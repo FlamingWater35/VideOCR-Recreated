@@ -1,0 +1,39 @@
+VideOCR AMD DirectML v16.2 Changed Files Manifest
+=================================================
+
+Purpose
+-------
+- Fix the Apply Tested AMD Preset button event not firing in the GUI event loop.
+- The previous v16.1 UI fields could already display the right values if they were saved, but the button itself was not included in the autosave/event branch that handled the preset action.
+- v16.2 adds the button key to the handled event list so clicking it actually forces the tested AMD preset immediately.
+
+Changed files
+-------------
+- VideOCR.py
+  - Adds -BTN-AMD-APPLY-RECOMMENDED- to KEYS_TO_AUTOSAVE so the preset button event reaches the existing apply_tested_amd_preset() handler.
+  - Updates the preset label to v16.2.
+  - Keeps the winning RX 7900 XTX preset:
+    * OCR Engine: EasyOCR DirectML (AMD GPU)
+    * DirectML GPU: GPU 1
+    * AMD Performance Preset: Max AMD GPU Load
+    * DirectML Recognition Mode: Stable Hybrid (recommended)
+    * AMD Frame Scan Mode: AMD FFmpeg D3D11VA Decode + DirectML SSIM
+    * DirectML Grid Max Width: 4096
+    * DirectML Grid Max Height: 4096
+    * Frames to Skip: 1
+    * Max OCR Image Width: 720
+
+Recommended v16.2 verification
+------------------------------
+1. Open VideOCR.py.
+2. Go to Advanced Settings.
+3. Change a few fields away from the target values, for example:
+   - DirectML Recognition Mode: AMD Max Auto
+   - DirectML Grid Max Width: 2048
+   - DirectML Grid Max Height: 2048
+4. Click Apply Tested AMD Preset.
+5. Confirm the visible fields immediately change to:
+   - Stable Hybrid (recommended)
+   - 4096
+   - 4096
+6. Go to Process Video and confirm OCR Engine is EasyOCR DirectML (AMD GPU).

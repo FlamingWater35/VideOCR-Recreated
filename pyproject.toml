@@ -1,0 +1,96 @@
+[build-system]
+requires = ["setuptools>=77.0.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "VideOCR"
+dynamic = ["version"]
+description = "Extract hardcoded subtitles from videos via a simple GUI using machine learning."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+keywords = ["machine-learning", "ocr", "deep-learning", "subtitles", "hardsub"]
+authors = [{name = "Tim Lodemann"}]
+requires-python = ">=3.9,<3.13"
+classifiers = [
+    "Intended Audience :: Developers",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+]
+dependencies = [
+    "av",
+    "cpuid",
+    "Fast-SSIM",
+    "opencc",
+    "Pillow",
+    "psutil",
+    "PySimpleGUI",
+    "thefuzz",
+    "wakepy",
+    "wordninja-enhanced",
+    "PyTaskbarProgress @ git+https://github.com/timminator/PyTaskbar.git ; sys_platform == 'win32'",
+    "winotify ; sys_platform == 'win32'",
+    "plyer ; sys_platform != 'win32'",
+]
+
+[project.optional-dependencies]
+directml = [
+    # torch-directml 0.2.5.dev240914 pulls torch 2.4.1. Keep NumPy below 2.x
+    # to avoid EasyOCR/torchvision import crashes on some Windows AMD installs.
+    "numpy==1.26.4 ; sys_platform == 'win32'",
+    "opencv-python-headless==4.10.0.84 ; sys_platform == 'win32'",
+    "easyocr==1.7.2 ; sys_platform == 'win32'",
+    "torch-directml==0.2.5.dev240914 ; sys_platform == 'win32'",
+    "onnxruntime-directml ; sys_platform == 'win32'",
+    "rapidocr-onnxruntime ; sys_platform == 'win32'",
+    "sympy==1.13.3 ; sys_platform == 'win32'",
+    "mpmath==1.3.0 ; sys_platform == 'win32'",
+]
+
+[dependency-groups]
+dev = [
+    "mypy",
+    "pre-commit",
+    "ruff",
+]
+build = [
+    "nuitka",
+    "patchelf; sys_platform == 'linux'",
+    "requests",
+]
+all = [
+    { include-group = "dev" },
+    { include-group = "build" },
+]
+
+[project.urls]
+Homepage = "https://github.com/timminator/VideOCR"
+documentation = "https://github.com/timminator/VideOCR/blob/master/README.md"
+Repository = "https://github.com/timminator/VideOCR.git"
+Issues = "https://github.com/timminator/VideOCR/issues"
+
+[tool.mypy]
+strict = true
+exclude = [
+    "VideOCR\\.build",
+    "CLI/videocr_cli\\.build"
+]
+
+[tool.setuptools]
+packages = []
+
+[tool.setuptools.dynamic]
+version = { attr = "_version.__version__" }
+
+[tool.ruff]
+exclude = ["build", "venv", ".venv", "__pycache__"]
+preview = true
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "W"]
+ignore = ["E501", "SIM108", "SIM102", "SIM114"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["videocr"]
