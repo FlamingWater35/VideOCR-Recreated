@@ -19,7 +19,6 @@ from PySide6.QtWidgets import (
     QPlainTextEdit,
     QProgressBar,
     QPushButton,
-    QSlider,
     QTabWidget,
     QVBoxLayout,
     QWidget,
@@ -33,7 +32,7 @@ from .progress import ProgressUpdate
 from .queue_tab import QueueTab
 from .settings_tab import SettingsTab
 from .video_preview import VideoPreview
-from .widgets import WheelGuardComboBox
+from .widgets import ClickableSlider, WheelGuardComboBox
 from .workers import CLIWorker, VIDEOCR_PATH
 
 try:  # pragma: no cover
@@ -190,7 +189,7 @@ class MainWindow(QMainWindow):
         # seek row
         seek_row = QHBoxLayout()
         seek_row.addWidget(QLabel(i18n.tr("lbl_seek", "Seek:")))
-        self.seek_slider = QSlider(Qt.Orientation.Horizontal)
+        self.seek_slider = ClickableSlider(Qt.Orientation.Horizontal)
         self.seek_slider.setRange(0, 0)
         self.seek_slider.setEnabled(False)
         self.seek_slider.valueChanged.connect(self._on_seek)

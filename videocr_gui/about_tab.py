@@ -26,7 +26,7 @@ class AboutTab(QWidget):
         layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.setSpacing(10)
 
-        title = QLabel("VideOCR")
+        title = QLabel("VideOCR Recreated")
         title.setObjectName("aboutTitle")
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(title)
@@ -70,4 +70,4 @@ class AboutTab(QWidget):
             if label.objectName() == "aboutVersion":
                 label.setText(i18n.tr("lbl_about_version", "Version: {}").replace("{}", "{version}").format(version=version))
             elif label.objectName() == "aboutTitle":
-                label.setText("VideOCR")
+                label.setText("VideOCR Recreated")
