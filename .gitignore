@@ -7,7 +7,7 @@ videocr_gui_config.ini
 # Distribution / SCM
 *.egg-info/
 /Releases/
-/VideOCR.dist/
+/VideOCR_qt.dist/
 /CLI/videocr_cli.dist/
 /CLI/PaddleOCR*
 /CLI/Chrome-Lens-OCR*

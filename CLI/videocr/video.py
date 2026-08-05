@@ -145,7 +145,9 @@ class Video:
             "-hwaccel", "d3d11va",
             "-i", self.path,
             "-vf", vf,
-            "-vsync", "0",
+            # -vsync 0 was removed in newer ffmpeg; use -fps_mode vfr (equivalent
+            # for raw-video pipe output: every selected frame is preserved).
+            "-fps_mode", "vfr",
             "-an",
             "-sn",
             "-f", "rawvideo",

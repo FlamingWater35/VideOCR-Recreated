@@ -48,7 +48,7 @@ if errorlevel 1 goto fail
 echo.
 echo SUCCESS. Now run:
 echo   .venv\Scripts\activate.bat
-echo   python VideOCR.py
+echo   python VideOCR_qt.py
 echo.
 pause
 exit /b 0

@@ -1,10 +1,8 @@
-English | [中文](README_ch.md)
-
 <p align="center">
 <img src="Pictures/VideOCR.png" alt="VideOCR Icon" width="128">
-  <h1 align="center">VideOCR AMD DirectML Fork</h1>
+  <h1 align="center">VideOCR Recreated</h1>
   <p align="center">
-    Extract hardcoded subtitles from videos with a simple GUI, 200+ languages, and experimental AMD DirectML GPU support.
+    Extract hardcoded subtitles from videos with a modern PySide6 GUI, 200+ languages, and experimental AMD DirectML GPU support.
     <br />
   </p>
 </p>
@@ -13,35 +11,33 @@ English | [中文](README_ch.md)
 
 ## ℹ About
 
-VideOCR extracts hardcoded / burned-in subtitles from videos and exports them as `.srt` subtitle files.
+VideOCR Recreated extracts hardcoded / burned-in subtitles from videos and exports them as `.srt` subtitle files.
 
-This fork adds an experimental **AMD GPU acceleration path for Windows** using:
+This project is a recreation of the original VideOCR GUI in **PySide6 (Qt)** — a modern, easy-to-use interface that replaces the old PySimpleGUI application. It keeps the core subtitle-extraction features while adding an experimental **AMD GPU acceleration path for Windows** using:
 
 - **DirectML**
 - **torch-directml**
 - **EasyOCR**
 - **Hybrid OCR mode**
 
-It keeps the original VideOCR features while adding an AMD-friendly OCR backend for systems that do not have NVIDIA CUDA GPUs.
-
-Original VideOCR supports:
+Supported OCR engines:
 
 - Local OCR with **[PaddleOCR](https://github.com/PaddlePaddle/PaddleOCR)**
 - Hybrid cloud recognition with **Google Lens**
-- GUI usage
-- CLI usage
-- 200+ OCR languages depending on selected OCR engine
+- **EasyOCR DirectML (AMD GPU)** — experimental Windows AMD path
+- **ONNX Runtime DirectML (AMD GPU Experimental)** — experimental
 
-This fork additionally supports:
+### What changed in the recreation
 
-- `easyocr_directml` OCR engine
-- AMD GPU text detection through DirectML
-- CPU-safe text recognition fallback for stability
-- DirectML adapter selection for systems with both integrated AMD graphics and a discrete AMD GPU
+- GUI rewritten from scratch in **PySide6** (modern dark theme, resizable layout, native HiDPI support).
+- **Update checking was removed** — the GUI no longer polls GitHub for new versions.
+- **Benchmarking and the "Apply Tested AMD Preset" button were removed** from the GUI (the CLI benchmark flags and `tools/benchmark_*.py` helpers remain available for advanced users).
+- The **DirectML GPU selection is now saved to the config file** and restored across sessions; it **defaults to GPU 0** (the first DirectML adapter).
+- The FFmpeg D3D11VA path uses `-fps_mode vfr` instead of the removed `-vsync 0` option so it works with newer FFmpeg versions.
 
-## AMD DirectML Fork Status
+## AMD DirectML Backend Status
 
-This fork has been tested on:
+Tested on:
 
 - **Windows**
 - **AMD Radeon RX 7900 XTX**
@@ -76,7 +72,7 @@ The hybrid mode is intentional. It avoids the crash while still using the AMD GP
 - Google Lens mode still works where available.
 - EasyOCR may download model files the first time it runs.
 - Python **3.12** is recommended.
-- Python **3.13** is not recommended for this fork because `torch-directml` may not provide compatible wheels for it.
+- Python **3.13** is not recommended because `torch-directml` may not provide compatible wheels for it.
 
 ## Setup
 
@@ -126,7 +122,7 @@ All DirectML diagnostics passed.
 Then start the GUI:
 
 ```bat
-python VideOCR.py
+python VideOCR_qt.py
 ```
 
 You can also use the helper:
@@ -143,6 +139,8 @@ set VIDEOCR_DIRECTML_DEVICE_INDEX=1
 
 before launching the GUI.
 
+> **DirectML GPU persistence:** in the GUI, the DirectML GPU dropdown (Advanced Settings) is saved to `videocr_gui_config.ini` and restored on the next launch. The default is **GPU 0**. If your discrete Radeon card is adapter `1`, select `GPU 1` once — the GUI will remember it.
+
 ### Windows Graphics Preference
 
 If Windows still sends DirectML workloads to the integrated GPU, force Python to use the high-performance GPU:
@@ -158,13 +156,6 @@ Windows Settings
 → Options
 → High performance
 → AMD Radeon RX 7900 XTX
-```
-
-Then launch VideOCR again with:
-
-```bat
-set VIDEOCR_DIRECTML_DEVICE_INDEX=1
-python VideOCR.py
 ```
 
 ### Linux
@@ -282,8 +273,6 @@ Frames to Skip: 3
 OCR Image Max Width: 720
 ```
 
-![GUI screenshot](Pictures/GUI.png)
-
 ## CLI Usage
 
 There is also a CLI version available. Open a terminal in the VideOCR folder and run:
@@ -362,26 +351,9 @@ Any CLI parameters listed below can be appended to the Docker command.
 
 ## Performance
 
-### AMD DirectML v12 frame-scan prototype
-
-This fork includes an experimental frame scan mode intended for AMD GPUs on Windows:
-
-```text
-AMD FFmpeg D3D11VA Decode + DirectML SSIM (prototype)
-```
-
-This mode asks FFmpeg to use D3D11VA hardware decode, then feeds the cropped subtitle area into the EasyOCR DirectML pipeline. It is best tested with a single subtitle crop area and FFmpeg available on PATH. For reliable use, keep DirectML Recognition Mode on `Stable Hybrid`; use `AMD Max Auto` only for experiments.
-
-A quick diagnostic is available:
-
-```bash
-python tools/benchmark_amd_decode.py "C:\path\to\video.mp4" --crop 1920:287:0:793 --scale 720:-2 --frames-to-skip 1 --seconds 60
-```
-
-
 Local OCR processing can be slow on CPU. Using a GPU is recommended when available.
 
-This fork provides three practical performance paths:
+The fork provides several practical performance paths:
 
 | Mode | Best For | Notes |
 |---|---|---|
@@ -389,6 +361,24 @@ This fork provides three practical performance paths:
 | `paddleocr` CUDA | NVIDIA GPUs | Fastest official local GPU path |
 | `google_lens` | Accuracy / cloud recognition | Requires internet |
 | `easyocr_directml` | AMD Windows GPUs | Experimental hybrid DirectML mode |
+
+### AMD DirectML Frame Scan Modes
+
+This fork includes experimental Step 1 frame-scan modes intended for AMD GPUs on Windows:
+
+```text
+CPU SSIM (compatible)
+AMD DirectML SSIM (experimental)
+AMD FFmpeg D3D11VA Decode + DirectML SSIM (prototype)
+```
+
+The FFmpeg D3D11VA prototype asks FFmpeg to use D3D11VA hardware decode, then feeds the cropped subtitle area into the EasyOCR DirectML pipeline. It is best tested with a single subtitle crop area and FFmpeg available on PATH. For reliable use, keep DirectML Recognition Mode on `Stable Hybrid`; use `AMD Max Auto` only for experiments.
+
+A quick diagnostic is available:
+
+```bash
+python tools/benchmark_amd_decode.py "C:\path\to\video.mp4" --crop 1920:287:0:793 --scale 720:-2 --frames-to-skip 1 --seconds 60
+```
 
 ### AMD DirectML Performance Notes
 
@@ -404,7 +394,7 @@ The AMD DirectML backend processes OCR in bursts:
 
 Because only part of the OCR pipeline runs on the GPU, GPU usage around `10–40%` can be normal. This does not mean the GPU is unused.
 
-For RX-class GPUs, v8 adds DirectML grid tuning and v9 adds a friendlier DirectML GPU dropdown. Larger stitched grids reduce per-image overhead and can keep the GPU busier during the detection pass. Good starting values are:
+For RX-class GPUs, the GUI exposes DirectML grid tuning and a DirectML GPU dropdown. Larger stitched grids reduce per-image overhead and can keep the GPU busier during the detection pass. Good starting values are:
 
 ```text
 DirectML GPU: GPU 1: AMD Radeon RX 7900 XTX
@@ -414,7 +404,22 @@ Frames to Skip: 2 for speed, 1 for accuracy
 OCR Image Max Width: 720 for speed, 960 for accuracy
 ```
 
-The GUI DirectML GPU selector writes the selected adapter index to the CLI automatically. The GUI also prints performance lines such as Step 1 time, Step 2 EasyOCR DirectML time, filtered frame count, stitched grid count, and average frames per grid.
+The DirectML performance preset controls the grid target automatically:
+
+| Preset | Grid target | Intended use |
+|---|---:|---|
+| `compatibility` | 1600x1600 | Older/lower-VRAM GPUs, stability first |
+| `balanced` | 2400x2400 | Recommended default |
+| `max` | 4096x4096 | Larger batches to feed high-end AMD GPUs harder |
+| `manual` | Uses the grid width/height fields | Manual tuning |
+
+DirectML Recognition Mode behavior:
+
+| Mode | Detection | Recognition | Notes |
+|---|---|---|---|
+| `stable` | DirectML GPU | CPU | Safest; avoids EasyOCR LSTM DirectML crash |
+| `auto` | DirectML GPU | Try DirectML GPU, then CPU fallback | Best "max AMD" test mode |
+| `experimental` | DirectML GPU | Try DirectML GPU | Still falls back for known LSTM compatibility failures |
 
 ## Tips
 
@@ -453,6 +458,7 @@ Valid values include:
 paddleocr
 google_lens
 easyocr_directml
+onnx_directml
 ```
 
 `paddleocr` uses local processing for both text detection and recognition.
@@ -460,6 +466,8 @@ easyocr_directml
 `google_lens` uses hybrid processing where local detection is combined with Google Lens recognition. This mode requires an active internet connection.
 
 `easyocr_directml` uses the AMD DirectML fork backend. In the current stable hybrid mode, EasyOCR text detection runs on DirectML / AMD GPU and recognition falls back to CPU.
+
+`onnx_directml` is an experimental ONNX Runtime DirectML backend. If the ONNX stack is unavailable it falls back to the EasyOCR DirectML Hybrid path for that run.
 
 ### `lang`
 
@@ -594,7 +602,7 @@ Higher values may improve accuracy.
 
 Set to `True` to perform OCR with GPU acceleration where supported.
 
-For AMD DirectML mode, also set:
+For AMD DirectML mode, the GUI saves your DirectML GPU selection in the config file (default GPU 0). From the CLI you can also set the adapter directly:
 
 ```bat
 set VIDEOCR_DIRECTML_DEVICE_INDEX=1
@@ -658,6 +666,70 @@ This may improve detection at the cost of more processing power.
 
 Primarily for PaddleOCR GPU usage.
 
+### `directml_device_index`
+
+Selects the DirectML adapter index used by `easyocr_directml` / `onnx_directml`.
+
+```bat
+--directml_device_index 0
+```
+
+usually selects the first DirectML adapter. `1` may select the discrete GPU on systems with integrated graphics plus an RX 7900 XTX.
+
+### `directml_performance_preset`
+
+```bat
+--directml_performance_preset compatibility
+--directml_performance_preset balanced
+--directml_performance_preset max
+--directml_performance_preset manual
+```
+
+### `directml_recognition_mode`
+
+```bat
+--directml_recognition_mode stable
+--directml_recognition_mode auto
+--directml_recognition_mode experimental
+```
+
+### `directml_frame_scan_mode`
+
+```bat
+--directml_frame_scan_mode cpu_ssim
+--directml_frame_scan_mode directml_ssim
+--directml_frame_scan_mode ffmpeg_d3d11va
+```
+
+### `onnx_directml_tuning`
+
+```bat
+--onnx_directml_tuning low_vram
+--onnx_directml_tuning balanced
+--onnx_directml_tuning max
+--onnx_directml_tuning manual
+```
+
+### `directml_grid_max_width` / `directml_grid_max_height`
+
+Maximum stitched OCR grid size for the manual DirectML mode.
+
+### Benchmark compare (CLI-only)
+
+The CLI retains optional benchmarking helpers that were removed from the GUI:
+
+```bat
+--benchmark_compare_engine false
+--benchmark_compare_sample_grids 3
+```
+
+These run a small EasyOCR-vs-ONNX sample after the main run and print `[BenchCompare]` lines. Leave them off for normal processing. Standalone tools:
+
+```bash
+python tools/benchmark_amd_presets.py "C:\path\to\video.mp4" --crop 0,793,1920,287 --seconds 180 --device-index 1 --keep-logs
+python tools/benchmark_ocr_compare.py "C:\path\to\video.mp4" --crop 0:793:1920:287 --frames-to-skip 1 --onnx-directml-tuning balanced
+```
+
 ## AMD DirectML Environment Variables
 
 ### `VIDEOCR_DIRECTML_DEVICE_INDEX`
@@ -714,17 +786,16 @@ Keep this on `cpu` unless you are testing experimental full DirectML recognition
 
 - Python 3.9 or higher
 - Python 3.12 recommended for AMD DirectML mode
+- **PySide6** (installed via `pip install PySide6` or the project dependencies)
 
 Windows:
 
 - C++ Build Tools, for example Visual Studio with **Desktop development with C++**
 - 7-Zip available in PATH
-- Tkinter, included with the default Python installation on Windows
 
 Linux:
 
 - 7-Zip
-- Tkinter
 - Working dbus installation is recommended
 
 ### Clone Repository
@@ -776,7 +847,7 @@ CUDA 12.9 build:
 python build.py --target gpu-cuda12.9
 ```
 
-AMD DirectML build, if enabled in this fork:
+AMD DirectML build:
 
 ```bash
 python build.py --target gpu-directml
@@ -821,6 +892,14 @@ Install project dependencies inside the active venv:
 python -m pip install -e ".[directml]"
 ```
 
+### `No module named PySide6`
+
+Install PySide6:
+
+```bat
+python -m pip install PySide6
+```
+
 ### `No module named sympy.core`
 
 Repair SymPy:
@@ -842,8 +921,10 @@ Then run:
 ```bat
 python tools\test_directml.py
 python tools\diagnose_easyocr_directml.py
-python VideOCR.py
+python VideOCR_qt.py
 ```
+
+In the GUI, open **Advanced Settings → DirectML GPU** and select your discrete card (e.g. `GPU 1: AMD Radeon RX 7900 XTX`). The selection is saved and restored on the next launch.
 
 Also set Windows graphics preference for:
 
@@ -868,7 +949,7 @@ Do not force recognition to DirectML unless testing.
 
 ## Credits
 
-This fork is based on the original **VideOCR** project by `timminator`.
+This project is based on the original **VideOCR** project by `timminator`, with a recreated PySide6 GUI and an AMD DirectML backend.
 
 Original project:
 
@@ -876,91 +957,11 @@ Original project:
 https://github.com/timminator/VideOCR
 ```
 
-AMD DirectML fork changes include:
+Fork changes include:
 
+- PySide6 GUI recreation ("VideOCR Recreated")
 - `easyocr_directml` backend
-- DirectML adapter selection
-- RX 7900 XTX development helper scripts
-- DirectML diagnostics
+- DirectML adapter selection (persisted in the config, default GPU 0)
+- DirectML diagnostics and development helper scripts
 - Hybrid EasyOCR mode for stable AMD GPU usage
-
-## AMD DirectML / Max GPU Support
-
-This fork adds experimental Windows AMD GPU acceleration through **EasyOCR + torch-directml**. It is intended for AMD Radeon GPUs such as the RX 7900 XTX, while still keeping CPU fallback paths for compatibility.
-
-Recommended 1080p anime settings:
-
-```text
-OCR Engine: EasyOCR DirectML (AMD GPU)
-DirectML GPU: your discrete Radeon card, e.g. GPU 1: AMD Radeon RX 7900 XTX
-AMD Performance Preset: Balanced or Max AMD GPU Load
-DirectML Recognition Mode: Stable Hybrid, or AMD Max Auto for testing
-Frames to Skip: 1–2
-Max OCR Image Width: 720–960
-Use Full Frame OCR: unchecked
-Crop: subtitle area only
-```
-
-CLI options added by this fork:
-
-```bat
---ocr_engine easyocr_directml ^
---directml_device_index 1 ^
---directml_performance_preset max ^
---directml_recognition_mode auto
-```
-
-`stable` recognition mode runs detection on DirectML and recognition on CPU for maximum compatibility. `auto` tries DirectML recognition first and falls back to CPU recognition if the EasyOCR LSTM path is unsupported by the installed DirectML stack.
-
-For diagnostics:
-
-```bat
-python tools\list_directml_adapters.py
-python tools\diagnose_easyocr_directml.py
-```
-
-See `README_AMD_DIRECTML.md` for full setup and troubleshooting notes.
-
-## AMD DirectML v13 note
-
-This fork includes an experimental AMD path for Windows Radeon GPUs:
-
-- EasyOCR DirectML Hybrid
-- FFmpeg D3D11VA frame scan prototype
-- ONNX Runtime DirectML OCR experimental engine
-- GUI Last Run Benchmark panel
-
-The ONNX engine is experimental and safely falls back to EasyOCR DirectML Hybrid if the ONNX Runtime DirectML stack is unavailable.
-
-### AMD DirectML v14 experimental tuning
-
-This fork includes an experimental AMD DirectML path. v14 adds ONNX Runtime DirectML tuning controls and an optional benchmark comparison between ONNX DirectML and EasyOCR DirectML Hybrid. For RX 7900 XTX testing, use ONNX DirectML tuning set to **Balanced ONNX** first to reduce excessive VRAM reservation, then try **Max Throughput** if it is stable.
-
-### AMD DirectML v16.1 tested preset
-
-v16.1 updates the one-click **Apply Tested AMD Preset** button for the RX 7900 XTX benchmark winner:
-
-```text
-OCR Engine: EasyOCR DirectML (AMD GPU)
-AMD Frame Scan Mode: AMD FFmpeg D3D11VA Decode + DirectML SSIM
-DirectML Recognition Mode: Stable Hybrid (recommended)
-DirectML Grid: 4096x4096
-Frames to Skip: 1
-Max OCR Image Width: 720
-```
-
-This preset is based on the measured fastest sample result: EasyOCR DirectML Hybrid at 122.48s total / 11.85x real-time on the EP86S 3-minute benchmark sample. v16.1 also prevents ONNX tuning events from changing the EasyOCR preset grid back to 2048x2048.
-
-
-### AMD DirectML v16.2 - Apply Tested AMD Preset button event fix
-
-v16.2 fixes the GUI button event for **Apply Tested AMD Preset**. The v16.1 preset values were correct, but the button key was not included in the handled event list, so clicking the button could fail to force the visible settings. v16.2 makes the button immediately apply the benchmark-backed RX 7900 XTX preset:
-
-- OCR Engine: EasyOCR DirectML (AMD GPU)
-- DirectML GPU: GPU 1
-- AMD Performance Preset: Max AMD GPU Load
-- DirectML Recognition Mode: Stable Hybrid (recommended)
-- AMD Frame Scan Mode: AMD FFmpeg D3D11VA Decode + DirectML SSIM
-- DirectML Grid Max Width/Height: 4096 x 4096
-- Frames to Skip: 1
-- Max OCR Image Width: 720
+- Newer-FFmpeg compatible frame-scan mode (`-fps_mode vfr`)

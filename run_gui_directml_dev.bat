@@ -14,5 +14,5 @@ REM Larger stitched grids reduce per-image overhead and can keep a fast Radeon G
 REM These are also available in the GUI Advanced Settings tab.
 set "VIDEOCR_DIRECTML_GRID_MAX_WIDTH=2400"
 set "VIDEOCR_DIRECTML_GRID_MAX_HEIGHT=2400"
-python VideOCR.py
+python VideOCR_qt.py
 pause

@@ -74,21 +74,19 @@ def print_header(message: str) -> None:
     print("=" * 60)
 
 
-def check_tkinter() -> None:
-    """Checks if Tkinter is installed and available."""
-    print_header("Checking for Tkinter support...")
+def check_pyside6() -> None:
+    """Checks if PySide6 is installed and importable."""
+    print_header("Checking for PySide6 support...")
     try:
-        import tkinter
-        print("Tkinter support found.")
-        root = tkinter.Tk()
-        root.destroy()
+        import PySide6  # noqa: F401
+
+        print("PySide6 support found.")
     except ImportError:
-        print("ERROR: Tkinter is not installed or not available.")
-        print("Please install it. On Debian/Ubuntu: sudo apt-get install python3-tk")
+        print("ERROR: PySide6 is not installed or not available.")
+        print("Please install it: python -m pip install PySide6")
         sys.exit(1)
     except Exception as e:
-        print(f"ERROR: Tkinter found, but failed to initialize: {e}")
-        print("This might be an issue with your display server (e.g., running in a headless environment).")
+        print(f"ERROR: PySide6 found, but failed to initialize: {e}")
         sys.exit(1)
 
 
@@ -488,7 +486,7 @@ def main() -> None:
 
     # Prerequisite Checks
     if not is_cli_only:
-        check_tkinter()
+        check_pyside6()
         check_dbus()
     check_7zip()
 
@@ -526,8 +524,8 @@ def main() -> None:
     # Compile GUI conditionally
     gui_dist_folder = None
     if not is_cli_only:
-        gui_script = "VideOCR.py"
-        gui_dist_folder = Path("VideOCR.dist")
+        gui_script = "VideOCR_qt.py"
+        gui_dist_folder = Path("VideOCR_qt.dist")
         if gui_dist_folder.exists():
             shutil.rmtree(gui_dist_folder)
         run_command([sys.executable, "-m", "nuitka", gui_script])

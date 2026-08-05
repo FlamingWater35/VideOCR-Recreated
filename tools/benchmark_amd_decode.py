@@ -42,7 +42,8 @@ def main() -> int:
         "-t", str(args.seconds),
         "-i", video,
         "-vf", vf,
-        "-vsync", "0",
+        # -vsync 0 was removed in newer ffmpeg; use -fps_mode vfr (equivalent).
+        "-fps_mode", "vfr",
         "-an", "-sn",
         "-f", "null",
         "-",
