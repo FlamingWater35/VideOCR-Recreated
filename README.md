@@ -56,7 +56,7 @@ Relative to the `BaseCrunch/VideOCR-AMD-DirectML` fork this project is based on:
 
 Tested on:
 
-- **Windows**
+- **Windows 11**
 - **AMD Radeon RX 7900 XTX** and **AMD Radeon RX 6700 XT**
 - **Python 3.12**
 - **torch-directml**
