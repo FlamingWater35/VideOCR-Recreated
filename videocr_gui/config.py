@@ -175,8 +175,11 @@ def load_settings() -> dict[str, Any]:
 
     parser = configparser.ConfigParser()
     try:
-        parser.read(CONFIG_FILE)
-    except configparser.Error as e:
+        # Config files are written as UTF-8 (see save_settings); read them the
+        # same way so CJK values (paths, output names) survive on Windows where
+        # the locale encoding is cp1252/charmap.
+        parser.read(CONFIG_FILE, encoding="utf-8")
+    except (configparser.Error, UnicodeDecodeError) as e:
         log_error(f"Error parsing config file {CONFIG_FILE}: {e}. Using defaults.")
         return settings
 

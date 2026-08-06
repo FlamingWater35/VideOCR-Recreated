@@ -13,6 +13,12 @@
 
 VideOCR Recreated extracts hardcoded / burned-in subtitles from videos and exports them as `.srt` subtitle files.
 
+<p align="center">
+  <img src="Pictures/GUI.jpg" alt="VideOCR GUI" width="720">
+  <br />
+  <em>VideOCR Recreated main window</em>
+</p>
+
 This project is a recreation of the original VideOCR GUI in **PySide6 (Qt)** — a modern, easy-to-use interface that replaces the old PySimpleGUI application. It keeps the core subtitle-extraction features while adding an experimental **AMD GPU acceleration path for Windows** using:
 
 - **DirectML**
@@ -125,20 +131,6 @@ Then start the GUI:
 python VideOCR_qt.py
 ```
 
-You can also use the helper:
-
-```bat
-run_gui_directml_dev.bat
-```
-
-This helper sets:
-
-```bat
-set VIDEOCR_DIRECTML_DEVICE_INDEX=1
-```
-
-before launching the GUI.
-
 > **DirectML GPU persistence:** in the GUI, the DirectML GPU dropdown (Advanced Settings) is saved to `videocr_gui_config.ini` and restored on the next launch. The default is **GPU 0**. If your discrete Radeon card is adapter `1`, select `GPU 1` once — the GUI will remember it.
 
 ### Windows Graphics Preference
@@ -174,63 +166,6 @@ You can remove it with:
 
 ```bash
 ./uninstall_videocr.sh
-```
-
-### Docker
-
-The VideOCR CLI can also be run within a Docker container.
-
-#### Requirements
-
-- **[Docker](https://docs.docker.com/get-docker/)** installed on your system.
-- **For CUDA GPU acceleration:** An NVIDIA GPU with the **[NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html)** installed on your host machine.
-
-> AMD DirectML mode is Windows/DirectML-based and is not currently supported through the Docker flow.
-
-#### Option A: Download from GitHub Container Registry
-
-Pre-built images are automatically generated and hosted on GitHub.
-
-CPU version:
-
-```bash
-docker pull ghcr.io/timminator/videocr-cli-cpu:latest
-```
-
-GPU version, CUDA 11.8 / NVIDIA 10 Series graphics cards:
-
-```bash
-docker pull ghcr.io/timminator/videocr-cli-gpu-cuda11.8:latest
-```
-
-GPU version, CUDA 12.9 / NVIDIA 16 - 50 Series graphics cards:
-
-```bash
-docker pull ghcr.io/timminator/videocr-cli-gpu-cuda12.9:latest
-```
-
-#### Option B: Build Locally
-
-Clone the repository and use the provided Dockerfile. You can specify the hardware target with `BUILD_TARGET`.
-
-Supported Docker build targets:
-
-```text
-cpu
-gpu-cuda11.8
-gpu-cuda12.9
-```
-
-Example CUDA 12.9 GPU build:
-
-```bash
-docker build --build-arg BUILD_TARGET=gpu-cuda12.9 -t videocr-cli-gpu:latest .
-```
-
-Example CPU build:
-
-```bash
-docker build --build-arg BUILD_TARGET=cpu -t videocr-cli-cpu:latest .
 ```
 
 ## GUI Usage
@@ -321,33 +256,6 @@ python CLI\videocr_cli.py ^
   --ssim_threshold 92 ^
   --ocr_image_max_width 720
 ```
-
-### Example Usage: Docker
-
-When running the Docker container, use Docker volumes with `-v` to mount your local video folder into the container's `/data` directory.
-
-GPU example:
-
-```bash
-docker run --rm -it --gpus all \
--v /path/to/your/local/videos:/data \
-ghcr.io/timminator/videocr-cli-gpu-cuda12.9:latest \
---video_path /data/my_video.mp4 \
---output /data/my_subtitle.srt \
---use_gpu true
-```
-
-CPU example:
-
-```bash
-docker run --rm -it \
--v /path/to/your/local/videos:/data \
-ghcr.io/timminator/videocr-cli-cpu:latest \
---video_path /data/my_video.mp4 \
---output /data/my_subtitle.srt
-```
-
-Any CLI parameters listed below can be appended to the Docker command.
 
 ## Performance
 
