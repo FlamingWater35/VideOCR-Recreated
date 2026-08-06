@@ -80,6 +80,10 @@ class MainWindow(QMainWindow):
         self._wake_lock: Any = None
         self._taskbar: Any = None
         self._graph_size = (720, 405)
+        self._crop_save_timer = QTimer(self)
+        self._crop_save_timer.setSingleShot(True)
+        self._crop_save_timer.setInterval(300)
+        self._crop_save_timer.timeout.connect(self._flush_crop_boxes)
 
         # Load the saved UI language BEFORE building widgets so the initial
         # render is localized (i18n.tr() falls back to English defaults while
@@ -565,6 +569,30 @@ class MainWindow(QMainWindow):
         # output path
         self._settings["_video_duration_ms"] = duration_ms
         self._update_output_path()
+        # restore the saved crop box selection once the first frame has been
+        # rendered (the preview's resized dimensions are set by show_frame)
+        QTimer.singleShot(0, self._restore_crop_boxes)
+
+    def _restore_crop_boxes(self) -> None:
+        """Restores the saved crop boxes (relative coords) for the current video."""
+        if not self._settings.get("--save_crop_box", False):
+            return
+        w, h = self.preview.original_size
+        if w <= 0 or h <= 0:
+            return
+        from .crop import absolute_from_relative
+
+        saved = config.parse_saved_crop_boxes(str(self._settings.get("--saved_crop_boxes", "[]")))
+        boxes = []
+        limit = 2 if self._settings.get("--use_dual_zone", False) else 1
+        for rel in saved[:limit]:
+            abs_coords = absolute_from_relative(rel, w, h)
+            if abs_coords["crop_width"] <= 0 or abs_coords["crop_height"] <= 0:
+                continue
+            boxes.append({"coords": abs_coords})
+        if boxes:
+            self.preview.restore_crop_boxes(boxes)
+            self.crop_label.setText(self.preview.crop_coords_text())
 
     def _on_video_error(self, path: str) -> None:
         info(self, i18n.tr("error_invalid_video_title", "Invalid or Empty Video File"),
@@ -639,9 +667,38 @@ class MainWindow(QMainWindow):
 
     # --- crop ----------------------------------------------------------------
     def _on_crop_changed(self, boxes: list[dict[str, Any]]) -> None:
-        # boxes live in the preview; just refresh the label + button state
+        # boxes live in the preview; refresh the label + button state, and
+        # persist the crop selection when "Save Crop Box Selection" is enabled.
         self.crop_label.setText(self.preview.crop_coords_text())
         self.clear_crop_btn.setEnabled(bool(boxes))
+        if not self._settings.get("--save_crop_box", False):
+            return
+        self._save_crop_boxes()
+
+    def _save_crop_boxes(self) -> None:
+        """Persists the current crop boxes as relative (0..1) coords.
+
+        Debounced: dragging/resizing a box emits crop_changed on every pixel,
+        so the config write is deferred ~300 ms to coalesce bursts.
+        """
+        if self._crop_save_timer.isActive():
+            self._crop_save_timer.stop()
+        self._crop_save_timer.start()
+
+    def _flush_crop_boxes(self) -> None:
+        from .crop import relative_from_absolute
+
+        w, h = self.preview.original_size
+        if w <= 0 or h <= 0:
+            return
+        boxes = []
+        for box in self.preview.crop_boxes:
+            coords = box.get("coords", {})
+            if not coords:
+                continue
+            boxes.append(relative_from_absolute(coords, w, h))
+        self._settings["--saved_crop_boxes"] = repr(boxes)
+        config.save_settings(self._settings)
 
     def _on_crop_clear(self) -> None:
         self.preview.clear_crop()
@@ -1173,6 +1230,10 @@ class MainWindow(QMainWindow):
             self._worker.cancel()
             self._worker.wait(3000)
         self._set_system_awake(False)
+        # flush any pending debounced crop-box save before writing settings
+        if self._crop_save_timer.isActive():
+            self._crop_save_timer.stop()
+            self._flush_crop_boxes()
         self.preview.handler.close()
         config.save_settings(self._settings)
         super().closeEvent(event)
