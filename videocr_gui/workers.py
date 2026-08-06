@@ -195,7 +195,13 @@ class CLIWorker(QThread):
         if exit_code != 0 and not self._cancelled_by_user:
             full_stdout = "".join(stdout_lines)
             full_stderr = "".join(stderr_lines)
-            if "Error: Process failed" not in full_stdout and "Unsupported Hardware Error:" not in full_stdout:
+            # A clean, user-facing error from the CLI (e.g. "Error: ... not found")
+            # is already shown in the log pane; don't treat it as an unexpected crash.
+            clean_error = "Error: Process failed" in full_stdout or "Unsupported Hardware Error:" in full_stdout
+            clean_error = clean_error or any(
+                line.startswith("Error: ") for line in full_stdout.splitlines()
+            )
+            if not clean_error:
                 log_message = (
                     f"The videocr-cli process crashed with exit code {exit_code}.\n\n"
                     f"--- COMMAND ---\n{' '.join(command)}\n\n"

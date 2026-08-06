@@ -39,7 +39,24 @@ def save_subtitles_to_file(
     cls_model_dir = ""
 
     if ocr_engine in ("paddleocr", "google_lens"):
-        paddleocr_path = utils.find_executable("paddleocr")
+        try:
+            paddleocr_path = utils.find_executable("paddleocr")
+        except FileNotFoundError as e:
+            helper = "PaddleOCR" if ocr_engine == "paddleocr" else "PaddleOCR (text detection) and Chrome Lens (recognition)"
+            install_hint = (
+                "install the VideOCR PaddleOCR support files (see the build/install instructions)"
+                if ocr_engine == "paddleocr"
+                else "install the VideOCR PaddleOCR and Chrome Lens support files (see the build/install instructions)"
+            )
+            print(
+                f"Error: {helper} helper executable not found.\n"
+                f"{e}\n\n"
+                f"To use the '{ocr_engine}' OCR engine, {install_hint}. "
+                f"Alternatively select the 'EasyOCR DirectML (AMD GPU)' engine, which runs fully from "
+                f"Python without external helper executables.",
+                flush=True,
+            )
+            sys.exit(1)
         try:
             utils.perform_hardware_check(paddleocr_path, use_gpu)
         except SystemExit as e:
@@ -53,7 +70,18 @@ def save_subtitles_to_file(
             det_model_dir, rec_model_dir, cls_model_dir = utils.resolve_model_dirs('en', use_server_model)
 
     if ocr_engine == "google_lens":
-        google_lens_path = utils.find_executable("chrome-lens")
+        try:
+            google_lens_path = utils.find_executable("chrome-lens")
+        except FileNotFoundError as e:
+            print(
+                f"Error: Chrome Lens helper executable not found.\n"
+                f"{e}\n\n"
+                f"To use the 'google_lens' OCR engine, install the VideOCR Chrome Lens support files. "
+                f"Alternatively select the 'EasyOCR DirectML (AMD GPU)' engine, which runs fully from "
+                f"Python without external helper executables.",
+                flush=True,
+            )
+            sys.exit(1)
 
     v = Video(video_path, paddleocr_path, det_model_dir, rec_model_dir, cls_model_dir, google_lens_path)
     try:
