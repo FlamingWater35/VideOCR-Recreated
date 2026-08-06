@@ -18,6 +18,7 @@
     "pos_any": "Cualquiera",
     "tip_sub_pos": "Selecciona la alineación de los subtítulos en el video (relativa a un cuadro de recorte opcional)",
     "btn_how_to_use": "Cómo usar",
+    "btn_info": "Información",
     "help_title": "Información de recorte",
     "help_message": "Dibuja un cuadro de recorte sobre la región de subtítulos en el video.\nUsa clic+arrastrar para seleccionar.\nEn modo 'Doble zona', puedes dibujar dos cuadros de recorte.\nSi no se selecciona un cuadro, por defecto se usará el tercio inferior del video\npara OCR.",
     "lbl_seek": "Buscar:",
@@ -269,5 +270,19 @@
     "tip_dml_grid_w": "Ancho máximo de la cuadrícula OCR unida para el modo DirectML manual.",
     "tip_dml_grid_h": "Alto máximo de la cuadrícula OCR unida para el modo DirectML manual.",
     "lbl_dml_section": "DirectML (GPU AMD):",
-    "tip_dml_device": "Seleccione el adaptador DirectML (GPU) utilizado para OCR. La selección se guarda y se restaura en el siguiente inicio."
+    "tip_dml_device": "Seleccione el adaptador DirectML (GPU) utilizado para OCR. La selección se guarda y se restaura en el siguiente inicio.",
+    "dml_preset_compatibility": "Compatibilidad / VRAM baja",
+    "dml_preset_balanced": "Equilibrado (recomendado)",
+    "dml_preset_max": "Carga máxima de GPU AMD",
+    "dml_preset_manual": "Tamaño de cuadrícula manual",
+    "dml_recognition_stable": "Híbrido estable (recomendado)",
+    "dml_recognition_auto": "AMD Max Auto (probar reconocimiento GPU + respaldo)",
+    "dml_recognition_experimental": "DirectML completo experimental",
+    "dml_frame_scan_cpu_ssim": "SSIM por CPU (compatible)",
+    "dml_frame_scan_directml_ssim": "SSIM DirectML AMD (experimental)",
+    "dml_frame_scan_ffmpeg_d3d11va": "Decodificación FFmpeg D3D11VA AMD + SSIM DirectML (prototipo)",
+    "dml_onnx_low_vram": "VRAM baja / más seguro",
+    "dml_onnx_balanced": "ONNX equilibrado (recomendado)",
+    "dml_onnx_max": "Rendimiento máximo / más VRAM",
+    "dml_onnx_manual": "Tamaño de cuadrícula manual"
 }

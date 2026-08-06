@@ -18,6 +18,7 @@
     "pos_any": "任意",
     "tip_sub_pos": "ビデオ内の字幕の配置を選択します（オプションのクロップボックスからの相対位置）",
     "btn_how_to_use": "使用方法",
+    "btn_info": "情報",
     "help_title": "クロップ情報",
     "help_message": "ビデオの字幕領域にクロップボックスを描画します。\nクリック+ドラッグで選択します。\n「デュアルゾーン」モードでは、2つのクロップボックスを描画できます。\nクロップボックスが選択されていない場合、ビデオの下部3分の1が\nデフォルトでOCRに使用されます。",
     "lbl_seek": "シーク:",
@@ -269,5 +270,19 @@
     "tip_dml_grid_w": "手動 DirectML モードでの合成 OCR グリッドの最大幅。",
     "tip_dml_grid_h": "手動 DirectML モードでの合成 OCR グリッドの最大高さ。",
     "lbl_dml_section": "DirectML (AMD GPU):",
-    "tip_dml_device": "OCR に使用する DirectML アダプター（GPU）を選択します。選択内容は保存され、次回起動時に復元されます。"
+    "tip_dml_device": "OCR に使用する DirectML アダプター（GPU）を選択します。選択内容は保存され、次回起動時に復元されます。",
+    "dml_preset_compatibility": "互換性 / 低VRAM",
+    "dml_preset_balanced": "バランス（推奨）",
+    "dml_preset_max": "AMD GPU 最大負荷",
+    "dml_preset_manual": "手動グリッドサイズ",
+    "dml_recognition_stable": "Stable Hybrid（推奨）",
+    "dml_recognition_auto": "AMD Max Auto（GPU認識を試行 + フォールバック）",
+    "dml_recognition_experimental": "実験的な完全DirectML",
+    "dml_frame_scan_cpu_ssim": "CPU SSIM（互換）",
+    "dml_frame_scan_directml_ssim": "AMD DirectML SSIM（実験的）",
+    "dml_frame_scan_ffmpeg_d3d11va": "AMD FFmpeg D3D11VA デコード + DirectML SSIM（プロトタイプ）",
+    "dml_onnx_low_vram": "低VRAM / より安全",
+    "dml_onnx_balanced": "バランスONNX（推奨）",
+    "dml_onnx_max": "最大スループット / 高VRAM",
+    "dml_onnx_manual": "手動グリッドサイズ"
 }

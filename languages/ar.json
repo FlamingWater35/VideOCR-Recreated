@@ -18,6 +18,7 @@
     "pos_any": "أي",
     "tip_sub_pos": "حدد محاذاة الترجمة في الفيديو (بالنسبة إلى مربع الاقتطاع الاختياري)",
     "btn_how_to_use": "كيفية الاستخدام",
+    "btn_info": "معلومات",
     "help_title": "معلومات القطع",
     "help_message": "ارسم صندوق قطع فوق منطقة الترجمة في الفيديو.\nاستخدم النقر+السحب للتحديد.\nفي وضع 'المنطقة المزدوجة'، يمكنك رسم صندوقي قطع.\nإذا لم يتم تحديد صندوق قطع، سيتم استخدام الثلث السفلي من الفيديو\nلـ OCR افتراضياً.",
     "lbl_seek": "البحث:",
@@ -269,5 +270,19 @@
     "tip_dml_grid_w": "أقصى عرض لشبكة OCR المدمجة لوضع DirectML اليدوي.",
     "tip_dml_grid_h": "أقصى ارتفاع لشبكة OCR المدمجة لوضع DirectML اليدوي.",
     "lbl_dml_section": "DirectML (GPU AMD):",
-    "tip_dml_device": "حدد محول DirectML (GPU) المستخدم لـ OCR. يتم حفظ التحديد واستعادته عند التشغيل التالي."
+    "tip_dml_device": "حدد محول DirectML (GPU) المستخدم لـ OCR. يتم حفظ التحديد واستعادته عند التشغيل التالي.",
+    "dml_preset_compatibility": "توافق / VRAM منخفض",
+    "dml_preset_balanced": "متوازن (موصى به)",
+    "dml_preset_max": "أقصى حمل لوحدة معالجة AMD",
+    "dml_preset_manual": "حجم شبكة يدوي",
+    "dml_recognition_stable": "هجين مستقر (موصى به)",
+    "dml_recognition_auto": "AMD Max Auto (محاولة التعرف عبر GPU + احتياطي)",
+    "dml_recognition_experimental": "DirectML كامل تجريبي",
+    "dml_frame_scan_cpu_ssim": "SSIM عبر CPU (متوافق)",
+    "dml_frame_scan_directml_ssim": "SSIM DirectML AMD (تجريبي)",
+    "dml_frame_scan_ffmpeg_d3d11va": "فك ترميز FFmpeg D3D11VA AMD + SSIM DirectML (نموذج أولي)",
+    "dml_onnx_low_vram": "VRAM منخفض / أكثر أمانًا",
+    "dml_onnx_balanced": "ONNX متوازن (موصى به)",
+    "dml_onnx_max": "أقصى إنتاجية / VRAM أعلى",
+    "dml_onnx_manual": "حجم شبكة يدوي"
 }

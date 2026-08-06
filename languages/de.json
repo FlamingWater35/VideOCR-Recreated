@@ -18,6 +18,7 @@
     "pos_any": "Beliebig",
     "tip_sub_pos": "Wählen Sie die Ausrichtung der Untertitel im Video (relativ zu einem optionalen Zuschneidebereich)",
     "btn_how_to_use": "Anleitung",
+    "btn_info": "Info",
     "help_title": "Zuschneide-Info",
     "help_message": "Zeichnen Sie einen Zuschneidebereich über den Untertitelbereich im Video.\nMit Klick+Ziehen auswählen.\nIm 'Dual-Zone'-Modus können Sie zwei Zuschneidebereiche zeichnen.\nWenn kein Zuschneidebereich gewählt ist, wird standardmäßig das untere Drittel des Videos\nfür die OCR verwendet.",
     "lbl_seek": "Position:",
@@ -269,5 +270,19 @@
     "tip_dml_grid_w": "Maximale gestitchte OCR-Rasterbreite für den manuellen DirectML-Modus.",
     "tip_dml_grid_h": "Maximale gestitchte OCR-Rasterhöhe für den manuellen DirectML-Modus.",
     "lbl_dml_section": "DirectML (AMD-GPU):",
-    "tip_dml_device": "Wählen Sie den DirectML-Adapter (GPU) für die OCR. Die Auswahl wird gespeichert und beim nächsten Start wiederhergestellt."
+    "tip_dml_device": "Wählen Sie den DirectML-Adapter (GPU) für die OCR. Die Auswahl wird gespeichert und beim nächsten Start wiederhergestellt.",
+    "dml_preset_compatibility": "Kompatibilität / Geringer VRAM",
+    "dml_preset_balanced": "Ausgewogen (empfohlen)",
+    "dml_preset_max": "Maximale AMD-GPU-Auslastung",
+    "dml_preset_manual": "Manuelle Rastergröße",
+    "dml_recognition_stable": "Stable Hybrid (empfohlen)",
+    "dml_recognition_auto": "AMD Max Auto (GPU-Erkennung versuchen + Fallback)",
+    "dml_recognition_experimental": "Experimentelles Voll-DirectML",
+    "dml_frame_scan_cpu_ssim": "CPU-SSIM (kompatibel)",
+    "dml_frame_scan_directml_ssim": "AMD DirectML-SSIM (experimentell)",
+    "dml_frame_scan_ffmpeg_d3d11va": "AMD FFmpeg-D3D11VA-Dekodierung + DirectML-SSIM (Prototyp)",
+    "dml_onnx_low_vram": "Geringer VRAM / sicherer",
+    "dml_onnx_balanced": "Ausgewogenes ONNX (empfohlen)",
+    "dml_onnx_max": "Maximaler Durchsatz / höherer VRAM",
+    "dml_onnx_manual": "Manuelle Rastergröße"
 }

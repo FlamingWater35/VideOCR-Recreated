@@ -18,6 +18,7 @@
     "pos_any": "Sembarang",
     "tip_sub_pos": "Pilih perataan teks dalam video (relatif terhadap kotak pemotongan opsional)",
     "btn_how_to_use": "Cara Penggunaan",
+    "btn_info": "Info",
     "help_title": "Info Cropping",
     "help_message": "Gambar kotak crop di atas area subtitle dalam video.\nGunakan klik+seret untuk memilih.\nDalam mode 'Zona Ganda', Anda dapat menggambar dua kotak crop.\nJika tidak ada kotak crop yang dipilih, sepertiga bagian bawah video\nakan digunakan untuk OCR secara default.",
     "lbl_seek": "Cari:",
@@ -269,5 +270,19 @@
     "tip_dml_grid_w": "Lebar maksimum grid OCR yang disambung untuk mode DirectML manual.",
     "tip_dml_grid_h": "Tinggi maksimum grid OCR yang disambung untuk mode DirectML manual.",
     "lbl_dml_section": "DirectML (GPU AMD):",
-    "tip_dml_device": "Pilih adaptor DirectML (GPU) yang digunakan untuk OCR. Pilihan disimpan dan dipulihkan pada peluncuran berikutnya."
+    "tip_dml_device": "Pilih adaptor DirectML (GPU) yang digunakan untuk OCR. Pilihan disimpan dan dipulihkan pada peluncuran berikutnya.",
+    "dml_preset_compatibility": "Kompatibilitas / VRAM Rendah",
+    "dml_preset_balanced": "Seimbang (disarankan)",
+    "dml_preset_max": "Beban GPU AMD Maksimum",
+    "dml_preset_manual": "Ukuran Grid Manual",
+    "dml_recognition_stable": "Hibrida Stabil (disarankan)",
+    "dml_recognition_auto": "AMD Max Auto (coba pengenalan GPU + cadangan)",
+    "dml_recognition_experimental": "DirectML Penuh Eksperimental",
+    "dml_frame_scan_cpu_ssim": "SSIM CPU (kompatibel)",
+    "dml_frame_scan_directml_ssim": "SSIM DirectML AMD (eksperimental)",
+    "dml_frame_scan_ffmpeg_d3d11va": "Dekode FFmpeg D3D11VA AMD + SSIM DirectML (prototipe)",
+    "dml_onnx_low_vram": "VRAM Rendah / lebih aman",
+    "dml_onnx_balanced": "ONNX Seimbang (disarankan)",
+    "dml_onnx_max": "Throughput Maksimum / VRAM lebih tinggi",
+    "dml_onnx_manual": "Ukuran Grid Manual"
 }

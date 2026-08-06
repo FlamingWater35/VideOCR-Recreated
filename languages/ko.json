@@ -18,6 +18,7 @@
     "pos_any": "임의",
     "tip_sub_pos": "비디오의 자막 정렬을 선택하세요 (선택 사항인 크롭 박스 기준)",
     "btn_how_to_use": "사용 방법",
+    "btn_info": "정보",
     "help_title": "자르기 정보",
     "help_message": "비디오의 자막 영역에 자르기 상자를 그립니다.\n클릭+드래그로 선택합니다.\n'이중 영역' 모드에서는 두 개의 자르기 상자를 그릴 수 있습니다.\n자르기 상자가 선택되지 않으면 비디오의 하단 1/3이\n기본적으로 OCR에 사용됩니다.",
     "lbl_seek": "탐색:",
@@ -269,5 +270,19 @@
     "tip_dml_grid_w": "수동 DirectML 모드에서 이어 붙인 OCR 그리드의 최대 너비입니다.",
     "tip_dml_grid_h": "수동 DirectML 모드에서 이어 붙인 OCR 그리드의 최대 높이입니다.",
     "lbl_dml_section": "DirectML (AMD GPU):",
-    "tip_dml_device": "OCR에 사용할 DirectML 어댑터(GPU)를 선택합니다. 선택 항목은 저장되어 다음 실행 시 복원됩니다."
+    "tip_dml_device": "OCR에 사용할 DirectML 어댑터(GPU)를 선택합니다. 선택 항목은 저장되어 다음 실행 시 복원됩니다.",
+    "dml_preset_compatibility": "호환성 / 낮은 VRAM",
+    "dml_preset_balanced": "균형 (권장)",
+    "dml_preset_max": "AMD GPU 최대 부하",
+    "dml_preset_manual": "수동 그리드 크기",
+    "dml_recognition_stable": "안정 하이브리드 (권장)",
+    "dml_recognition_auto": "AMD Max Auto (GPU 인식 시도 + 대체)",
+    "dml_recognition_experimental": "실험적 전체 DirectML",
+    "dml_frame_scan_cpu_ssim": "CPU SSIM (호환)",
+    "dml_frame_scan_directml_ssim": "AMD DirectML SSIM (실험적)",
+    "dml_frame_scan_ffmpeg_d3d11va": "AMD FFmpeg D3D11VA 디코딩 + DirectML SSIM (프로토타입)",
+    "dml_onnx_low_vram": "낮은 VRAM / 더 안전",
+    "dml_onnx_balanced": "균형 ONNX (권장)",
+    "dml_onnx_max": "최대 처리량 / 더 많은 VRAM",
+    "dml_onnx_manual": "수동 그리드 크기"
 }

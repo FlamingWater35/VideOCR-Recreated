@@ -90,37 +90,37 @@ class QueueTab(QWidget):
 
         # reorder/edit row
         row2 = QHBoxLayout()
-        up_btn = QPushButton("▲")
-        up_btn.setProperty("reorder", True)
-        down_btn = QPushButton("▼")
-        down_btn.setProperty("reorder", True)
-        self._tooltip_map[up_btn] = "tip_batch_up"
-        self._tooltip_map[down_btn] = "tip_batch_down"
-        up_btn.setToolTip(i18n.tr("tip_batch_up", "Move up"))
-        down_btn.setToolTip(i18n.tr("tip_batch_down", "Move down"))
-        reset_btn = QPushButton(i18n.tr("btn_reset", "Reset"))
-        reset_btn.setToolTip(i18n.tr("tip_batch_reset", "Reset selected jobs to Pending"))
-        self._tooltip_map[reset_btn] = "tip_batch_reset"
-        edit_btn = QPushButton(i18n.tr("btn_edit", "Edit"))
-        edit_btn.setToolTip(i18n.tr("tip_batch_edit", "Edit selected job settings"))
-        self._tooltip_map[edit_btn] = "tip_batch_edit"
-        remove_btn = QPushButton(i18n.tr("btn_remove", "Remove"))
-        remove_btn.setToolTip(i18n.tr("tip_batch_remove", "Remove selected jobs"))
-        self._tooltip_map[remove_btn] = "tip_batch_remove"
-        clear_btn = QPushButton(i18n.tr("btn_clear_queue", "Clear Queue"))
-        clear_btn.setToolTip(i18n.tr("tip_batch_clear", "Clear finished/cancelled jobs"))
-        self._tooltip_map[clear_btn] = "tip_batch_clear"
-        for b in (up_btn, down_btn, reset_btn, edit_btn, remove_btn, clear_btn):
+        self.up_btn = QPushButton("▲")
+        self.up_btn.setProperty("reorder", True)
+        self.down_btn = QPushButton("▼")
+        self.down_btn.setProperty("reorder", True)
+        self._tooltip_map[self.up_btn] = "tip_batch_up"
+        self._tooltip_map[self.down_btn] = "tip_batch_down"
+        self.up_btn.setToolTip(i18n.tr("tip_batch_up", "Move up"))
+        self.down_btn.setToolTip(i18n.tr("tip_batch_down", "Move down"))
+        self.reset_btn = QPushButton(i18n.tr("btn_reset", "Reset"))
+        self.reset_btn.setToolTip(i18n.tr("tip_batch_reset", "Reset selected jobs to Pending"))
+        self._tooltip_map[self.reset_btn] = "tip_batch_reset"
+        self.edit_btn = QPushButton(i18n.tr("btn_edit", "Edit"))
+        self.edit_btn.setToolTip(i18n.tr("tip_batch_edit", "Edit selected job settings"))
+        self._tooltip_map[self.edit_btn] = "tip_batch_edit"
+        self.remove_btn = QPushButton(i18n.tr("btn_remove", "Remove"))
+        self.remove_btn.setToolTip(i18n.tr("tip_batch_remove", "Remove selected jobs"))
+        self._tooltip_map[self.remove_btn] = "tip_batch_remove"
+        self.clear_btn = QPushButton(i18n.tr("btn_clear_queue", "Clear Queue"))
+        self.clear_btn.setToolTip(i18n.tr("tip_batch_clear", "Clear finished/cancelled jobs"))
+        self._tooltip_map[self.clear_btn] = "tip_batch_clear"
+        for b in (self.up_btn, self.down_btn, self.reset_btn, self.edit_btn, self.remove_btn, self.clear_btn):
             row2.addWidget(b)
         row2.addStretch(1)
         layout.addLayout(row2)
 
-        up_btn.clicked.connect(self.move_up_requested)
-        down_btn.clicked.connect(self.move_down_requested)
-        reset_btn.clicked.connect(self.reset_requested)
-        edit_btn.clicked.connect(self.edit_requested)
-        remove_btn.clicked.connect(self.remove_requested)
-        clear_btn.clicked.connect(self.clear_requested)
+        self.up_btn.clicked.connect(self.move_up_requested)
+        self.down_btn.clicked.connect(self.move_down_requested)
+        self.reset_btn.clicked.connect(self.reset_requested)
+        self.edit_btn.clicked.connect(self.edit_requested)
+        self.remove_btn.clicked.connect(self.remove_requested)
+        self.clear_btn.clicked.connect(self.clear_requested)
         self.start_btn.clicked.connect(self.start_requested)
         self.stop_btn.clicked.connect(self.stop_requested)
         self.pause_btn.clicked.connect(self._pause_clicked)
@@ -191,6 +191,10 @@ class QueueTab(QWidget):
         self.start_btn.setText(i18n.tr("btn_start_queue", "Start Queue"))
         self.stop_btn.setText(i18n.tr("btn_stop_queue", "Stop Queue"))
         self.pause_btn.setText(i18n.tr("btn_pause", "Pause"))
+        self.reset_btn.setText(i18n.tr("btn_reset", "Reset"))
+        self.edit_btn.setText(i18n.tr("btn_edit", "Edit"))
+        self.remove_btn.setText(i18n.tr("btn_remove", "Remove"))
+        self.clear_btn.setText(i18n.tr("btn_clear_queue", "Clear Queue"))
         for widget, tip_key in self._tooltip_map.items():
             widget.setToolTip(i18n.tr(tip_key, ""))
         self.refresh()

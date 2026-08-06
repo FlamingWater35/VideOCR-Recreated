@@ -18,6 +18,7 @@
     "pos_any": "Любая",
     "tip_sub_pos": "Выберите выравнивание субтитров в видео (относительно необязательной области кадрирования)",
     "btn_how_to_use": "Как Использовать",
+    "btn_info": "Информация",
     "help_title": "Информация об Обрезке",
     "help_message": "Нарисуйте область обрезки над областью субтитров в видео.\nИспользуйте клик+перетаскивание для выбора.\nВ режиме 'Двойная Зона' вы можете нарисовать две области обрезки.\nЕсли область обрезки не выбрана, нижняя треть видео\nбудет использоваться для OCR по умолчанию.",
     "lbl_seek": "Поиск:",
@@ -269,5 +270,19 @@
     "tip_dml_grid_w": "Максимальная ширина склеенной сетки OCR для ручного режима DirectML.",
     "tip_dml_grid_h": "Максимальная высота склеенной сетки OCR для ручного режима DirectML.",
     "lbl_dml_section": "DirectML (GPU AMD):",
-    "tip_dml_device": "Выберите адаптер DirectML (GPU), используемый для OCR. Выбор сохраняется и восстанавливается при следующем запуске."
+    "tip_dml_device": "Выберите адаптер DirectML (GPU), используемый для OCR. Выбор сохраняется и восстанавливается при следующем запуске.",
+    "dml_preset_compatibility": "Совместимость / Низкий VRAM",
+    "dml_preset_balanced": "Сбалансированный (рекомендуется)",
+    "dml_preset_max": "Максимальная нагрузка GPU AMD",
+    "dml_preset_manual": "Ручной размер сетки",
+    "dml_recognition_stable": "Stable Hybrid (рекомендуется)",
+    "dml_recognition_auto": "AMD Max Auto (попробовать распознавание на GPU + запасной вариант)",
+    "dml_recognition_experimental": "Экспериментальный полный DirectML",
+    "dml_frame_scan_cpu_ssim": "SSIM на CPU (совместимый)",
+    "dml_frame_scan_directml_ssim": "SSIM DirectML AMD (экспериментальный)",
+    "dml_frame_scan_ffmpeg_d3d11va": "Декодирование FFmpeg D3D11VA AMD + SSIM DirectML (прототип)",
+    "dml_onnx_low_vram": "Низкий VRAM / безопаснее",
+    "dml_onnx_balanced": "Сбалансированный ONNX (рекомендуется)",
+    "dml_onnx_max": "Максимальная пропускная способность / больше VRAM",
+    "dml_onnx_manual": "Ручной размер сетки"
 }

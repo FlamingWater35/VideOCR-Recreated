@@ -18,6 +18,7 @@
     "pos_any": "ใดๆ",
     "tip_sub_pos": "เลือกการจัดตำแหน่งของคำบรรยายในวิดีโอ (อ้างอิงตามกล่องครอบตัดที่เป็นตัวเลือก)",
     "btn_how_to_use": "วิธีใช้งาน",
+    "btn_info": "ข้อมูล",
     "help_title": "ข้อมูลการครอป",
     "help_message": "วาดกล่องครอปบนพื้นที่คำบรรยายในวิดีโอ\nใช้คลิก+ลากเพื่อเลือก\nในโหมด 'สองโซน' คุณสามารถวาดกล่องครอปสองกล่อง\nหากไม่มีการเลือกกล่องครอป หนึ่งในสามด้านล่างของวิดีโอ\nจะถูกใช้สำหรับ OCR โดยค่าเริ่มต้น",
     "lbl_seek": "ค้นหา:",
@@ -269,5 +270,19 @@
     "tip_dml_grid_w": "ความกว้างสูงสุดของกริด OCR ที่ต่อกันสำหรับโหมด DirectML แบบกำหนดเอง",
     "tip_dml_grid_h": "ความสูงสูงสุดของกริด OCR ที่ต่อกันสำหรับโหมด DirectML แบบกำหนดเอง",
     "lbl_dml_section": "DirectML (GPU AMD):",
-    "tip_dml_device": "เลือกอะแดปเตอร์ DirectML (GPU) ที่ใช้สำหรับ OCR การเลือกจะถูกบันทึกและเรียกคืนเมื่อเปิดใช้ครั้งถัดไป"
+    "tip_dml_device": "เลือกอะแดปเตอร์ DirectML (GPU) ที่ใช้สำหรับ OCR การเลือกจะถูกบันทึกและเรียกคืนเมื่อเปิดใช้ครั้งถัดไป",
+    "dml_preset_compatibility": "ความเข้ากันได้ / VRAM ต่ำ",
+    "dml_preset_balanced": "สมดุล (แนะนำ)",
+    "dml_preset_max": "โหลด GPU AMD สูงสุด",
+    "dml_preset_manual": "ขนาดกริดแบบกำหนดเอง",
+    "dml_recognition_stable": "ไฮบริดเสถียร (แนะนำ)",
+    "dml_recognition_auto": "AMD Max Auto (ลองรู้จำด้วย GPU + สำรอง)",
+    "dml_recognition_experimental": "DirectML เต็มรูปแบบทดลอง",
+    "dml_frame_scan_cpu_ssim": "SSIM CPU (เข้ากันได้)",
+    "dml_frame_scan_directml_ssim": "SSIM DirectML AMD (ทดลอง)",
+    "dml_frame_scan_ffmpeg_d3d11va": "ถอดรหัส FFmpeg D3D11VA AMD + SSIM DirectML (ต้นแบบ)",
+    "dml_onnx_low_vram": "VRAM ต่ำ / ปลอดภัยกว่า",
+    "dml_onnx_balanced": "ONNX สมดุล (แนะนำ)",
+    "dml_onnx_max": "ปริมาณงานสูงสุด / VRAM มากขึ้น",
+    "dml_onnx_manual": "ขนาดกริดแบบกำหนดเอง"
 }

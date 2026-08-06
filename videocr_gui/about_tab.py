@@ -38,9 +38,9 @@ class AboutTab(QWidget):
 
         layout.addSpacing(12)
 
-        newest = QLabel(i18n.tr("lbl_get_newest", "Get the newest version here:"))
-        newest.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(newest)
+        self.newest_lbl = QLabel(i18n.tr("lbl_get_newest", "Get the newest version here:"))
+        self.newest_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(self.newest_lbl)
 
         releases = ClickableLabel("https://github.com/timminator/VideOCR/releases")
         releases.setObjectName("linkLabel")
@@ -51,10 +51,10 @@ class AboutTab(QWidget):
 
         layout.addSpacing(8)
 
-        bug = QLabel(i18n.tr("lbl_bug_report", "Found a bug or have a suggestion? Feel free to open an issue at:"))
-        bug.setWordWrap(True)
-        bug.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(bug)
+        self.bug_lbl = QLabel(i18n.tr("lbl_bug_report", "Found a bug or have a suggestion? Feel free to open an issue at:"))
+        self.bug_lbl.setWordWrap(True)
+        self.bug_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(self.bug_lbl)
 
         issues = ClickableLabel("https://github.com/timminator/VideOCR/issues")
         issues.setObjectName("linkLabel")
@@ -71,3 +71,5 @@ class AboutTab(QWidget):
                 label.setText(i18n.tr("lbl_about_version", "Version: {}").replace("{}", "{version}").format(version=version))
             elif label.objectName() == "aboutTitle":
                 label.setText("VideOCR Recreated")
+        self.newest_lbl.setText(i18n.tr("lbl_get_newest", "Get the newest version here:"))
+        self.bug_lbl.setText(i18n.tr("lbl_bug_report", "Found a bug or have a suggestion? Feel free to open an issue at:"))

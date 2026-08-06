@@ -18,6 +18,7 @@
     "pos_any": "N'importe",
     "tip_sub_pos": "Sélectionnez l'alignement des sous-titres dans la vidéo (par rapport à une zone de recadrage facultative)",
     "btn_how_to_use": "Comment utiliser",
+    "btn_info": "Infos",
     "help_title": "Informations sur le découpage",
     "help_message": "Dessinez une zone de découpe sur la région des sous-titres dans la vidéo.\nUtilisez clic+glisser pour sélectionner.\nEn mode 'Double zone', vous pouvez dessiner deux zones de découpe.\nSi aucune zone n'est sélectionnée, le tiers inférieur de la vidéo\nsera utilisé par défaut pour l'OCR.",
     "lbl_seek": "Aller à :",
@@ -269,5 +270,19 @@
     "tip_dml_grid_w": "Largeur maximale de la grille OCR fusionnée pour le mode DirectML manuel.",
     "tip_dml_grid_h": "Hauteur maximale de la grille OCR fusionnée pour le mode DirectML manuel.",
     "lbl_dml_section": "DirectML (GPU AMD) :",
-    "tip_dml_device": "Sélectionnez l'adaptateur DirectML (GPU) utilisé pour l'OCR. La sélection est enregistrée et restaurée au prochain lancement."
+    "tip_dml_device": "Sélectionnez l'adaptateur DirectML (GPU) utilisé pour l'OCR. La sélection est enregistrée et restaurée au prochain lancement.",
+    "dml_preset_compatibility": "Compatibilité / VRAM faible",
+    "dml_preset_balanced": "Équilibré (recommandé)",
+    "dml_preset_max": "Charge GPU AMD maximale",
+    "dml_preset_manual": "Taille de grille manuelle",
+    "dml_recognition_stable": "Hybride stable (recommandé)",
+    "dml_recognition_auto": "AMD Max Auto (essayer la reconnaissance GPU + repli)",
+    "dml_recognition_experimental": "DirectML complet expérimental",
+    "dml_frame_scan_cpu_ssim": "SSIM CPU (compatible)",
+    "dml_frame_scan_directml_ssim": "SSIM DirectML AMD (expérimental)",
+    "dml_frame_scan_ffmpeg_d3d11va": "Décodage FFmpeg D3D11VA AMD + SSIM DirectML (prototype)",
+    "dml_onnx_low_vram": "VRAM faible / plus sûr",
+    "dml_onnx_balanced": "ONNX équilibré (recommandé)",
+    "dml_onnx_max": "Débit maximal / VRAM supérieure",
+    "dml_onnx_manual": "Taille de grille manuelle"
 }

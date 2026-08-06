@@ -18,6 +18,7 @@
     "pos_any": "任意",
     "tip_sub_pos": "选择视频中字幕的对齐方式（相对于可选的裁剪框）",
     "btn_how_to_use": "使用说明",
+    "btn_info": "信息",
     "help_title": "字幕选区说明",
     "help_message": "在视频的字幕区域绘制一个字幕选区。\n单击并拖动进行选择。\n在“双区域”模式下，可以绘制两个字幕选区。\n如果未选择字幕选区，则默认使用视频底部三分之一进行 OCR。",
     "lbl_seek": "定位：",
@@ -269,5 +270,19 @@
     "tip_dml_grid_w": "手动 DirectML 模式下拼接 OCR 网格的最大宽度。",
     "tip_dml_grid_h": "手动 DirectML 模式下拼接 OCR 网格的最大高度。",
     "lbl_dml_section": "DirectML（AMD GPU）：",
-    "tip_dml_device": "选择用于 OCR 的 DirectML 适配器（GPU）。该选择会被保存，并在下次启动时恢复。"
+    "tip_dml_device": "选择用于 OCR 的 DirectML 适配器（GPU）。该选择会被保存，并在下次启动时恢复。",
+    "dml_preset_compatibility": "兼容 / 低显存",
+    "dml_preset_balanced": "均衡（推荐）",
+    "dml_preset_max": "AMD GPU 最大负载",
+    "dml_preset_manual": "手动网格大小",
+    "dml_recognition_stable": "稳定混合（推荐）",
+    "dml_recognition_auto": "AMD Max Auto（尝试 GPU 识别 + 回退）",
+    "dml_recognition_experimental": "实验性全 DirectML",
+    "dml_frame_scan_cpu_ssim": "CPU SSIM（兼容）",
+    "dml_frame_scan_directml_ssim": "AMD DirectML SSIM（实验性）",
+    "dml_frame_scan_ffmpeg_d3d11va": "AMD FFmpeg D3D11VA 解码 + DirectML SSIM（原型）",
+    "dml_onnx_low_vram": "低显存 / 更安全",
+    "dml_onnx_balanced": "均衡 ONNX（推荐）",
+    "dml_onnx_max": "最大吞吐量 / 更高显存",
+    "dml_onnx_manual": "手动网格大小"
 }

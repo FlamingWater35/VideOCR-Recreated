@@ -18,6 +18,7 @@
     "pos_any": "Qualquer",
     "tip_sub_pos": "Selecione o alinhamento das legendas no vídeo (relativo a uma caixa de corte opcional)",
     "btn_how_to_use": "Como usar",
+    "btn_info": "Informações",
     "help_title": "Informações de corte",
     "help_message": "Desenhe uma área de corte sobre a região das legendas no vídeo.\nClique e arraste para selecionar.\nNo modo 'Zona dupla', você pode desenhar duas áreas de corte.\nSe nenhuma área for selecionada, o terço inferior do vídeo\nserá usado por padrão para OCR.",
     "lbl_seek": "Ir para:",
@@ -269,5 +270,19 @@
     "tip_dml_grid_w": "Largura máxima da grade OCR unida para o modo DirectML manual.",
     "tip_dml_grid_h": "Altura máxima da grade OCR unida para o modo DirectML manual.",
     "lbl_dml_section": "DirectML (GPU AMD):",
-    "tip_dml_device": "Selecione o adaptador DirectML (GPU) usado para OCR. A seleção é salva e restaurada na próxima inicialização."
+    "tip_dml_device": "Selecione o adaptador DirectML (GPU) usado para OCR. A seleção é salva e restaurada na próxima inicialização.",
+    "dml_preset_compatibility": "Compatibilidade / VRAM baixa",
+    "dml_preset_balanced": "Equilibrado (recomendado)",
+    "dml_preset_max": "Carga máxima da GPU AMD",
+    "dml_preset_manual": "Tamanho de grade manual",
+    "dml_recognition_stable": "Híbrido estável (recomendado)",
+    "dml_recognition_auto": "AMD Max Auto (tentar reconhecimento na GPU + fallback)",
+    "dml_recognition_experimental": "DirectML completo experimental",
+    "dml_frame_scan_cpu_ssim": "SSIM na CPU (compatível)",
+    "dml_frame_scan_directml_ssim": "SSIM DirectML AMD (experimental)",
+    "dml_frame_scan_ffmpeg_d3d11va": "Decodificação FFmpeg D3D11VA AMD + SSIM DirectML (protótipo)",
+    "dml_onnx_low_vram": "VRAM baixa / mais seguro",
+    "dml_onnx_balanced": "ONNX equilibrado (recomendado)",
+    "dml_onnx_max": "Máximo rendimento / mais VRAM",
+    "dml_onnx_manual": "Tamanho de grade manual"
 }

@@ -18,6 +18,7 @@
     "pos_any": "Qualsiasi",
     "tip_sub_pos": "Seleziona l'allineamento dei sottotitoli nel video (relativo a un riquadro di ritaglio opzionale)",
     "btn_how_to_use": "Come usare",
+    "btn_info": "Informazioni",
     "help_title": "Informazioni sul ritaglio",
     "help_message": "Disegna un'area di ritaglio sopra la regione dei sottotitoli nel video.\nClicca e trascina per selezionare.\nIn modalità 'Doppia zona', puoi disegnare due aree di ritaglio.\nSe non selezioni nulla, il terzo inferiore del video\nsarà usato di default per l'OCR.",
     "lbl_seek": "Vai a:",
@@ -269,5 +270,19 @@
     "tip_dml_grid_w": "Larghezza massima della griglia OCR unita per la modalità DirectML manuale.",
     "tip_dml_grid_h": "Altezza massima della griglia OCR unita per la modalità DirectML manuale.",
     "lbl_dml_section": "DirectML (GPU AMD):",
-    "tip_dml_device": "Seleziona l'adattatore DirectML (GPU) usato per l'OCR. La selezione viene salvata e ripristinata al prossimo avvio."
+    "tip_dml_device": "Seleziona l'adattatore DirectML (GPU) usato per l'OCR. La selezione viene salvata e ripristinata al prossimo avvio.",
+    "dml_preset_compatibility": "Compatibilità / VRAM bassa",
+    "dml_preset_balanced": "Bilanciato (consigliato)",
+    "dml_preset_max": "Carico GPU AMD massimo",
+    "dml_preset_manual": "Dimensione griglia manuale",
+    "dml_recognition_stable": "Ibrido stabile (consigliato)",
+    "dml_recognition_auto": "AMD Max Auto (prova riconoscimento GPU + fallback)",
+    "dml_recognition_experimental": "DirectML completo sperimentale",
+    "dml_frame_scan_cpu_ssim": "SSIM CPU (compatibile)",
+    "dml_frame_scan_directml_ssim": "SSIM DirectML AMD (sperimentale)",
+    "dml_frame_scan_ffmpeg_d3d11va": "Decodifica FFmpeg D3D11VA AMD + SSIM DirectML (prototipo)",
+    "dml_onnx_low_vram": "VRAM bassa / più sicuro",
+    "dml_onnx_balanced": "ONNX bilanciato (consigliato)",
+    "dml_onnx_max": "Massimo throughput / più VRAM",
+    "dml_onnx_manual": "Dimensione griglia manuale"
 }

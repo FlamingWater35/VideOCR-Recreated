@@ -23,6 +23,35 @@ from . import constants as C
 from . import i18n
 from .widgets import WheelGuardComboBox
 
+# Map DirectML combo widget key -> {English option name: i18n key}.
+# Settings/CLI store the English canonical option name; the UI shows the
+# localized text. Kept here (not in constants.py) so the CLI round-trip and
+# settings persistence stay on the stable English strings.
+# The i18n key per option is derived from constants' CLI value, so the two
+# "Manual Grid Size" entries (presets vs onnx) get distinct keys.
+DML_OPTION_KEYS: dict[str, dict[str, str]] = {
+    "--directml_performance_preset": {
+        name: f"dml_preset_{cli}" for name, cli in C.DIRECTML_PERFORMANCE_PRESETS
+    },
+    "--directml_recognition_mode": {
+        name: f"dml_recognition_{cli}" for name, cli in C.DIRECTML_RECOGNITION_MODES
+    },
+    "--directml_frame_scan_mode": {
+        name: f"dml_frame_scan_{cli}" for name, cli in C.DIRECTML_FRAME_SCAN_MODES
+    },
+    "--onnx_directml_tuning": {
+        name: f"dml_onnx_{cli}" for name, cli in C.ONNX_DIRECTML_TUNING_MODES
+    },
+}
+
+# Combo widget keys whose options are translatable via DML_OPTION_KEYS.
+DML_OPTION_COMBOS = (
+    "--directml_performance_preset",
+    "--directml_recognition_mode",
+    "--directml_frame_scan_mode",
+    "--onnx_directml_tuning",
+)
+
 
 def _translated_label(key: str, fallback: str) -> str:
     """Returns the translated text for a label key, falling back to the default."""
@@ -104,10 +133,10 @@ class SettingsTab(QWidget):
         self._widgets["-DML_ADAPTER_COMBO-"].currentIndexChanged.connect(
             lambda _i: self._on_changed(["-DML_ADAPTER_COMBO-"])
         )
-        refresh_btn = QPushButton(i18n.tr("btn_refresh", "Refresh"))
-        refresh_btn.clicked.connect(self._refresh_directml)
+        self.refresh_btn = QPushButton(i18n.tr("btn_refresh", "Refresh"))
+        self.refresh_btn.clicked.connect(self._refresh_directml)
         gpu_row.addWidget(self._widgets["-DML_ADAPTER_COMBO-"])
-        gpu_row.addWidget(refresh_btn)
+        gpu_row.addWidget(self.refresh_btn)
         gpu_row.addStretch(1)
         dml_form.addRow(self._lbl("lbl_dml_device", "DirectML GPU:"), gpu_row)
 
@@ -219,7 +248,8 @@ class SettingsTab(QWidget):
             display = [_translated_label(lang_key, name) for lang_key, name in options]
             combo.addItems(display)
         else:
-            combo.addItems([str(o) for o in options])
+            display = [self._localized_option(key, str(o)) for o in options]
+            combo.addItems(display)
         self._widgets[key] = combo
         if internal_values is not None:
             self._combo_internal[key] = internal_values
@@ -229,6 +259,26 @@ class SettingsTab(QWidget):
         form.addRow(self._lbl(label_key, fallback_label), combo)
         combo.currentIndexChanged.connect(lambda _i, k=key: self._on_changed([k]))
         return combo
+
+    @staticmethod
+    def _localized_option(combo_key: str, option: str) -> str:
+        """Localizes a DirectML option's display text via its i18n key."""
+        if combo_key in DML_OPTION_COMBOS:
+            i18n_key = DML_OPTION_KEYS.get(combo_key, {}).get(option)
+            if i18n_key:
+                return i18n.tr(i18n_key, option)
+        return option
+
+    @staticmethod
+    def _dml_english_options(combo_key: str) -> list[str]:
+        """English canonical option names for a DirectML combo key."""
+        source = {
+            "--directml_performance_preset": C.DIRECTML_PERFORMANCE_PRESETS,
+            "--directml_recognition_mode": C.DIRECTML_RECOGNITION_MODES,
+            "--directml_frame_scan_mode": C.DIRECTML_FRAME_SCAN_MODES,
+            "--onnx_directml_tuning": C.ONNX_DIRECTML_TUNING_MODES,
+        }.get(combo_key, [])
+        return [name for name, _ in source]
 
     def _add_check(self, form: QFormLayout, key: str, label_key: str, fallback_label: str,
                    tooltip_key: str, default: bool) -> QCheckBox:
@@ -258,6 +308,12 @@ class SettingsTab(QWidget):
                         internal_list = self._combo_internal[key]
                         idx = internal_list.index(str(value)) if str(value) in internal_list else 0
                         widget.setCurrentIndex(idx)
+                    elif key in DML_OPTION_COMBOS:
+                        # settings store the English canonical value; the combo
+                        # displays localized text, so match by option index
+                        names = self._dml_english_options(key)
+                        idx = names.index(str(value)) if str(value) in names else 0
+                        widget.setCurrentIndex(idx)
                     else:
                         idx = widget.findText(str(value))
                         if idx >= 0:
@@ -281,10 +337,12 @@ class SettingsTab(QWidget):
 
             scale_combo = self._widgets["gui_scaling"]
             scale_combo.clear()
-            scale_combo.addItems([s[1] for s in C.GUI_SCALING_LIST])
-            idx = scale_combo.findText(str(settings.get("gui_scaling", C.DEFAULT_GUI_SCALING)))
-            if idx >= 0:
-                scale_combo.setCurrentIndex(idx)
+            scale_combo.addItems([i18n.tr(k, d) for k, d in C.GUI_SCALING_LIST])
+            saved = str(settings.get("gui_scaling", C.DEFAULT_GUI_SCALING))
+            # settings store the internal key (system_default/scale_1_0/...)
+            internal_keys = [k for k, _ in C.GUI_SCALING_LIST]
+            idx = internal_keys.index(saved) if saved in internal_keys else 0
+            scale_combo.setCurrentIndex(idx)
         finally:
             self._block_signals = False
 
@@ -301,6 +359,16 @@ class SettingsTab(QWidget):
                     internal_list = self._combo_internal[key]
                     idx = widget.currentIndex()
                     settings[key] = internal_list[idx] if 0 <= idx < len(internal_list) else (internal_list[0] if internal_list else "")
+                elif key == "gui_scaling":
+                    # combo shows localized text; persist the internal key
+                    internal_keys = [k for k, _ in C.GUI_SCALING_LIST]
+                    idx = widget.currentIndex()
+                    settings[key] = internal_keys[idx] if 0 <= idx < len(internal_keys) else (internal_keys[0] if internal_keys else "")
+                elif key in DML_OPTION_COMBOS:
+                    # combo shows localized text; persist the English canonical value
+                    names = self._dml_english_options(key)
+                    idx = widget.currentIndex()
+                    settings[key] = names[idx] if 0 <= idx < len(names) else (names[0] if names else "")
                 else:
                     settings[key] = widget.currentText()
             elif isinstance(widget, QCheckBox):
@@ -319,7 +387,7 @@ class SettingsTab(QWidget):
                 label.setText(_translated_label(key, fallback or label.text()))
 
         # Checkboxes (in _widgets, carry langKey/fallbackText)
-        for key, widget in self._widgets.items():
+        for _key, widget in self._widgets.items():
             if isinstance(widget, QCheckBox):
                 prop = widget.property("langKey")
                 fallback = widget.property("fallbackText")
@@ -342,9 +410,38 @@ class SettingsTab(QWidget):
                 widget.setCurrentIndex(internal_list.index(cur_internal))
             widget.blockSignals(False)
 
+        # DirectML option combos: rebuild localized items preserving selection
+        for key in DML_OPTION_COMBOS:
+            widget = self._widgets.get(key)
+            if not isinstance(widget, QComboBox):
+                continue
+            idx = widget.currentIndex()
+            display = [self._localized_option(key, name) for name in self._dml_english_options(key)]
+            widget.blockSignals(True)
+            widget.clear()
+            widget.addItems(display)
+            if 0 <= idx < widget.count():
+                widget.setCurrentIndex(idx)
+            widget.blockSignals(False)
+
+        # GUI scaling combo: rebuild localized items preserving selection
+        scale_combo = self._widgets.get("gui_scaling")
+        if isinstance(scale_combo, QComboBox):
+            idx = scale_combo.currentIndex()
+            display = [i18n.tr(k, d) for k, d in C.GUI_SCALING_LIST]
+            scale_combo.blockSignals(True)
+            scale_combo.clear()
+            scale_combo.addItems(display)
+            if 0 <= idx < scale_combo.count():
+                scale_combo.setCurrentIndex(idx)
+            scale_combo.blockSignals(False)
+
         # Section titles
         for box, key, fallback in self._section_boxes:
             box.setTitle(i18n.tr(key, fallback))
+
+        # DirectML refresh button
+        self.refresh_btn.setText(i18n.tr("btn_refresh", "Refresh"))
 
         # Tooltips
         for widget, tip_key in self._tooltips.items():
@@ -367,7 +464,11 @@ class SettingsTab(QWidget):
             self.ui_language_changed.emit(self._widgets[key].currentText())
             return
         elif key == "gui_scaling":
-            self.scaling_changed.emit(self._widgets[key].currentText())
+            # emit the internal key, not the localized display text
+            internal_keys = [k for k, _ in C.GUI_SCALING_LIST]
+            idx = self._widgets[key].currentIndex()
+            internal = internal_keys[idx] if 0 <= idx < len(internal_keys) else (internal_keys[0] if internal_keys else "")
+            self.scaling_changed.emit(internal)
             return
         elif key == "-DML_ADAPTER_COMBO-":
             self.directml_gpu_changed.emit(self._directml_index())
@@ -383,7 +484,9 @@ class SettingsTab(QWidget):
         return directml.option_to_index(self._widgets["-DML_ADAPTER_COMBO-"].currentText())
 
     def _apply_preset_grid(self) -> None:
-        preset = self._widgets["--directml_performance_preset"].currentText()
+        preset = self._dml_english_options("--directml_performance_preset")[
+            self._widgets["--directml_performance_preset"].currentIndex()
+        ]
         cli = C.DIRECTML_PERFORMANCE_TO_CLI.get(preset, "balanced")
         grid = {"compatibility": "1600", "balanced": "2400", "max": "4096"}.get(cli)
         if grid:
@@ -391,7 +494,9 @@ class SettingsTab(QWidget):
             self._widgets["--directml_grid_max_height"].setText(grid)
 
     def _apply_onnx_grid(self) -> None:
-        tuning = self._widgets["--onnx_directml_tuning"].currentText()
+        tuning = self._dml_english_options("--onnx_directml_tuning")[
+            self._widgets["--onnx_directml_tuning"].currentIndex()
+        ]
         cli = C.ONNX_DIRECTML_TUNING_TO_CLI.get(tuning, "balanced")
         engine = self._widgets.get("ocr_engine", None)
         engine_text = ""

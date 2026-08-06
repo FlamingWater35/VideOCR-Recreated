@@ -17,6 +17,7 @@
   "pos_any": "Any",
   "tip_sub_pos": "Select the alignment of subtitles in the video (relative to an optional crop box)",
   "btn_how_to_use": "How to Use",
+  "btn_info": "Info",
   "help_title": "Cropping Info",
   "help_message": "Draw a crop box over the subtitle region in the video.\nUse click+drag to select.\nIn 'Dual Zone' mode, you can draw two crop boxes.\nIf no crop box is selected, the bottom third of the video\nwill be used for OCR by default.",
   "lbl_seek": "Seek:",
@@ -250,5 +251,19 @@
   "tip_dml_grid_w": "Maximum stitched OCR grid width for manual DirectML mode.",
   "tip_dml_grid_h": "Maximum stitched OCR grid height for manual DirectML mode.",
   "lbl_dml_section": "DirectML (AMD GPU):",
-  "tip_dml_device": "Select the DirectML adapter (GPU) used for OCR. The selection is saved and restored on the next launch."
+  "tip_dml_device": "Select the DirectML adapter (GPU) used for OCR. The selection is saved and restored on the next launch.",
+  "dml_preset_compatibility": "Compatibility / Low VRAM",
+  "dml_preset_balanced": "Balanced (recommended)",
+  "dml_preset_max": "Max AMD GPU Load",
+  "dml_preset_manual": "Manual Grid Size",
+  "dml_recognition_stable": "Stable Hybrid (recommended)",
+  "dml_recognition_auto": "AMD Max Auto (try GPU recognition + fallback)",
+  "dml_recognition_experimental": "Experimental Full DirectML",
+  "dml_frame_scan_cpu_ssim": "CPU SSIM (compatible)",
+  "dml_frame_scan_directml_ssim": "AMD DirectML SSIM (experimental)",
+  "dml_frame_scan_ffmpeg_d3d11va": "AMD FFmpeg D3D11VA Decode + DirectML SSIM (prototype)",
+  "dml_onnx_low_vram": "Low VRAM / safer",
+  "dml_onnx_balanced": "Balanced ONNX (recommended)",
+  "dml_onnx_max": "Max Throughput / higher VRAM",
+  "dml_onnx_manual": "Manual Grid Size"
 }

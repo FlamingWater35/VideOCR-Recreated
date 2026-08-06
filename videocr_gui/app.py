@@ -81,6 +81,11 @@ class MainWindow(QMainWindow):
         self._taskbar: Any = None
         self._graph_size = (720, 405)
 
+        # Load the saved UI language BEFORE building widgets so the initial
+        # render is localized (i18n.tr() falls back to English defaults while
+        # the language dict is empty).
+        i18n.load_language(str(self._settings.get("--language", "en")))
+
         self._build_ui()
         self._init_taskbar()
         self._apply_settings_to_ui()
@@ -136,30 +141,32 @@ class MainWindow(QMainWindow):
         self.source_combo.setMinimumWidth(300)
         self.source_combo.setEditable(False)
         self.source_combo.currentIndexChanged.connect(self._on_source_changed)
-        row1.addWidget(QLabel(i18n.tr("lbl_source", "Source:")))
+        self.source_lbl = QLabel(i18n.tr("lbl_source", "Source:"))
+        row1.addWidget(self.source_lbl)
         row1.addWidget(self.source_combo, 1)
-        open_btn = QPushButton(i18n.tr("btn_browse", "Open File..."))
-        folder_btn = QPushButton(i18n.tr("btn_browse_folder", "Open Folder..."))
-        open_btn.clicked.connect(self._open_file)
-        folder_btn.clicked.connect(self._open_folder)
-        row1.addWidget(open_btn)
-        row1.addWidget(folder_btn)
+        self.open_btn = QPushButton(i18n.tr("btn_browse", "Open File..."))
+        self.folder_btn = QPushButton(i18n.tr("btn_browse_folder", "Open Folder..."))
+        self.open_btn.clicked.connect(self._open_file)
+        self.folder_btn.clicked.connect(self._open_folder)
+        row1.addWidget(self.open_btn)
+        row1.addWidget(self.folder_btn)
         layout.addLayout(row1)
 
         row2 = QHBoxLayout()
         self.output_edit = QLineEdit()
         self.output_edit.setReadOnly(True)
-        row2.addWidget(QLabel(i18n.tr("lbl_output_srt", "Output SRT:")))
+        self.output_lbl = QLabel(i18n.tr("lbl_output_srt", "Output SRT:"))
+        row2.addWidget(self.output_lbl)
         row2.addWidget(self.output_edit, 1)
         self.save_as_btn = QPushButton(i18n.tr("btn_save_as", "Save As..."))
         self.save_as_btn.clicked.connect(self._save_as)
-        info_btn = QPushButton(i18n.tr("btn_info", "Info"))
-        info_btn.clicked.connect(self._show_engine_info)
-        help_btn = QPushButton(i18n.tr("btn_how_to_use", "How to Use"))
-        help_btn.clicked.connect(self._show_help)
+        self.info_btn = QPushButton(i18n.tr("btn_info", "Info"))
+        self.info_btn.clicked.connect(self._show_engine_info)
+        self.help_btn = QPushButton(i18n.tr("btn_how_to_use", "How to Use"))
+        self.help_btn.clicked.connect(self._show_help)
         row2.addWidget(self.save_as_btn)
-        row2.addWidget(info_btn)
-        row2.addWidget(help_btn)
+        row2.addWidget(self.info_btn)
+        row2.addWidget(self.help_btn)
         layout.addLayout(row2)
 
         # engine / language / position row
@@ -189,7 +196,8 @@ class MainWindow(QMainWindow):
 
         # seek row
         seek_row = QHBoxLayout()
-        seek_row.addWidget(QLabel(i18n.tr("lbl_seek", "Seek:")))
+        self.seek_lbl = QLabel(i18n.tr("lbl_seek", "Seek:"))
+        seek_row.addWidget(self.seek_lbl)
         self.seek_slider = ClickableSlider(Qt.Orientation.Horizontal)
         self.seek_slider.setRange(0, 0)
         self.seek_slider.setEnabled(False)
@@ -201,7 +209,8 @@ class MainWindow(QMainWindow):
 
         # crop coords row
         crop_row = QHBoxLayout()
-        crop_row.addWidget(QLabel(i18n.tr("lbl_crop_box", "Crop Box (X, Y, W, H):")))
+        self.crop_lbl = QLabel(i18n.tr("lbl_crop_box", "Crop Box (X, Y, W, H):"))
+        crop_row.addWidget(self.crop_lbl)
         self.crop_label = QLabel(i18n.tr("crop_not_set", "Not Set"))
         self.crop_label.setStyleSheet("font-family: monospace;")
         crop_row.addWidget(self.crop_label, 1)
@@ -222,16 +231,16 @@ class MainWindow(QMainWindow):
         self.run_btn.clicked.connect(self._on_run)
         self.pause_btn.clicked.connect(self._on_pause)
         self.cancel_btn.clicked.connect(self._on_cancel)
-        add_btn = QPushButton(i18n.tr("btn_add_to_queue", "Add to Queue"))
-        add_all_btn = QPushButton(i18n.tr("btn_add_all_to_queue", "Add All to Queue"))
-        add_btn.clicked.connect(self._on_add_to_queue)
-        add_all_btn.clicked.connect(self._on_add_all)
+        self.add_btn = QPushButton(i18n.tr("btn_add_to_queue", "Add to Queue"))
+        self.add_all_btn = QPushButton(i18n.tr("btn_add_all_to_queue", "Add All to Queue"))
+        self.add_btn.clicked.connect(self._on_add_to_queue)
+        self.add_all_btn.clicked.connect(self._on_add_all)
         run_row.addWidget(self.run_btn)
         run_row.addWidget(self.pause_btn)
         run_row.addWidget(self.cancel_btn)
         run_row.addStretch(1)
-        run_row.addWidget(add_btn)
-        run_row.addWidget(add_all_btn)
+        run_row.addWidget(self.add_btn)
+        run_row.addWidget(self.add_all_btn)
         layout.addLayout(run_row)
 
         # progress row
@@ -250,7 +259,8 @@ class MainWindow(QMainWindow):
         # post-action row
         post_row = QHBoxLayout()
         post_row.addStretch(1)
-        post_row.addWidget(QLabel(i18n.tr("lbl_when_ready", "When ready:")))
+        self.when_ready_lbl = QLabel(i18n.tr("lbl_when_ready", "When ready:"))
+        post_row.addWidget(self.when_ready_lbl)
         self.post_action_combo = WheelGuardComboBox()
         self._refresh_post_action_combo()
         self.post_action_combo.currentIndexChanged.connect(self._on_post_action_changed)
@@ -258,8 +268,8 @@ class MainWindow(QMainWindow):
         layout.addLayout(post_row)
 
         # log pane
-        log_label = QLabel(i18n.tr("lbl_log", "Log:"))
-        layout.addWidget(log_label)
+        self.log_lbl = QLabel(i18n.tr("lbl_log", "Log:"))
+        layout.addWidget(self.log_lbl)
         self.log_pane = QPlainTextEdit()
         self.log_pane.setReadOnly(True)
         self.log_pane.setMaximumBlockCount(5000)
@@ -443,10 +453,34 @@ class MainWindow(QMainWindow):
         self.about_tab.retranslate(self._version())
         self.settings_tab.retranslate()
         self._refresh_post_action_combo()
-        # re-translate process-tab labels
+        self._translate_process_tab()
+
+    def _translate_process_tab(self) -> None:
+        """Re-translates every process-tab widget that has translatable text."""
+        self.source_lbl.setText(i18n.tr("lbl_source", "Source:"))
+        self.output_lbl.setText(i18n.tr("lbl_output_srt", "Output SRT:"))
         self.engine_lbl.setText(i18n.tr("lbl_ocr_engine", "OCR Engine:"))
         self.lang_lbl.setText(i18n.tr("lbl_sub_lang", "Subtitle Language:"))
         self.pos_lbl.setText(i18n.tr("lbl_sub_pos", "Subtitle Position:"))
+        self.seek_lbl.setText(i18n.tr("lbl_seek", "Seek:"))
+        self.crop_lbl.setText(i18n.tr("lbl_crop_box", "Crop Box (X, Y, W, H):"))
+        self.crop_label.setText(i18n.tr("crop_not_set", "Not Set"))
+        self.when_ready_lbl.setText(i18n.tr("lbl_when_ready", "When ready:"))
+        self.log_lbl.setText(i18n.tr("lbl_log", "Log:"))
+        self.time_label.setText(i18n.tr("time_text_empty", "Time: -/-"))
+
+        self.open_btn.setText(i18n.tr("btn_browse", "Open File..."))
+        self.folder_btn.setText(i18n.tr("btn_browse_folder", "Open Folder..."))
+        self.save_as_btn.setText(i18n.tr("btn_save_as", "Save As..."))
+        self.info_btn.setText(i18n.tr("btn_info", "Info"))
+        self.help_btn.setText(i18n.tr("btn_how_to_use", "How to Use"))
+        self.clear_crop_btn.setText(i18n.tr("btn_clear_crop", "Clear Crop"))
+        self.run_btn.setText(i18n.tr("btn_run", "Run"))
+        self.pause_btn.setText(i18n.tr("btn_pause", "Pause"))
+        self.cancel_btn.setText(i18n.tr("btn_cancel", "Cancel"))
+        self.add_btn.setText(i18n.tr("btn_add_to_queue", "Add to Queue"))
+        self.add_all_btn.setText(i18n.tr("btn_add_all_to_queue", "Add All to Queue"))
+
         self._populate_engine_lang_pos()
 
     def _version(self) -> str:

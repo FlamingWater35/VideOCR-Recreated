@@ -438,7 +438,7 @@ GUI_SCALING_LIST = [('system_default', 'System Default'),
  ('scale_1_5', '1.5'),
  ('scale_1_75', '1.75'),
  ('scale_2_0', '2.0')]
-DEFAULT_GUI_SCALING = 'System Default'
+DEFAULT_GUI_SCALING = 'system_default'
 
 # --- DirectML options ---
 DIRECTML_AUTO_OPTION = 'Auto (recommended)'

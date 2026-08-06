@@ -18,6 +18,7 @@
     "pos_any": "Bất Kỳ",
     "tip_sub_pos": "Chọn căn lề của phụ đề trong video (tương đối với một hộp cắt tùy chọn)",
     "btn_how_to_use": "Hướng Dẫn Sử Dụng",
+    "btn_info": "Thông Tin",
     "help_title": "Thông Tin Cắt",
     "help_message": "Vẽ một vùng cắt trên vùng phụ đề trong video.\nSử dụng click+kéo để chọn.\nTrong chế độ 'Hai Vùng', bạn có thể vẽ hai vùng cắt.\nNếu không có vùng cắt nào được chọn, một phần ba dưới của video\nsẽ được sử dụng cho OCR theo mặc định.",
     "lbl_seek": "Tìm Kiếm:",
@@ -269,5 +270,19 @@
     "tip_dml_grid_w": "Chiều rộng tối đa của lưới OCR ghép cho chế độ DirectML thủ công.",
     "tip_dml_grid_h": "Chiều cao tối đa của lưới OCR ghép cho chế độ DirectML thủ công.",
     "lbl_dml_section": "DirectML (GPU AMD):",
-    "tip_dml_device": "Chọn bộ điều hợp DirectML (GPU) dùng cho OCR. Lựa chọn được lưu và khôi phục ở lần khởi động tiếp theo."
+    "tip_dml_device": "Chọn bộ điều hợp DirectML (GPU) dùng cho OCR. Lựa chọn được lưu và khôi phục ở lần khởi động tiếp theo.",
+    "dml_preset_compatibility": "Tương Thích / VRAM Thấp",
+    "dml_preset_balanced": "Cân Bằng (khuyến nghị)",
+    "dml_preset_max": "Tải GPU AMD Tối Đa",
+    "dml_preset_manual": "Kích Thước Lưới Thủ Công",
+    "dml_recognition_stable": "Kết Hợp Ổn Định (khuyến nghị)",
+    "dml_recognition_auto": "AMD Max Auto (thử nhận dạng GPU + dự phòng)",
+    "dml_recognition_experimental": "DirectML Toàn Phần Thử Nghiệm",
+    "dml_frame_scan_cpu_ssim": "SSIM CPU (tương thích)",
+    "dml_frame_scan_directml_ssim": "SSIM DirectML AMD (thử nghiệm)",
+    "dml_frame_scan_ffmpeg_d3d11va": "Giải Mã FFmpeg D3D11VA AMD + SSIM DirectML (nguyên mẫu)",
+    "dml_onnx_low_vram": "VRAM Thấp / an toàn hơn",
+    "dml_onnx_balanced": "ONNX Cân Bằng (khuyến nghị)",
+    "dml_onnx_max": "Thông Lượng Tối Đa / VRAM cao hơn",
+    "dml_onnx_manual": "Kích Thước Lưới Thủ Công"
 }
