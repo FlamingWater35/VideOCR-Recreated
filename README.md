@@ -4,6 +4,8 @@
   <p align="center">
     Extract hardcoded subtitles from videos with a modern PySide6 GUI, 200+ languages, and experimental AMD DirectML GPU support.
     <br />
+    <em>Forked from <a href="https://github.com/timminator/VideOCR">VideOCR</a> (by <code>timminator</code>), via <a href="https://github.com/BaseCrunch/VideOCR-AMD-DirectML">VideOCR-AMD-DirectML</a> (by <code>BaseCrunch</code>) — with more features on top.</em>
+    <br />
   </p>
 </p>
 
@@ -19,13 +21,17 @@ VideOCR Recreated extracts hardcoded / burned-in subtitles from videos and expor
   <em>VideOCR Recreated main window</em>
 </p>
 
-This project is a **fork** of the original VideOCR GUI, rebuilt in **PySide6 (Qt)** — a modern, easy-to-use interface that replaces the old PySimpleGUI application. It keeps the core subtitle-extraction features while adding an experimental **AMD GPU acceleration path for Windows** using:
+This project is a **fork of a fork**. It builds on:
 
-- **DirectML**
-- **torch-directml**
-- **EasyOCR**
-- **Hybrid OCR mode**
+1. The original **[VideOCR](https://github.com/timminator/VideOCR)** by `timminator` — the base subtitle-extraction project.
+2. **[VideOCR-AMD-DirectML](https://github.com/BaseCrunch/VideOCR-AMD-DirectML)** by `BaseCrunch` — a fork that added the experimental **AMD GPU acceleration path for Windows** using **DirectML** / **torch-directml** / **EasyOCR** with a hybrid OCR mode, DirectML GPU selection, performance presets, and the FFmpeg D3D11VA frame-scan path.
+
+VideOCR Recreated keeps all of the above and adds **more features on top**:
+
+- A complete **PySide6 (Qt)** GUI rewrite — a modern, easy-to-use interface that replaces the old PySimpleGUI application.
 - **Label detection** (text outside the subtitle crop, saved as `.ass`)
+- A reworked **warm-obsidian & gold** visual theme.
+- Further refinements (see [What changed](#what-changed-in-this-fork) below).
 
 Supported OCR engines:
 
@@ -34,7 +40,9 @@ Supported OCR engines:
 - **EasyOCR DirectML (AMD GPU)** — experimental Windows AMD path
 - **ONNX Runtime DirectML (AMD GPU Experimental)** — experimental
 
-### What changed in the fork
+### What changed in this fork
+
+Relative to the `BaseCrunch/VideOCR-AMD-DirectML` fork this project is based on:
 
 - GUI rewritten from scratch in **PySide6** (modern warm-obsidian + gold dark theme, resizable layout, native HiDPI support).
 - **Label detection** — detects text *outside* the subtitle crop (e.g. people's / places' names) and saves the result as a positioned `.ass` subtitle file.
@@ -49,7 +57,7 @@ Supported OCR engines:
 Tested on:
 
 - **Windows**
-- **AMD Radeon RX 7900 XTX**
+- **AMD Radeon RX 7900 XTX** and **AMD Radeon RX 6700 XT**
 - **Python 3.12**
 - **torch-directml**
 - **EasyOCR 1.7.2**
@@ -106,7 +114,7 @@ python -m pip install --force-reinstall --no-cache-dir "sympy==1.13.3" "mpmath==
 
 If your PC has both integrated AMD graphics and a discrete AMD GPU, force the DirectML adapter.
 
-For RX 7900 XTX systems where the discrete GPU is adapter index `1`:
+On many systems the discrete GPU is adapter index `1` (the iGPU is `0`); check with `python tools\list_directml_adapters.py` and set:
 
 ```bat
 set VIDEOCR_DIRECTML_DEVICE_INDEX=1
@@ -150,7 +158,7 @@ Windows Settings
   .venv\Scripts\python.exe
 → Options
 → High performance
-→ AMD Radeon RX 7900 XTX
+→ (pick your discrete AMD GPU, e.g. "AMD Radeon RX ...")
 ```
 
 ### Linux
@@ -299,16 +307,16 @@ The AMD DirectML backend processes OCR in bursts:
 
 1. CPU reads and filters frames.
 2. CPU creates stitched OCR image grids.
-3. RX 7900 XTX performs text detection through DirectML.
+3. The AMD GPU performs text detection through DirectML.
 4. CPU performs text recognition for compatibility.
 5. CPU merges subtitle lines and writes the `.srt`.
 
 Because only part of the OCR pipeline runs on the GPU, GPU usage around `10–40%` can be normal. This does not mean the GPU is unused.
 
-For RX-class GPUs, the GUI exposes DirectML grid tuning and a DirectML GPU dropdown. Larger stitched grids reduce per-image overhead and can keep the GPU busier during the detection pass. Good starting values are:
+For discrete AMD GPUs, the GUI exposes DirectML grid tuning and a DirectML GPU dropdown. Larger stitched grids reduce per-image overhead and can keep the GPU busier during the detection pass. Good starting values are:
 
 ```text
-DirectML GPU: GPU 1: AMD Radeon RX 7900 XTX
+DirectML GPU: your discrete AMD GPU (e.g. GPU 1: AMD Radeon RX ...)
 DirectML Grid Max Width: 2400
 DirectML Grid Max Height: 2400
 Frames to Skip: 2 for speed, 1 for accuracy
@@ -638,7 +646,7 @@ Selects the DirectML adapter index used by `easyocr_directml` / `onnx_directml`.
 --directml_device_index 0
 ```
 
-usually selects the first DirectML adapter. `1` may select the discrete GPU on systems with integrated graphics plus an RX 7900 XTX.
+usually selects the first DirectML adapter. `1` may select the discrete GPU on systems with both integrated and discrete AMD graphics.
 
 ### `directml_performance_preset`
 
@@ -712,13 +720,13 @@ usually selects the first DirectML adapter.
 set VIDEOCR_DIRECTML_DEVICE_INDEX=1
 ```
 
-may select the discrete GPU on systems with integrated graphics plus an RX 7900 XTX.
+may select the discrete GPU on systems with both integrated and discrete AMD graphics.
 
 ### `VIDEOCR_DIRECTML_GRID_MAX_WIDTH` / `VIDEOCR_DIRECTML_GRID_MAX_HEIGHT`
 
 Optional helper values used by the development launcher. The GUI and CLI settings are preferred.
 
-Recommended RX 7900 XTX starting point:
+Recommended starting point for a discrete AMD GPU (8 GB+ VRAM):
 
 ```bat
 set VIDEOCR_DIRECTML_GRID_MAX_WIDTH=2400
@@ -872,9 +880,9 @@ Repair SymPy:
 python -m pip install --force-reinstall --no-cache-dir "sympy==1.13.3" "mpmath==1.3.0"
 ```
 
-### DirectML uses integrated GPU instead of RX 7900 XTX
+### DirectML uses the integrated GPU instead of the discrete AMD GPU
 
-Set the adapter index:
+If DirectML workloads land on the integrated GPU, force the adapter index (check `python tools\list_directml_adapters.py` to see which index your discrete card is):
 
 ```bat
 set VIDEOCR_DIRECTML_DEVICE_INDEX=1
@@ -888,7 +896,7 @@ python tools\diagnose_easyocr_directml.py
 python VideOCR_qt.py
 ```
 
-In the GUI, open **Advanced Settings → DirectML GPU** and select your discrete card (e.g. `GPU 1: AMD Radeon RX 7900 XTX`). The selection is saved and restored on the next launch.
+In the GUI, open **Advanced Settings → DirectML GPU** and select your discrete card (e.g. `GPU 1: AMD Radeon RX ...`). The selection is saved and restored on the next launch.
 
 Also set Windows graphics preference for:
 
@@ -953,18 +961,17 @@ Notes:
 
 ## Credits
 
-This project is a **fork** of the original **VideOCR** project by `timminator`, with a recreated PySide6 GUI, an AMD DirectML backend, and label detection.
+This project is a **fork of a fork**:
 
-Fork repository:
+1. The original **VideOCR** by `timminator` — the base subtitle-extraction project.
+2. **VideOCR-AMD-DirectML** by `BaseCrunch` — added the AMD DirectML backend, DirectML GPU selection, performance presets, and the FFmpeg D3D11VA frame-scan path.
+3. This project — a recreated PySide6 GUI, an AMD DirectML backend, label detection, and more.
 
-```text
-https://github.com/FlamingWater35/VideOCR-Recreated
-```
-
-Original project:
+Upstream projects:
 
 ```text
 https://github.com/timminator/VideOCR
+https://github.com/BaseCrunch/VideOCR-AMD-DirectML
 ```
 
 Fork changes include:
