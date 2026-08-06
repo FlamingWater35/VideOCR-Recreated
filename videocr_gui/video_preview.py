@@ -192,22 +192,32 @@ class VideoHandler:
 
 # --- Crop box overlay -----------------------------------------------------------
 class ResizableRect(QGraphicsRectItem):
-    """A crop rectangle with handles; emits geometry changes on drag/resize."""
+    """A crop rectangle with handles; calls ``on_change`` on geometry changes.
 
-    geometry_changed = Signal()
+    The item's ``rect`` is in LOCAL coordinates (0,0,w,h); the scene position is
+    stored in the item's ``pos()``. This makes Qt's built-in move (ItemIsMovable)
+    and our handle-based resize behave correctly.
+    """
 
     HANDLE = 10
     TOLERANCE = 8
 
     def __init__(self, rect: QRectF, movable: bool = True) -> None:
-        super().__init__(rect)
+        # rect is in scene coordinates; convert to local rect + scene pos
+        top_left = rect.topLeft()
+        super().__init__(QRectF(0.0, 0.0, rect.width(), rect.height()))
+        self.setPos(top_left)
+        self.on_change = None  # optional callable, invoked on move/resize
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, movable)
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, True)
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemSendsGeometryChanges, True)
         self.setPen(QPen(QColor("#ff5252"), 2))
-        self.setBrush(QBrush(QColor(255, 82, 82, 30)))
+        self.setBrush(Qt.BrushStyle.NoBrush)
         self._resize_mode: str | None = None
         self._start_rect = QRectF()
+        self._moving = False
+        self._move_start_scene = QPointF()
+        self._move_start_pos = QPointF()
         self._handles: list[QGraphicsRectItem] = []
         self._create_handles()
 
@@ -219,6 +229,9 @@ class ResizableRect(QGraphicsRectItem):
             h.setBrush(QBrush(QColor("#ff5252")))
             h.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, False)
             h.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, False)
+            # Make handles transparent to mouse events so the parent
+            # ResizableRect receives presses/moves for handle-based resizing.
+            h.setAcceptedMouseButtons(Qt.MouseButton.NoButton)
             h.setData(0, name)
             self._handles.append(h)
         self._place_handles()
@@ -241,11 +254,10 @@ class ResizableRect(QGraphicsRectItem):
             pos = positions[name]
             handle.setPos(pos[0], pos[1])
 
-    def _resize_from(self, mode: str, pos: QPointF) -> None:
+    def _resize_from(self, mode: str, scene_pos: QPointF) -> None:
+        # convert scene coords to this item's local coords (rect is local)
         r = QRectF(self._start_rect)
-        p = self.mapToParent(pos)
-        # convert parent coords to our local rect coords (we are moved; rect is local)
-        local = self.mapFromParent(pos)
+        local = self.mapFromScene(scene_pos)
         if "l" in mode:
             r.setLeft(min(local.x(), r.right() - 5))
         if "r" in mode:
@@ -256,7 +268,8 @@ class ResizableRect(QGraphicsRectItem):
             r.setBottom(max(local.y(), r.top() + 5))
         self.setRect(r.normalized())
         self._place_handles()
-        self.geometry_changed.emit()
+        if self.on_change:
+            self.on_change()
 
     def itemChange(self, change, value):  # noqa: N802 - Qt API name
         if change == QGraphicsItem.GraphicsItemChange.ItemPositionChange and self.scene():
@@ -276,29 +289,130 @@ class ResizableRect(QGraphicsRectItem):
         result = super().itemChange(change, value)
         if change == QGraphicsItem.GraphicsItemChange.ItemPositionHasChanged:
             self._place_handles()
-            self.geometry_changed.emit()
+            if self.on_change:
+                self.on_change()
         return result
 
     def mousePressEvent(self, event) -> None:  # noqa: N802
-        pos = event.pos()
+        # event.pos() is in this item's local coords; map to scene for hit-testing
+        scene_pos = self.mapToScene(event.pos())
         for handle in self._handles:
-            if handle.contains(handle.mapFromParent(self.mapToParent(pos))):
+            if handle.sceneBoundingRect().contains(scene_pos):
                 self._resize_mode = handle.data(0)
                 self._start_rect = self.rect()
                 event.accept()
                 return
+        # interior press: begin manual move
         self._resize_mode = None
-        super().mousePressEvent(event)
+        self._move_start_scene = scene_pos
+        self._move_start_pos = self.pos()
+        self._moving = True
+        event.accept()
 
     def mouseMoveEvent(self, event) -> None:  # noqa: N802
+        scene_pos = self.mapToScene(event.pos())
         if self._resize_mode:
-            self._resize_from(self._resize_mode, event.pos())
+            self._resize_from(self._resize_mode, scene_pos)
+            event.accept()
+            return
+        if getattr(self, "_moving", False):
+            delta = scene_pos - self._move_start_scene
+            self.setPos(self._move_start_pos + delta)
             event.accept()
             return
         super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event) -> None:  # noqa: N802
         self._resize_mode = None
+        self._moving = False
+        event.accept()
+
+
+class PreviewView(QGraphicsView):
+    """QGraphicsView that forwards mouse events to the controller for crop drawing.
+
+    The crop-box drawing logic lives in the parent ``VideoPreview``, but the
+    video is displayed inside this view, which would otherwise consume all
+    mouse events. This subclass intercepts left-button presses on empty space
+    and routes draw interactions to the controller, while letting presses on
+    existing crop-box items fall through to the items (move/resize).
+    """
+
+    def __init__(self, controller: "VideoPreview", scene: QGraphicsScene) -> None:
+        super().__init__(scene)
+        self._controller = controller
+        self._pressed_item: "ResizableRect | None" = None
+
+    def _forward_to_item(self, item, event, scene_pos) -> "QGraphicsSceneMouseEvent":
+        """Builds a QGraphicsSceneMouseEvent in the item's local coords."""
+        from PySide6.QtWidgets import QGraphicsSceneMouseEvent
+
+        local = item.mapFromScene(scene_pos)
+        scene_ev = QGraphicsSceneMouseEvent(event.type())
+        scene_ev.setScenePos(scene_pos)
+        scene_ev.setPos(local)
+        scene_ev.setScreenPos(event.globalPosition().toPoint())
+        scene_ev.setButton(event.button())
+        scene_ev.setButtons(event.buttons())
+        scene_ev.setModifiers(event.modifiers())
+        scene_ev.setAccepted(False)
+        return scene_ev
+
+    def mousePressEvent(self, event) -> None:  # noqa: N802 - Qt API name
+        if event.button() == Qt.MouseButton.LeftButton:
+            pos = event.position().toPoint()
+            scene_pos = self.mapToScene(pos)
+            target = self._crop_item_at(scene_pos)
+            if target is not None:
+                # Forward the press directly to the crop item so handle
+                # resizing and interior dragging work even where the handle
+                # ring overlaps the video pixmap.
+                self._pressed_item = target
+                scene_ev = self._forward_to_item(target, event, scene_pos)
+                target.mousePressEvent(scene_ev)
+                event.accept()
+                return
+            if self._controller.start_draw(scene_pos):
+                event.accept()
+                return
+        super().mousePressEvent(event)
+
+    def _crop_item_at(self, scene_pos) -> "ResizableRect | None":
+        """Returns the crop box item at scene_pos, including its handle ring."""
+        pad = ResizableRect.HANDLE
+        for rr in self._controller.crop_rect_items():
+            if rr.sceneBoundingRect().adjusted(-pad, -pad, pad, pad).contains(scene_pos):
+                return rr
+        return None
+
+    def mouseMoveEvent(self, event) -> None:  # noqa: N802 - Qt API name
+        if self._controller.is_drawing():
+            scene_pos = self.mapToScene(event.position().toPoint())
+            self._controller.update_draw(scene_pos)
+            event.accept()
+            return
+        # Forward to the item we pressed on (handle resize or interior move).
+        if self._pressed_item is not None and event.buttons() & Qt.MouseButton.LeftButton:
+            scene_pos = self.mapToScene(event.position().toPoint())
+            scene_ev = self._forward_to_item(self._pressed_item, event, scene_pos)
+            self._pressed_item.mouseMoveEvent(scene_ev)
+            event.accept()
+            return
+        super().mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event) -> None:  # noqa: N802 - Qt API name
+        if self._controller.is_drawing() and event.button() == Qt.MouseButton.LeftButton:
+            scene_pos = self.mapToScene(event.position().toPoint())
+            self._controller.end_draw(scene_pos)
+            event.accept()
+            return
+        if self._pressed_item is not None and event.button() == Qt.MouseButton.LeftButton:
+            scene_pos = self.mapToScene(event.position().toPoint())
+            scene_ev = self._forward_to_item(self._pressed_item, event, scene_pos)
+            self._pressed_item.mouseReleaseEvent(scene_ev)
+            self._pressed_item = None
+            event.accept()
+            return
         super().mouseReleaseEvent(event)
 
 
@@ -336,7 +450,7 @@ class VideoPreview(QWidget):
         self._max_boxes = 1
 
         self._scene = QGraphicsScene(self)
-        self._view = QGraphicsView(self._scene)
+        self._view = PreviewView(self, self._scene)
         self._view.setRenderHints(QPainter.RenderHint.SmoothPixmapTransform | QPainter.RenderHint.Antialiasing)
         self._view.setBackgroundBrush(QBrush(QColor("#101010")))
         self._view.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
@@ -440,7 +554,7 @@ class VideoPreview(QWidget):
     def _redraw_boxes(self) -> None:
         # remove old rect items (keep pixmap)
         for item in list(self._scene.items()):
-            if isinstance(item, ResizableRect):
+            if isinstance(item, ResizableRect) or item.data(0) == "draw-preview":
                 self._scene.removeItem(item)
 
         for box in self._crop_boxes:
@@ -450,15 +564,17 @@ class VideoPreview(QWidget):
                 abs(x2 - x1), abs(y2 - y1),
             )
             rr = ResizableRect(rect)
-            rr.geometry_changed.connect(lambda: self._sync_box_from_item(rr))
+            rr.on_change = lambda r=rr: self._sync_box_from_item(r)
+            box["_item"] = rr
             self._scene.addItem(rr)
 
         if self._drawing is not None:
             p1, p2 = self._drawing
             rect = QRectF(p1, p2).normalized()
             tmp = QGraphicsRectItem(rect)
+            tmp.setData(0, "draw-preview")
             tmp.setPen(QPen(QColor("#ff5252"), 2))
-            tmp.setBrush(QBrush(QColor(255, 82, 82, 30)))
+            tmp.setBrush(Qt.BrushStyle.NoBrush)
             tmp.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, False)
             tmp.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, False)
             self._scene.addItem(tmp)
@@ -469,51 +585,57 @@ class VideoPreview(QWidget):
         y1 = scene_rect.top() - self._offset_y
         x2 = scene_rect.right() - self._offset_x
         y2 = scene_rect.bottom() - self._offset_y
-        idx = self._find_item_index(item)
-        if idx is None:
+        box = next((b for b in self._crop_boxes if b.get("_item") is item), None)
+        if box is None:
             return
-        self._crop_boxes[idx]["img_points"] = ((x1, y1), (x2, y2))
+        box["img_points"] = ((x1, y1), (x2, y2))
+        # keep absolute video coords in sync after move/resize
+        from .crop import compute_crop_coords
+
+        box["coords"] = compute_crop_coords(
+            min(x1, x2), min(y1, y2), max(x1, x2), max(y1, y2),
+            self._orig_w, self._orig_h, self._resized_w, self._resized_h,
+        )
         self.crop_changed.emit(list(self._crop_boxes))
 
-    def _find_item_index(self, item: ResizableRect) -> int | None:
-        # match by scene rect center proximity
-        center = item.sceneBoundingRect().center()
-        for i, box in enumerate(self._crop_boxes):
-            (x1, y1), (x2, y2) = box["img_points"]
-            cx = (min(x1, x2) + max(x1, x2)) / 2 + self._offset_x
-            cy = (min(y1, y2) + max(y1, y2)) / 2 + self._offset_y
-            if abs(cx - center.x()) < 2 and abs(cy - center.y()) < 2:
-                return i
-        return None
+    def is_drawing(self) -> bool:
+        return self._drawing is not None
 
-    def mousePressEvent(self, event) -> None:  # noqa: N802
+    def crop_rect_items(self) -> list["ResizableRect"]:
+        """Returns the live ResizableRect items for the current crop boxes."""
+        return [b.get("_item") for b in self._crop_boxes if b.get("_item") is not None]
+
+    def start_draw(self, scene_pos: QPointF) -> bool:
+        """Begins drawing a crop box from a scene-space point.
+
+        Returns True if drawing started (a frame is loaded and the point is
+        inside the video area), False otherwise.
+        """
         if self._current_pixmap is None:
-            return
-        pos = self._view.mapToScene(event.position().toPoint())
-        if event.button() == Qt.MouseButton.LeftButton:
-            p = self._img_point(pos)
-            if p is None:
-                return
-            if len(self._crop_boxes) >= self._max_boxes:
-                self._crop_boxes.clear()
-                self._redraw_boxes()
-                self.crop_changed.emit(list(self._crop_boxes))
-            self._drawing = (pos, pos)
+            return False
+        p = self._img_point(scene_pos)
+        if p is None:
+            return False
+        if len(self._crop_boxes) >= self._max_boxes:
+            self._crop_boxes.clear()
             self._redraw_boxes()
+            self.crop_changed.emit(list(self._crop_boxes))
+        self._drawing = (scene_pos, scene_pos)
+        self._redraw_boxes()
+        return True
 
-    def mouseMoveEvent(self, event) -> None:  # noqa: N802
+    def update_draw(self, scene_pos: QPointF) -> None:
         if self._drawing is not None:
-            pos = self._view.mapToScene(event.position().toPoint())
-            self._drawing = (self._drawing[0], pos)
+            self._drawing = (self._drawing[0], scene_pos)
             self._redraw_boxes()
 
-    def mouseReleaseEvent(self, event) -> None:  # noqa: N802
+    def end_draw(self, scene_pos: QPointF) -> None:
         if self._drawing is None:
             return
         p1, p2 = self._drawing
         self._drawing = None
         img1 = self._img_point(p1)
-        img2 = self._img_point(p2)
+        img2 = self._img_point(scene_pos)
         if img1 is None or img2 is None:
             self._redraw_boxes()
             return
@@ -521,7 +643,17 @@ class VideoPreview(QWidget):
         if rect.width() < 7 or rect.height() < 7:
             self._redraw_boxes()
             return
-        self._crop_boxes.append({"img_points": ((rect.left(), rect.top()), (rect.right(), rect.bottom()))})
+        # compute absolute video coords for the CLI / label
+        from .crop import compute_crop_coords
+
+        coords = compute_crop_coords(
+            rect.left(), rect.top(), rect.right(), rect.bottom(),
+            self._orig_w, self._orig_h, self._resized_w, self._resized_h,
+        )
+        self._crop_boxes.append({
+            "coords": coords,
+            "img_points": ((rect.left(), rect.top()), (rect.right(), rect.bottom())),
+        })
         self._redraw_boxes()
         self.crop_changed.emit(list(self._crop_boxes))
 

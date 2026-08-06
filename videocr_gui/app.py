@@ -285,22 +285,30 @@ class MainWindow(QMainWindow):
     # --- taskbar / wake ------------------------------------------------------
     def _init_taskbar(self) -> None:
         if sys.platform == "win32" and PyTaskbar is not None:
-            try:
-                self._taskbar = PyTaskbar.Progress(int(self.winId()), 16)
-                self._taskbar.init()
-                self._taskbar.setState("normal")
-            except Exception as e:
-                config.log_error(f"Taskbar init failed: {e}")
-                self._taskbar = None
+            # Defer until the window is realized: winId() may be invalid/0
+            # before show(), which makes TaskbarProgress fail or crash.
+            QTimer.singleShot(0, self._setup_taskbar)
+
+    def _setup_taskbar(self) -> None:
+        if self._taskbar is not None or PyTaskbar is None:
+            return
+        try:
+            self._taskbar = PyTaskbar.TaskbarProgress(int(self.winId()))
+            self._taskbar.set_progress_type(PyTaskbar.ProgressType.NOPROGRESS)
+        except Exception as e:
+            config.log_error(f"Taskbar init failed: {e}")
+            self._taskbar = None
 
     def _update_taskbar(self, state: str | None = None, progress: int | None = None) -> None:
         if self._taskbar is None:
             return
         try:
-            if state:
-                self._taskbar.setState(state)
+            if state == "paused":
+                self._taskbar.set_progress_type(PyTaskbar.ProgressType.PAUSED)
+            elif state == "normal":
+                self._taskbar.set_progress_type(PyTaskbar.ProgressType.NORMAL)
             if progress is not None:
-                self._taskbar.setProgress(progress)
+                self._taskbar.set_progress(int(progress), 100)
         except Exception:
             pass
 
@@ -578,8 +586,7 @@ class MainWindow(QMainWindow):
 
     # --- crop ----------------------------------------------------------------
     def _on_crop_changed(self, boxes: list[dict[str, Any]]) -> None:
-        self.preview.crop_boxes = boxes
-        # compute absolute coords for label
+        # boxes live in the preview; just refresh the label + button state
         self.crop_label.setText(self.preview.crop_coords_text())
         self.clear_crop_btn.setEnabled(bool(boxes))
 
