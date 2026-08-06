@@ -607,6 +607,26 @@ name text.
 Minimum display duration in seconds for detected labels (default: `1.0`).
 Labels detected for shorter than this are extended to remain readable.
 
+### `label_min_confirmation_frames`
+
+A label must appear in at least this many sampled frames before it is emitted
+(default: `2`). Higher values filter out single-frame OCR noise (stray letters
+or digits that flash by in one frame).
+
+### `label_reappear_merge_gap`
+
+Reappearances of the same label within this many seconds are merged into a
+single event (default: `2.0`). For example a character name that appears at
+`0:52`, `0:54` and `0:56` becomes one label spanning `0:52`–`0:56` instead of
+three short events. Set it lower (e.g. `0.5`) to keep separate appearances
+distinct.
+
+### `label_filter_single_char`
+
+Drop single ASCII character/digit labels such as `M`, `3`, `L` which are
+usually OCR noise (default: `true`). Single Chinese characters are kept, since
+a person's name may be one character.
+
 ### `directml_device_index`
 
 Selects the DirectML adapter index used by `easyocr_directml` / `onnx_directml`.

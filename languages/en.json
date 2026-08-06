@@ -273,5 +273,11 @@
   "tip_label_ocr_width": "Maximum image width used for OCR in the label detection area (outside the subtitle crop).",
   "lbl_label_min_duration": "Label Minimum Display Duration (seconds):",
   "tip_label_min_duration": "Minimum display duration in seconds for detected labels.",
+  "lbl_label_conf_frames": "Label Minimum Confirmation Frames:",
+  "tip_label_conf_frames": "A label must appear in at least this many sampled frames before it is emitted. Higher values filter more OCR noise.",
+  "lbl_label_reappear_gap": "Label Reappear Merge Gap (seconds):",
+  "tip_label_reappear_gap": "Reappearances of the same label within this gap are merged into a single event.",
+  "chk_label_filter_single": "Filter Single-Character Label Noise",
+  "tip_label_filter_single": "Drop single ASCII character/digit labels (e.g. \"M\", \"3\") which are usually OCR noise. Single Chinese characters are kept.",
   "save_as_ass_filter_name": "Advanced SubStation Alpha Subtitle"
 }

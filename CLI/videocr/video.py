@@ -28,6 +28,14 @@ def _label_text_norm(text: str) -> str:
     return (text or "").replace(" ", "")
 
 
+def _is_single_ascii_label(text: str) -> bool:
+    """True if the label is a single ASCII character/digit (OCR noise)."""
+    t = (text or "").strip()
+    if len(t) != 1:
+        return False
+    return t.isascii() and (t.isalnum())
+
+
 class Video:
     path: str
     lang: str
@@ -447,7 +455,10 @@ class Video:
                 directml_frame_scan_mode: str = "cpu_ssim", onnx_directml_tuning: str = "balanced",
                 benchmark_compare_engine: bool = False, benchmark_compare_sample_grids: int = 3,
                 enable_label_detection: bool = False, label_ocr_image_max_width: int = 720,
-                label_min_display_duration_sec: float = 1.0) -> None:
+                label_min_display_duration_sec: float = 1.0,
+                label_min_confirmation_frames: int = 2,
+                label_reappear_merge_gap_sec: float = 2.0,
+                label_filter_single_char: bool = True) -> None:
         perf_total_start = time.perf_counter()
         step1_start = perf_total_start
         conf_threshold_ratio = conf_threshold / 100
@@ -460,6 +471,9 @@ class Video:
         self.label_zone = None
         self.label_frames = []
         self._label_min_display_duration_ms = float(label_min_display_duration_sec or 1.0) * 1000.0
+        self._label_min_confirmation_frames = max(1, int(label_min_confirmation_frames or 1))
+        self._label_reappear_merge_gap_ms = float(label_reappear_merge_gap_sec or 0.0) * 1000.0
+        self._label_filter_single_char = bool(label_filter_single_char)
 
         if ocr_engine == "onnx_directml":
             os.environ["VIDEOCR_ONNX_DIRECTML_TUNING"] = str(onnx_directml_tuning or "balanced").strip().lower() or "balanced"
@@ -1775,6 +1789,7 @@ class Video:
             events.append(ev)
             return ev
 
+        gap_frames = self._label_reappear_gap_frames()
         for frame in frames:
             if not frame.lines:
                 continue
@@ -1786,10 +1801,11 @@ class Video:
                 best_ev: dict[str, Any] | None = None
                 best_score: float = -1.0
                 for ev in events:
-                    # Skip events that already ended well before this frame
-                    # (they belong to an earlier appearance), and skip events
-                    # this frame already extended (one frame line per event).
-                    if ev.get("last_frame_idx", -1) < frame.start_index - 20:
+                    # Skip events whose last detection is older than the
+                    # reappear-merge gap (they belong to an earlier, separate
+                    # appearance), and skip events this frame already extended
+                    # (one frame line per event).
+                    if ev.get("last_frame_idx", -1) < frame.start_index - gap_frames:
                         continue
                     if ev.get("last_frame_idx") == frame.start_index and ev.get("_matched_this_frame"):
                         continue
@@ -1848,6 +1864,19 @@ class Video:
         for ev in events:
             _close_event(ev)
 
+        # Minimum confirmation frames: drop events that only appeared once
+        # (or fewer than the configured threshold) — usually OCR noise.
+        min_conf = getattr(self, "_label_min_confirmation_frames", 2)
+        events = [ev for ev in events if ev.get("count", 1) >= min_conf]
+
+        # Optional single-ASCII-character noise filter ("M", "3", "L", ...).
+        # CJK single characters are kept (a person's name may be one char).
+        if getattr(self, "_label_filter_single_char", True):
+            events = [
+                ev for ev in events
+                if not _is_single_ascii_label(ev["text"])
+            ]
+
         # Enforce a minimum display duration for readability. Guard against
         # degenerate timestamps (e.g. avg_frame_duration_ms == 0.0 when only a
         # single sampled frame exists) by clamping end >= start + min duration.
@@ -1875,6 +1904,18 @@ class Video:
         normalized = {_label_text_norm(s): s for s in event.get("text_samples", [])}
         originals = [normalized.get(t, t) for t in candidates]
         return max(originals, key=len)
+
+    def _label_reappear_gap_frames(self) -> int:
+        """Frames a label event can stay "open" for reappearance merging.
+
+        Derived from the configured reappear-merge gap (in seconds) and the
+        average sampled-frame duration. Falls back to a 20-frame window.
+        """
+        gap_ms = getattr(self, "_label_reappear_merge_gap_ms", 0.0)
+        if gap_ms <= 0:
+            return 20
+        frame_ms = self.avg_frame_duration_ms or 33.0
+        return max(1, int(round(gap_ms / frame_ms)))
 
     def _label_frame_start_ms(self, frame: Any) -> float:
         start_ms = self.frame_timestamps.get(frame.start_index, 0)

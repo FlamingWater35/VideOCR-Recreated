@@ -158,6 +158,9 @@ def main() -> None:
     parser.add_argument('--enable_label_detection', type=lambda x: x.lower() == 'true', default=False, help='Detect text outside the subtitle crop area (e.g. people/place name labels) and write an .ass subtitle file with positioned Label events (default: false)')
     parser.add_argument('--label_ocr_image_max_width', type=restricted_int(min_val=1), default=720, help='Maximum image width used for OCR in the label detection zone (default: 720)')
     parser.add_argument('--label_min_display_duration', type=restricted_float(min_val=0.0), default=1.0, help='Minimum display duration in seconds for detected labels (default: 1.0)')
+    parser.add_argument('--label_min_confirmation_frames', type=restricted_int(min_val=1), default=2, help='Minimum number of sampled frames a label must appear in before it is emitted (filters OCR noise, default: 2)')
+    parser.add_argument('--label_reappear_merge_gap', type=restricted_float(min_val=0.0), default=2.0, help='Maximum gap in seconds between reappearances of the same label that are merged into one event (default: 2.0)')
+    parser.add_argument('--label_filter_single_char', type=lambda x: x.lower() == 'true', default=True, help='Drop single-character label detections (e.g. "M", "3") which are usually OCR noise (default: true)')
     parser.add_argument('--allow_system_sleep', type=lambda x: x.lower() == 'true', default=False, help='Allow the system to sleep during processing (default: false)')
 
     args = parser.parse_args()
@@ -256,7 +259,10 @@ def main() -> None:
                 benchmark_compare_sample_grids=args.benchmark_compare_sample_grids,
                 enable_label_detection=args.enable_label_detection,
                 label_ocr_image_max_width=args.label_ocr_image_max_width,
-                label_min_display_duration_sec=args.label_min_display_duration
+                label_min_display_duration_sec=args.label_min_display_duration,
+                label_min_confirmation_frames=args.label_min_confirmation_frames,
+                label_reappear_merge_gap_sec=args.label_reappear_merge_gap,
+                label_filter_single_char=args.label_filter_single_char
             )
     except ValueError as e:
         print(f"Error: {e}")

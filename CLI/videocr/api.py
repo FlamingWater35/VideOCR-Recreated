@@ -20,7 +20,10 @@ def save_subtitles_to_file(
         directml_frame_scan_mode: str = "cpu_ssim", onnx_directml_tuning: str = "balanced",
         benchmark_compare_engine: bool = False, benchmark_compare_sample_grids: int = 3,
         enable_label_detection: bool = False, label_ocr_image_max_width: int = 720,
-        label_min_display_duration_sec: float = 1.0) -> None:
+        label_min_display_duration_sec: float = 1.0,
+        label_min_confirmation_frames: int = 2,
+        label_reappear_merge_gap_sec: float = 2.0,
+        label_filter_single_char: bool = True) -> None:
 
     total_start = time.perf_counter()
 
@@ -107,7 +110,8 @@ def save_subtitles_to_file(
             directml_grid_max_width, directml_grid_max_height,
             directml_performance_preset, directml_recognition_mode, directml_frame_scan_mode,
             onnx_directml_tuning, benchmark_compare_engine, benchmark_compare_sample_grids,
-            enable_label_detection, label_ocr_image_max_width, label_min_display_duration_sec
+            enable_label_detection, label_ocr_image_max_width, label_min_display_duration_sec,
+            label_min_confirmation_frames, label_reappear_merge_gap_sec, label_filter_single_char
         )
         ocr_end = time.perf_counter()
     except Exception as e:

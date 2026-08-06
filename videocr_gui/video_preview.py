@@ -214,7 +214,6 @@ class ResizableRect(QGraphicsRectItem):
         self.setPen(QPen(QColor("#ff5252"), 2))
         self.setBrush(Qt.BrushStyle.NoBrush)
         self._resize_mode: str | None = None
-        self._start_rect = QRectF()
         self._moving = False
         self._move_start_scene = QPointF()
         self._move_start_pos = QPointF()
@@ -255,18 +254,31 @@ class ResizableRect(QGraphicsRectItem):
             handle.setPos(pos[0], pos[1])
 
     def _resize_from(self, mode: str, scene_pos: QPointF) -> None:
-        # convert scene coords to this item's local coords (rect is local)
-        r = QRectF(self._start_rect)
-        local = self.mapFromScene(scene_pos)
+        # Work in scene coordinates: compute the new rect there, then convert
+        # back to (local rect + pos). This keeps the local rect always in
+        # positive coordinates, so handle positions, dragging and the
+        # itemChange bounds clamp all stay consistent.
+        # Current rect in scene coordinates = pos + local rect (no pen math).
+        cur = self.rect()
+        scene_rect = QRectF(
+            self.pos().x() + cur.left(), self.pos().y() + cur.top(),
+            cur.width(), cur.height(),
+        )
+        r = QRectF(scene_rect)
+        sx, sy = scene_pos.x(), scene_pos.y()
         if "l" in mode:
-            r.setLeft(min(local.x(), r.right() - 5))
+            r.setLeft(min(sx, r.right() - 5))
         if "r" in mode:
-            r.setRight(max(local.x(), r.left() + 5))
+            r.setRight(max(sx, r.left() + 5))
         if "t" in mode:
-            r.setTop(min(local.y(), r.bottom() - 5))
+            r.setTop(min(sy, r.bottom() - 5))
         if "b" in mode:
-            r.setBottom(max(local.y(), r.top() + 5))
-        self.setRect(r.normalized())
+            r.setBottom(max(sy, r.top() + 5))
+        r = r.normalized()
+
+        # Convert scene rect -> local rect + pos (local is always >= 0).
+        self.setRect(QRectF(0.0, 0.0, r.width(), r.height()))
+        self.setPos(r.topLeft())
         self._place_handles()
         if self.on_change:
             self.on_change()
@@ -299,7 +311,6 @@ class ResizableRect(QGraphicsRectItem):
         for handle in self._handles:
             if handle.sceneBoundingRect().contains(scene_pos):
                 self._resize_mode = handle.data(0)
-                self._start_rect = self.rect()
                 event.accept()
                 return
         # interior press: begin manual move

@@ -136,6 +136,9 @@ def get_default_settings() -> dict[str, Any]:
         "enable_label_detection": False,
         "--label_ocr_image_max_width": "720",
         "--label_min_display_duration": "1.0",
+        "--label_min_confirmation_frames": "2",
+        "--label_reappear_merge_gap": "2.0",
+        "--label_filter_single_char": True,
     }
 
 
@@ -149,6 +152,7 @@ _BOOL_KEYS = {
     "--use_dual_zone",
     "enable_subtitle_alignment",
     "enable_label_detection",
+    "--label_filter_single_char",
     "--save_in_video_dir",
     "--send_notification",
     "--save_crop_box",

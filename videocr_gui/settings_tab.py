@@ -191,6 +191,12 @@ class SettingsTab(QWidget):
                        "Label Max OCR Image Width (pixel):", "720", "tip_label_ocr_width")
         self._add_line(label_form, "--label_min_display_duration", "lbl_label_min_duration",
                        "Label Minimum Display Duration (seconds):", "1.0", "tip_label_min_duration")
+        self._add_line(label_form, "--label_min_confirmation_frames", "lbl_label_conf_frames",
+                       "Label Minimum Confirmation Frames:", "2", "tip_label_conf_frames")
+        self._add_line(label_form, "--label_reappear_merge_gap", "lbl_label_reappear_gap",
+                       "Label Reappear Merge Gap (seconds):", "2.0", "tip_label_reappear_gap")
+        self._add_check(label_form, "--label_filter_single_char", "chk_label_filter_single",
+                        "Filter Single-Character Label Noise", "tip_label_filter_single", True)
         root.addWidget(label_box)
 
         # VideOCR settings

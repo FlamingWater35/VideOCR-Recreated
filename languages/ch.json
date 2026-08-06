@@ -292,5 +292,11 @@
     "tip_label_ocr_width": "标签检测区域（字幕选区之外）用于 OCR 的最大图像宽度。",
     "lbl_label_min_duration": "标签最短显示时长（秒）：",
     "tip_label_min_duration": "检测到的标签的最短显示时长（秒）。",
+    "lbl_label_conf_frames": "标签最小确认帧数：",
+    "tip_label_conf_frames": "标签必须至少在这么多采样帧中出现过才会输出。数值越高，过滤的 OCR 噪声越多。",
+    "lbl_label_reappear_gap": "标签重现合并间隔（秒）：",
+    "tip_label_reappear_gap": "同一标签在此间隔内的重现会被合并为单个事件。",
+    "chk_label_filter_single": "过滤单字符标签噪声",
+    "tip_label_filter_single": "丢弃单个 ASCII 字符/数字标签（如 \"M\"、\"3\"），它们通常是 OCR 噪声。单个中文字符会保留。",
     "save_as_ass_filter_name": "高级 SubStation Alpha 字幕"
 }
