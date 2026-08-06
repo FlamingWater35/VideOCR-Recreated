@@ -26,6 +26,7 @@ from PySide6.QtWidgets import (
 
 from . import i18n
 from .config import log_error
+from .style import PALETTE
 
 
 # --- VideoHandler port (PyAV) -------------------------------------------------
@@ -211,7 +212,7 @@ class ResizableRect(QGraphicsRectItem):
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, movable)
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, True)
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemSendsGeometryChanges, True)
-        self.setPen(QPen(QColor("#ff5252"), 2))
+        self.setPen(QPen(QColor(PALETTE["accent"]), 2))
         self.setBrush(Qt.BrushStyle.NoBrush)
         self._resize_mode: str | None = None
         self._moving = False
@@ -224,8 +225,8 @@ class ResizableRect(QGraphicsRectItem):
         self._handles = []
         for name in ("tl", "tr", "bl", "br", "l", "r", "t", "b"):
             h = QGraphicsRectItem(0, 0, self.HANDLE, self.HANDLE, self)
-            h.setPen(QPen(QColor("#ffffff"), 1))
-            h.setBrush(QBrush(QColor("#ff5252")))
+            h.setPen(QPen(QColor(PALETTE["text_emphasis"]), 1))
+            h.setBrush(QBrush(QColor(PALETTE["accent"])))
             h.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, False)
             h.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, False)
             # Make handles transparent to mouse events so the parent
@@ -463,7 +464,7 @@ class VideoPreview(QWidget):
         self._scene = QGraphicsScene(self)
         self._view = PreviewView(self, self._scene)
         self._view.setRenderHints(QPainter.RenderHint.SmoothPixmapTransform | QPainter.RenderHint.Antialiasing)
-        self._view.setBackgroundBrush(QBrush(QColor("#101010")))
+        self._view.setBackgroundBrush(QBrush(QColor(PALETTE["bg_deep"])))
         self._view.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self._view.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self._view.setDragMode(QGraphicsView.DragMode.NoDrag)
@@ -584,7 +585,7 @@ class VideoPreview(QWidget):
             rect = QRectF(p1, p2).normalized()
             tmp = QGraphicsRectItem(rect)
             tmp.setData(0, "draw-preview")
-            tmp.setPen(QPen(QColor("#ff5252"), 2))
+            tmp.setPen(QPen(QColor(PALETTE["accent"]), 2))
             tmp.setBrush(Qt.BrushStyle.NoBrush)
             tmp.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, False)
             tmp.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, False)

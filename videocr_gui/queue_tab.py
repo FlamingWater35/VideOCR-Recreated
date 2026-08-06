@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
 )
 
 from . import i18n
+from .style import PALETTE
 
 STATUS_TRANSLATIONS = {
     "Pending": "status_pending",
@@ -166,15 +167,15 @@ class QueueTab(QWidget):
 
     @staticmethod
     def _status_color(status: str) -> str:
-        """Accent color for each queue status (matches the theme palette)."""
+        """Accent color for each queue status (matches the warm-obsidian theme)."""
         return {
-            "Pending": "#9aa4b6",
-            "Processing": "#22d3ee",
-            "Paused": "#fbbf24",
-            "Completed": "#34d399",
-            "Cancelled": "#f87171",
-            "Error": "#f87171",
-        }.get(status, "#9aa4b6")
+            "Pending": PALETTE["text_dim"],
+            "Processing": PALETTE["accent"],
+            "Paused": PALETTE["amber"],
+            "Completed": PALETTE["ok"],
+            "Cancelled": PALETTE["danger"],
+            "Error": PALETTE["danger"],
+        }.get(status, PALETTE["text_dim"])
 
     def _pause_clicked(self) -> None:
         if self.pause_btn.text() == i18n.tr("btn_resume", "Resume"):

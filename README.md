@@ -9,9 +9,9 @@
 
 <br>
 
-## ℹ About
+## About
 
-VideOCR Recreated extracts hardcoded / burned-in subtitles from videos and exports them as `.srt` subtitle files.
+VideOCR Recreated extracts hardcoded / burned-in subtitles from videos and exports them as `.srt` (or `.ass` with label detection) subtitle files.
 
 <p align="center">
   <img src="Pictures/GUI.jpg" alt="VideOCR GUI" width="720">
@@ -19,12 +19,13 @@ VideOCR Recreated extracts hardcoded / burned-in subtitles from videos and expor
   <em>VideOCR Recreated main window</em>
 </p>
 
-This project is a recreation of the original VideOCR GUI in **PySide6 (Qt)** — a modern, easy-to-use interface that replaces the old PySimpleGUI application. It keeps the core subtitle-extraction features while adding an experimental **AMD GPU acceleration path for Windows** using:
+This project is a **fork** of the original VideOCR GUI, rebuilt in **PySide6 (Qt)** — a modern, easy-to-use interface that replaces the old PySimpleGUI application. It keeps the core subtitle-extraction features while adding an experimental **AMD GPU acceleration path for Windows** using:
 
 - **DirectML**
 - **torch-directml**
 - **EasyOCR**
 - **Hybrid OCR mode**
+- **Label detection** (text outside the subtitle crop, saved as `.ass`)
 
 Supported OCR engines:
 
@@ -33,12 +34,14 @@ Supported OCR engines:
 - **EasyOCR DirectML (AMD GPU)** — experimental Windows AMD path
 - **ONNX Runtime DirectML (AMD GPU Experimental)** — experimental
 
-### What changed in the recreation
+### What changed in the fork
 
-- GUI rewritten from scratch in **PySide6** (modern dark theme, resizable layout, native HiDPI support).
+- GUI rewritten from scratch in **PySide6** (modern warm-obsidian + gold dark theme, resizable layout, native HiDPI support).
+- **Label detection** — detects text *outside* the subtitle crop (e.g. people's / places' names) and saves the result as a positioned `.ass` subtitle file.
 - **Update checking was removed** — the GUI no longer polls GitHub for new versions.
 - **Benchmarking and the "Apply Tested AMD Preset" button were removed** from the GUI (the CLI benchmark flags and `tools/benchmark_*.py` helpers remain available for advanced users).
 - The **DirectML GPU selection is now saved to the config file** and restored across sessions; it **defaults to GPU 0** (the first DirectML adapter).
+- The DirectML and label-detection settings are **disabled in the GUI** until their master toggle (Enable GPU Usage / Enable Label Detection) is switched on.
 - The FFmpeg D3D11VA path uses `-fps_mode vfr` instead of the removed `-vsync 0` option so it works with newer FFmpeg versions.
 
 ## AMD DirectML Backend Status
@@ -54,7 +57,7 @@ Tested on:
 Current AMD backend:
 
 | Stage | Device |
-|---|---|
+| --- | --- |
 | Video decoding / frame filtering | CPU |
 | Image preprocessing / stitching | CPU |
 | EasyOCR text detection | AMD GPU through DirectML |
@@ -264,7 +267,7 @@ Local OCR processing can be slow on CPU. Using a GPU is recommended when availab
 The fork provides several practical performance paths:
 
 | Mode | Best For | Notes |
-|---|---|---|
+| --- | --- | --- |
 | `paddleocr` CPU | Compatibility | Fully local but can be slow |
 | `paddleocr` CUDA | NVIDIA GPUs | Fastest official local GPU path |
 | `google_lens` | Accuracy / cloud recognition | Requires internet |
@@ -315,7 +318,7 @@ OCR Image Max Width: 720 for speed, 960 for accuracy
 The DirectML performance preset controls the grid target automatically:
 
 | Preset | Grid target | Intended use |
-|---|---:|---|
+| --- | ---: | --- |
 | `compatibility` | 1600x1600 | Older/lower-VRAM GPUs, stability first |
 | `balanced` | 2400x2400 | Recommended default |
 | `max` | 4096x4096 | Larger batches to feed high-end AMD GPUs harder |
@@ -324,7 +327,7 @@ The DirectML performance preset controls the grid target automatically:
 DirectML Recognition Mode behavior:
 
 | Mode | Detection | Recognition | Notes |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `stable` | DirectML GPU | CPU | Safest; avoids EasyOCR LSTM DirectML crash |
 | `auto` | DirectML GPU | Try DirectML GPU, then CPU fallback | Best "max AMD" test mode |
 | `experimental` | DirectML GPU | Try DirectML GPU | Still falls back for known LSTM compatibility failures |
@@ -338,7 +341,7 @@ A tight crop box around the subtitle area is usually much faster and more accura
 ### Quick Configuration Cheatsheet
 
 | Option | More Speed | More Accuracy | Notes |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | Input video quality | Use lower quality | Use higher quality | Cropping reduces the performance cost of high resolution |
 | `frames_to_skip` | Higher number | Lower number | For perfectly accurate timestamps, set this to `0` |
 | `ssim_threshold` | Lower threshold | Higher threshold | Lower values reduce the number of images sent to OCR |
@@ -762,8 +765,8 @@ Linux:
 ### Clone Repository
 
 ```bash
-git clone https://github.com/BaseCrunch/VideOCR.git
-cd VideOCR
+git clone https://github.com/FlamingWater35/VideOCR-Recreated.git
+cd VideOCR-Recreated
 ```
 
 If you rename this fork, use your new repository URL instead.
@@ -950,7 +953,13 @@ Notes:
 
 ## Credits
 
-This project is based on the original **VideOCR** project by `timminator`, with a recreated PySide6 GUI and an AMD DirectML backend.
+This project is a **fork** of the original **VideOCR** project by `timminator`, with a recreated PySide6 GUI, an AMD DirectML backend, and label detection.
+
+Fork repository:
+
+```text
+https://github.com/FlamingWater35/VideOCR-Recreated
+```
 
 Original project:
 
@@ -960,8 +969,10 @@ https://github.com/timminator/VideOCR
 
 Fork changes include:
 
-- PySide6 GUI recreation ("VideOCR Recreated")
+- PySide6 GUI recreation ("VideOCR Recreated") with a warm-obsidian + gold theme
 - `easyocr_directml` backend
+- `onnx_directml` experimental backend
+- **Label detection** (`enable_label_detection`) with `.ass` output and positioned Label events
 - DirectML adapter selection (persisted in the config, default GPU 0)
 - DirectML diagnostics and development helper scripts
 - Hybrid EasyOCR mode for stable AMD GPU usage
