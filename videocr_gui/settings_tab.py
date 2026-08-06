@@ -177,6 +177,22 @@ class SettingsTab(QWidget):
         self._add_check(mode_form, "--use_server_model", "chk_server_model", "Use Server Model", "tip_server_model", False)
         root.addWidget(mode_box)
 
+        # Label detection settings (text outside the subtitle crop area, e.g. names)
+        label_box = QGroupBox()
+        label_box.setObjectName("sectionBox")
+        self._section_boxes.append((label_box, "lbl_label_section", "Label Detection:"))
+        label_form = QFormLayout(label_box)
+        label_form.setLabelAlignment(Qt.AlignmentFlag.AlignLeft)
+        label_form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow)
+
+        self._add_check(label_form, "enable_label_detection", "chk_label_detection",
+                        "Enable Label Detection (detect text outside the subtitle crop)", "tip_label_detection", False)
+        self._add_line(label_form, "--label_ocr_image_max_width", "lbl_label_ocr_width",
+                       "Label Max OCR Image Width (pixel):", "720", "tip_label_ocr_width")
+        self._add_line(label_form, "--label_min_display_duration", "lbl_label_min_duration",
+                       "Label Minimum Display Duration (seconds):", "1.0", "tip_label_min_duration")
+        root.addWidget(label_box)
+
         # VideOCR settings
         vo_box = QGroupBox()
         vo_box.setObjectName("sectionBox")

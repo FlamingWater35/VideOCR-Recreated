@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import sys
 import time
 
@@ -17,7 +18,9 @@ def save_subtitles_to_file(
         directml_grid_max_width: int = 2400, directml_grid_max_height: int = 2400,
         directml_performance_preset: str = "balanced", directml_recognition_mode: str = "stable",
         directml_frame_scan_mode: str = "cpu_ssim", onnx_directml_tuning: str = "balanced",
-        benchmark_compare_engine: bool = False, benchmark_compare_sample_grids: int = 3) -> None:
+        benchmark_compare_engine: bool = False, benchmark_compare_sample_grids: int = 3,
+        enable_label_detection: bool = False, label_ocr_image_max_width: int = 720,
+        label_min_display_duration_sec: float = 1.0) -> None:
 
     total_start = time.perf_counter()
 
@@ -28,6 +31,17 @@ def save_subtitles_to_file(
         subtitle_alignments = [None, None]
     elif len(subtitle_alignments) == 1:
         subtitle_alignments.append(None)
+
+    # Label detection (e.g. people/place names outside the subtitle crop area)
+    # is an ASS-only feature: the final result is written as an .ass subtitle
+    # file with proper ASS timestamps and \pos-positioned Label events.
+    label_detection = bool(enable_label_detection)
+    if label_detection:
+        if file_path.lower().endswith(".srt"):
+            file_path = file_path[:-4] + ".ass"
+        print(f"Label detection enabled: output will be written as .ass subtitle file: {file_path}", flush=True)
+        if os.path.isfile(file_path):
+            print(f"Warning: overwriting existing .ass file: {file_path}", flush=True)
 
     # PaddleOCR and Chrome Lens are standalone helper executables.
     # EasyOCR DirectML is a pure-Python backend, so it must not require the
@@ -92,7 +106,8 @@ def save_subtitles_to_file(
             frames_to_skip, crop_zones, ocr_image_max_width, normalize_to_simplified_chinese,
             directml_grid_max_width, directml_grid_max_height,
             directml_performance_preset, directml_recognition_mode, directml_frame_scan_mode,
-            onnx_directml_tuning, benchmark_compare_engine, benchmark_compare_sample_grids
+            onnx_directml_tuning, benchmark_compare_engine, benchmark_compare_sample_grids,
+            enable_label_detection, label_ocr_image_max_width, label_min_display_duration_sec
         )
         ocr_end = time.perf_counter()
     except Exception as e:
@@ -103,6 +118,52 @@ def save_subtitles_to_file(
 
     with open(file_path, 'w+', encoding='utf-8') as f:
         f.write(subtitles)
+
+    # Run the bundled ASS QA auto-fixer (ass_qafix) on the generated .ass file
+    # as post-processing. Label detection always produces .ass output.
+    if label_detection:
+        qafix_errors: list[str] = []
+        try:
+            import subprocess as _sp
+            import sys as _sys
+
+            script = os.path.join(
+                os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+                "tools", "ass_qafix", "ass_qafix.py",
+            )
+            if not os.path.isfile(script):
+                script = ""
+                for root, _dirs, files in os.walk(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))):
+                    if "ass_qafix.py" in files:
+                        script = os.path.join(root, "ass_qafix.py")
+                        break
+            if script:
+                env = os.environ.copy()
+                # Let the bundled ass-qafix import jieba3/rapidfuzz/rich from the
+                # same interpreter/environment that runs the VideOCR CLI, and
+                # force UTF-8 so any CJK text in its output survives the pipe.
+                env["PYTHONIOENCODING"] = "utf-8"
+                env["PYTHONUNBUFFERED"] = "1"
+                result = _sp.run(
+                    [_sys.executable, script, "--inplace", file_path],
+                    capture_output=True, text=True, encoding="utf-8", errors="replace", env=env,
+                )
+                if result.returncode == 0:
+                    print("ASS post-processing (ass-qafix) completed successfully.", flush=True)
+                else:
+                    print(
+                        f"Warning: ass-qafix exited with code {result.returncode}. "
+                        f"Output: {(result.stdout or '').strip()[:500]}",
+                        flush=True,
+                    )
+            else:
+                print("Warning: ass-qafix script not found; skipping ASS post-processing.", flush=True)
+        except Exception as e:
+            qafix_errors.append(str(e))
+            print(f"Warning: ASS post-processing (ass-qafix) failed: {e}", flush=True)
+        if qafix_errors:
+            print(f"ASS post-processing errors: {'; '.join(qafix_errors)}", flush=True)
+
     total_end = time.perf_counter()
 
     merge_write_sec = total_end - merge_start

@@ -132,6 +132,10 @@ def get_default_settings() -> dict[str, Any]:
         "prevent_system_sleep": True,
         "--normalize_to_simplified_chinese": True,
         "gui_scaling": C.DEFAULT_GUI_SCALING,
+        # Label detection (text outside the subtitle crop, e.g. names)
+        "enable_label_detection": False,
+        "--label_ocr_image_max_width": "720",
+        "--label_min_display_duration": "1.0",
     }
 
 
@@ -144,6 +148,7 @@ _BOOL_KEYS = {
     "--use_server_model",
     "--use_dual_zone",
     "enable_subtitle_alignment",
+    "enable_label_detection",
     "--save_in_video_dir",
     "--send_notification",
     "--save_crop_box",

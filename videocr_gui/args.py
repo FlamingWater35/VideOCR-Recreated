@@ -43,7 +43,11 @@ def _time_to_seconds(time_str: str | None) -> int | None:
 def generate_output_path(
     video_path: str, settings: dict[str, Any], default_dir: str = DEFAULT_DOCUMENTS_DIR,
 ) -> pathlib.Path:
-    """Generates a unique output SRT path based on video path, settings and language."""
+    """Generates a unique output subtitle path based on video path, settings and language.
+
+    When label detection is enabled the output format is ASS (needed for the
+    positioned Label events), so the extension becomes ``.ass``.
+    """
     video_file = pathlib.Path(video_path)
     stem = video_file.stem
 
@@ -55,11 +59,12 @@ def generate_output_path(
         output_dir = pathlib.Path(output_dir_str) if output_dir_str else pathlib.Path(default_dir)
 
     lang_code = _language_iso_code(settings)
-    output_path = output_dir / f"{stem}.{lang_code}.srt"
+    ext = ".ass" if settings.get("enable_label_detection") else ".srt"
+    output_path = output_dir / f"{stem}.{lang_code}{ext}"
 
     counter = 1
     while output_path.exists():
-        output_path = output_dir / f"{stem}({counter}).{lang_code}.srt"
+        output_path = output_dir / f"{stem}({counter}).{lang_code}{ext}"
         counter += 1
     return output_path
 
@@ -207,6 +212,10 @@ def build_args(
         args["subtitle_alignment"] = align_map.get(str(settings.get("--subtitle_alignment", "")), C.DEFAULT_SUBTITLE_ALIGNMENT)
         if use_dual_zone:
             args["subtitle_alignment2"] = align_map.get(str(settings.get("--subtitle_alignment2", "")), C.DEFAULT_SUBTITLE_ALIGNMENT)
+
+    # label detection (text outside the subtitle crop, e.g. names)
+    if settings.get("enable_label_detection"):
+        args["enable_label_detection"] = True
 
     # notifications handled by GUI, not CLI
     args["send_notification"] = settings.get("--send_notification", True)

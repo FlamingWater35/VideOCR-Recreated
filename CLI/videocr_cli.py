@@ -29,6 +29,24 @@ from videocr import save_subtitles_to_file, utils
 from videocr.lang_dictionaries import GOOGLE_LENS_LANGS, PADDLEOCR_LANGS
 
 
+# The GUI runs this CLI as a subprocess and captures stdout/stderr through a
+# pipe. On Windows the interpreter then falls back to the locale encoding
+# (e.g. cp1252/charmap), which cannot encode CJK characters coming from video
+# paths, GPU names or OCR results and raises UnicodeEncodeError at runtime.
+# Force UTF-8 on the standard streams up-front so non-ASCII output always
+# works, whether the CLI is piped (GUI/queue) or attached to a console.
+def _force_utf8_stdio() -> None:
+    try:
+        if hasattr(sys.stdout, "reconfigure"):
+            sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+            sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
+
+_force_utf8_stdio()
+
+
 # custom validators for argparse
 def valid_video_path(arg: str) -> str:
     if not os.path.isfile(arg):
@@ -137,6 +155,9 @@ def main() -> None:
     parser.add_argument('--crop_height2', type=int, default=None, help='(Zone 2) Crop height')
     parser.add_argument('--subtitle_alignment', type=valid_alignment_name, default=None, help='(Zone 1) Subtitle alignment. Allowed: bottom-left, bottom-center, bottom-right, middle-left, middle-center, middle-right, top-left, top-center, top-right')
     parser.add_argument('--subtitle_alignment2', type=valid_alignment_name, default=None, help='(Zone 2) Subtitle alignment. See --subtitle_alignment for allowed values.')
+    parser.add_argument('--enable_label_detection', type=lambda x: x.lower() == 'true', default=False, help='Detect text outside the subtitle crop area (e.g. people/place name labels) and write an .ass subtitle file with positioned Label events (default: false)')
+    parser.add_argument('--label_ocr_image_max_width', type=restricted_int(min_val=1), default=720, help='Maximum image width used for OCR in the label detection zone (default: 720)')
+    parser.add_argument('--label_min_display_duration', type=restricted_float(min_val=0.0), default=1.0, help='Minimum display duration in seconds for detected labels (default: 1.0)')
     parser.add_argument('--allow_system_sleep', type=lambda x: x.lower() == 'true', default=False, help='Allow the system to sleep during processing (default: false)')
 
     args = parser.parse_args()
@@ -232,7 +253,10 @@ def main() -> None:
                 directml_frame_scan_mode=args.directml_frame_scan_mode,
                 onnx_directml_tuning=args.onnx_directml_tuning,
                 benchmark_compare_engine=args.benchmark_compare_engine,
-                benchmark_compare_sample_grids=args.benchmark_compare_sample_grids
+                benchmark_compare_sample_grids=args.benchmark_compare_sample_grids,
+                enable_label_detection=args.enable_label_detection,
+                label_ocr_image_max_width=args.label_ocr_image_max_width,
+                label_min_display_duration_sec=args.label_min_display_duration
             )
     except ValueError as e:
         print(f"Error: {e}")

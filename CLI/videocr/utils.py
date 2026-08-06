@@ -56,6 +56,70 @@ def get_srt_timestamp_from_ms(ms: float) -> str:
     return f'{hours:02d}:{minutes:02d}:{seconds:02d},{milliseconds:03d}'
 
 
+def get_ass_timestamp_from_ms(ms: float) -> str:
+    """Convert milliseconds into ASS timestamp (H:MM:SS.cc)."""
+    td = datetime.timedelta(milliseconds=ms)
+    minutes, seconds = divmod(td.seconds, 60)
+    hours, minutes = divmod(minutes, 60)
+    centiseconds = td.microseconds // 10000
+    return f'{hours}:{minutes:02d}:{seconds:02d}.{centiseconds:02d}'
+
+
+def compute_label_zone(width: int, height: int, subtitle_zones: list[dict[str, Any]]) -> dict[str, int] | None:
+    """Compute the label-detection area: the region of the frame NOT covered
+    by the subtitle crop zone(s) (e.g. people/place names that appear above or
+    below the hardcoded subtitle area).
+
+    Subtitles are usually a horizontal band, so the free area is split into
+    horizontal bands; the largest band is returned as the label zone.
+
+    Args:
+        width: Video width in pixels.
+        height: Video height in pixels.
+        subtitle_zones: Validated subtitle zones with 'x_start'/'x_end'/
+                       'y_start'/'y_end' (original video coordinates).
+
+    Returns:
+        A dict {'x', 'y', 'w', 'h'} in original video coordinates, or None
+        when the subtitle zones cover the entire frame height.
+    """
+    if not subtitle_zones or width <= 0 or height <= 0:
+        return None
+
+    # Merge the y-intervals covered by the subtitle zones.
+    covered: list[list[int]] = []
+    for z in subtitle_zones:
+        y1 = int(max(0, z.get('y_start', 0)))
+        y2 = int(min(height, z.get('y_end', height)))
+        if y2 > y1:
+            covered.append([y1, y2])
+    covered.sort()
+
+    merged: list[list[int]] = []
+    for y1, y2 in covered:
+        if merged and y1 <= merged[-1][1]:
+            merged[-1][1] = max(merged[-1][1], y2)
+        else:
+            merged.append([y1, y2])
+
+    # Free horizontal bands: frame edges + gaps between merged intervals.
+    bands: list[list[int]] = []
+    cursor = 0
+    for y1, y2 in merged:
+        if y1 > cursor:
+            bands.append([cursor, y1])
+        cursor = max(cursor, y2)
+    if cursor < height:
+        bands.append([cursor, height])
+
+    if not bands:
+        return None
+
+    # Pick the largest free band as the label zone (full width).
+    y1, y2 = max(bands, key=lambda b: b[1] - b[0])
+    return {'x': 0, 'y': y1, 'w': width, 'h': y2 - y1}
+
+
 def frame_to_array(frame: av.VideoFrame, fmt: str) -> np.ndarray[Any, Any]:
     """Converts a frame to an array, safely falls back if threads arg is unsupported."""
     if not hasattr(frame_to_array, "supports_threads"):

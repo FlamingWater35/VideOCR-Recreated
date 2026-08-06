@@ -666,6 +666,39 @@ This may improve detection at the cost of more processing power.
 
 Primarily for PaddleOCR GPU usage.
 
+### `enable_label_detection`
+
+Detects text **outside** the selected subtitle crop area — for example people's
+or places' names when they first appear in Chinese anime / donghua.
+
+```bat
+--enable_label_detection true
+```
+
+When enabled, the final result is saved as an **`.ass`** subtitle file with:
+
+- Proper ASS timestamps (`H:MM:SS.cc`) for every dialogue.
+- **Label events** positioned at their actual on-screen location using ASS
+  `\pos` override tags (a `Label` style, top-aligned).
+- The bundled **ass-qafix** auto-fixer runs automatically on the generated
+  `.ass` file as post-processing (deduplication, merge, overlap/empty-text
+  cleanup).
+
+The label detection area is the largest free horizontal band outside the
+subtitle crop zone(s); every sampled frame is OCR'd there (no SSIM frame
+dedup) so label appearances are not lost.
+
+### `label_ocr_image_max_width`
+
+Maximum image width used for OCR inside the label detection area (default:
+`720`). Lower values are faster; higher values may improve accuracy for small
+name text.
+
+### `label_min_display_duration`
+
+Minimum display duration in seconds for detected labels (default: `1.0`).
+Labels detected for shorter than this are extended to remain readable.
+
 ### `directml_device_index`
 
 Selects the DirectML adapter index used by `easyocr_directml` / `onnx_directml`.

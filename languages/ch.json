@@ -284,5 +284,13 @@
     "dml_onnx_low_vram": "低显存 / 更安全",
     "dml_onnx_balanced": "均衡 ONNX（推荐）",
     "dml_onnx_max": "最大吞吐量 / 更高显存",
-    "dml_onnx_manual": "手动网格大小"
+    "dml_onnx_manual": "手动网格大小",
+    "lbl_label_section": "标签检测：",
+    "chk_label_detection": "启用标签检测（检测字幕选区之外的文本）",
+    "tip_label_detection": "检测字幕选区之外的文本，例如人物或地点首次出现时的名称。最终结果将保存为带有定位 Label 事件的 .ass 字幕文件。",
+    "lbl_label_ocr_width": "标签最大 OCR 图像宽度（像素）：",
+    "tip_label_ocr_width": "标签检测区域（字幕选区之外）用于 OCR 的最大图像宽度。",
+    "lbl_label_min_duration": "标签最短显示时长（秒）：",
+    "tip_label_min_duration": "检测到的标签的最短显示时长（秒）。",
+    "save_as_ass_filter_name": "高级 SubStation Alpha 字幕"
 }

@@ -584,11 +584,18 @@ class MainWindow(QMainWindow):
 
     def _save_as(self) -> None:
         current = self.output_edit.text()
-        path, _ = QFileDialog.getSaveFileName(
-            self, i18n.tr("save_as_title", "Save As"),
-            current,
-            f"{i18n.tr('save_as_filter_name', 'SubRip Subtitle')} (*.srt);;{i18n.tr('all_file_types', 'All Files')} (*.*)",
-        )
+        if self._current_settings().get("enable_label_detection"):
+            path, _ = QFileDialog.getSaveFileName(
+                self, i18n.tr("save_as_title", "Save As"),
+                current,
+                f"{i18n.tr('save_as_ass_filter_name', 'Advanced SubStation Alpha Subtitle')} (*.ass);;{i18n.tr('all_file_types', 'All Files')} (*.*)",
+            )
+        else:
+            path, _ = QFileDialog.getSaveFileName(
+                self, i18n.tr("save_as_title", "Save As"),
+                current,
+                f"{i18n.tr('save_as_filter_name', 'SubRip Subtitle')} (*.srt);;{i18n.tr('all_file_types', 'All Files')} (*.*)",
+            )
         if path:
             self.output_edit.setText(path)
 
@@ -643,7 +650,9 @@ class MainWindow(QMainWindow):
     def _on_settings_changed(self, keys: list[str]) -> None:
         self._settings.update(self.settings_tab.read_settings())
         for key in keys:
-            if key == "--save_in_video_dir":
+            # Output extension/format changes when the subtitle crop, save dir,
+            # or label detection setting changes.
+            if key in ("--save_in_video_dir", "enable_label_detection"):
                 self._update_output_path()
         config.save_settings(self._settings)
 
@@ -1116,7 +1125,9 @@ class MainWindow(QMainWindow):
             if arg_key in ("ocr_engine", "lang", "video_path", "output", "send_notification", "allow_system_sleep", "subtitle_position"):
                 continue
             gui_key = f"--{arg_key}"
-            if gui_key == "--directml_performance_preset":
+            if arg_key == "enable_label_detection":
+                settings["enable_label_detection"] = bool(arg_val)
+            elif gui_key == "--directml_performance_preset":
                 settings[gui_key] = C.DIRECTML_PERFORMANCE_FROM_CLI.get(str(arg_val), "Balanced (recommended)")
             elif gui_key == "--directml_recognition_mode":
                 settings[gui_key] = C.DIRECTML_RECOGNITION_FROM_CLI.get(str(arg_val), "Stable Hybrid (recommended)")

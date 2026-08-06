@@ -265,5 +265,13 @@
   "dml_onnx_low_vram": "Low VRAM / safer",
   "dml_onnx_balanced": "Balanced ONNX (recommended)",
   "dml_onnx_max": "Max Throughput / higher VRAM",
-  "dml_onnx_manual": "Manual Grid Size"
+  "dml_onnx_manual": "Manual Grid Size",
+  "lbl_label_section": "Label Detection:",
+  "chk_label_detection": "Enable Label Detection (detect text outside the subtitle crop)",
+  "tip_label_detection": "Detect text outside the subtitle crop area, such as people's or places' names when they first appear. The final result is saved as an .ass subtitle file with positioned Label events.",
+  "lbl_label_ocr_width": "Label Max OCR Image Width (pixel):",
+  "tip_label_ocr_width": "Maximum image width used for OCR in the label detection area (outside the subtitle crop).",
+  "lbl_label_min_duration": "Label Minimum Display Duration (seconds):",
+  "tip_label_min_duration": "Minimum display duration in seconds for detected labels.",
+  "save_as_ass_filter_name": "Advanced SubStation Alpha Subtitle"
 }
