@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import subprocess
@@ -50,7 +51,6 @@ def normalize_easyocr_lang(lang: str) -> list[str]:
         f"EasyOCR DirectML does not have a language mapping for '{lang}'. "
         f"Use one of these VideOCR language codes or add a mapping in easyocr_directml.py: {supported}"
     )
-
 
 
 def _windows_video_adapters() -> list[dict[str, Any]]:
@@ -136,7 +136,7 @@ def _score_video_adapter(adapter: dict[str, Any]) -> int:
         score += 350
 
     # Common integrated-GPU names should not win unless they are the only adapter.
-    if "integrated" in name or "radeon(tm) graphics" in name or "graphics" == name.strip():
+    if "integrated" in name or "radeon(tm) graphics" in name or name.strip() == "graphics":
         score -= 400
     if "microsoft basic" in name or "remote" in name:
         score -= 1000
@@ -177,17 +177,6 @@ def get_directml_recognition_mode() -> str:
     return mode
 
 
-def _is_lstm_directml_failure(e: BaseException) -> bool:
-    text = _format_exception(e).lower()
-    needles = (
-        "_thnn_fused_lstm_cell",
-        "lstm",
-        "not currently supported on the dml backend",
-        "could not run 'aten::",
-    )
-    return any(n in text for n in needles)
-
-
 def _safe_directml_device_count(torch_directml: Any) -> int | None:
     """Return the DirectML adapter count when the installed torch-directml exposes it."""
     for name in ("device_count", "get_device_count"):
@@ -221,7 +210,7 @@ def _build_directml_candidate_indices(torch_directml: Any) -> list[int | None]:
             raise RuntimeError(
                 "VIDEOCR_DIRECTML_DEVICE_INDEX must be a number, for example:\n"
                 "  set VIDEOCR_DIRECTML_DEVICE_INDEX=1"
-            )
+            ) from None
 
     prefer_high_perf = os.environ.get("VIDEOCR_DIRECTML_AUTO_PREFER_HIGH_PERFORMANCE", "1").strip().lower() not in {"0", "false", "no", "off"}
     preferred = _preferred_high_performance_adapter_index() if prefer_high_perf else None
@@ -279,10 +268,8 @@ def get_directml_device() -> Any:
             x = torch.tensor([1.0]).to(device)
             _ = (x + 1).cpu().item()
 
-            try:
+            with contextlib.suppress(Exception):
                 device._videocr_directml_index = index
-            except Exception:
-                pass
 
             print(f"Selected DirectML adapter index: {label}", flush=True)
             return device
@@ -294,7 +281,6 @@ def get_directml_device() -> Any:
         "Update your AMD driver and verify DirectX 12 support.\n\n"
         "Tried:\n  " + "\n  ".join(errors)
     )
-
 
 
 def _format_exception(e: BaseException) -> str:
@@ -342,13 +328,13 @@ def patch_easyocr_for_directml(easyocr_module: Any) -> None:
         import importlib
         from collections import OrderedDict
 
-        import torch  # type: ignore
         import easyocr.detection as detection  # type: ignore
         import easyocr.easyocr as easyocr_core  # type: ignore
         import easyocr.recognition as recognition  # type: ignore
+        import torch  # type: ignore
         from easyocr.craft import CRAFT  # type: ignore
-        from easyocr.utils import CTCLabelConverter  # type: ignore
         from easyocr.detection import copyStateDict  # type: ignore
+        from easyocr.utils import CTCLabelConverter  # type: ignore
     except Exception as e:
         raise RuntimeError("Could not prepare EasyOCR DirectML runtime patch:\n" + _format_exception(e)) from e
 
@@ -403,17 +389,13 @@ def patch_easyocr_for_directml(easyocr_module: Any) -> None:
             # uses; run_easyocr_on_stitched_images will catch that known failure
             # and recreate the reader in stable CPU-recognition mode.
             model = model.to(device)
-            try:
+            with contextlib.suppress(Exception):
                 model._videocr_directml_recognizer_experimental = True
-            except Exception:
-                pass
         else:
             # Stable hybrid mode: DirectML detector + CPU recognizer.
             model = model.to("cpu")
-            try:
+            with contextlib.suppress(Exception):
                 model._videocr_cpu_recognizer_for_directml = True
-            except Exception:
-                pass
         model.eval()
         return model, converter
 

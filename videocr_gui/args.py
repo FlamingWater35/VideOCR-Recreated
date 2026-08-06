@@ -16,10 +16,10 @@ def _is_valid_time(time_str: str | None) -> bool:
     parts = time_str.split(":")
     try:
         if len(parts) == 2:
-            m, s = int(parts[0]), int(parts[1])
+            m, s = float(parts[0]), float(parts[1])
             return m >= 0 and s >= 0 and s < 60
         if len(parts) == 3:
-            h, m, s = int(parts[0]), int(parts[1]), int(parts[2])
+            h, m, s = float(parts[0]), float(parts[1]), float(parts[2])
             return h >= 0 and m >= 0 and s >= 0 and m < 60 and s < 60
     except ValueError:
         return False
@@ -32,9 +32,9 @@ def _time_to_seconds(time_str: str | None) -> int | None:
     parts = time_str.split(":")
     try:
         if len(parts) == 2:
-            return int(parts[0]) * 60 + int(parts[1])
+            return int(float(parts[0]) * 60 + float(parts[1]))
         if len(parts) == 3:
-            return int(parts[0]) * 3600 + int(parts[1]) * 60 + int(parts[2])
+            return int(float(parts[0]) * 3600 + float(parts[1]) * 60 + float(parts[2]))
     except ValueError:
         return None
     return None

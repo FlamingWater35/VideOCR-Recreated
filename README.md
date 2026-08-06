@@ -456,7 +456,7 @@ Maximum allowed time gap in seconds between two subtitles to be considered for m
 Default value:
 
 ```text
-0.09
+0.1
 ```
 
 Increase this if the output SRT contains repeated subtitle lines that should have been merged.

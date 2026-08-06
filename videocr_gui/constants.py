@@ -4,22 +4,6 @@ from __future__ import annotations
 
 import sys
 
-# --- Language UI names ---
-LANGUAGE_CODE_TO_NATIVE_NAME = {'ar': 'العربية',
- 'ch': '中文',
- 'de': 'Deutsch',
- 'en': 'English',
- 'es': 'Español',
- 'fr': 'Français',
- 'id': 'Bahasa Indonesia',
- 'it': 'Italiano',
- 'ja': '日本語',
- 'ko': '한국어',
- 'pt': 'Português',
- 'ru': 'Русский',
- 'th': 'ไทย',
- 'vi': 'Tiếng Việt'}
-
 # --- OCR engines ---
 OCR_ENGINES = ['PaddleOCR (Det. + Rec.)',
  'PaddleOCR (Det.) + Google Lens (Rec.)',

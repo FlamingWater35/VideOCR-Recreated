@@ -75,9 +75,9 @@ LABEL_DEPENDENT_WIDGETS = (
 
 def _translated_label(key: str, fallback: str) -> str:
     """Returns the translated text for a label key, falling back to the default."""
-    if not i18n.LANG:
-        return fallback
-    return i18n.LANG.get(key, fallback)
+    # Use i18n.tr() so missing keys fall back to the English language file
+    # first (consistent with the rest of the UI), then to the fallback text.
+    return i18n.tr(key, fallback)
 
 
 class SettingsTab(QWidget):
@@ -532,7 +532,11 @@ class SettingsTab(QWidget):
         elif key == "--onnx_directml_tuning":
             self._apply_onnx_grid()
         elif key == "-UI_LANG_COMBO-":
-            self.ui_language_changed.emit(self._widgets[key].currentText())
+            # emit the language code, not the localized native name, so the
+            # main window can apply the switch unambiguously
+            native = self._widgets[key].currentText()
+            code = i18n.get_available_languages().get(native)
+            self.ui_language_changed.emit(code or native)
             return
         elif key == "gui_scaling":
             # emit the internal key, not the localized display text

@@ -77,6 +77,7 @@ class MainWindow(QMainWindow):
         self._is_processing = False
         self._cancelled_by_user = False
         self._paused = False
+        self._current_pid: int | None = None
         self._wake_lock: Any = None
         self._taskbar: Any = None
         self._graph_size = (720, 405)
@@ -721,8 +722,12 @@ class MainWindow(QMainWindow):
         self._settings["post_action"] = index
         config.save_settings(self._settings)
 
-    def _on_ui_language(self, native_name: str) -> None:
-        code = i18n.get_available_languages().get(native_name)
+    def _on_ui_language(self, code_or_native: str) -> None:
+        # The signal now carries the language code; accept a native name too
+        # for robustness.
+        code = code_or_native
+        if code not in i18n.get_available_languages().values():
+            code = i18n.get_available_languages().get(code_or_native)
         if not code:
             return
         self._settings["--language"] = code

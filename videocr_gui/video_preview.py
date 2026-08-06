@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
     QGraphicsPixmapItem,
     QGraphicsRectItem,
     QGraphicsScene,
+    QGraphicsSceneMouseEvent,
     QGraphicsView,
     QVBoxLayout,
     QWidget,
@@ -350,15 +351,13 @@ class PreviewView(QGraphicsView):
     existing crop-box items fall through to the items (move/resize).
     """
 
-    def __init__(self, controller: "VideoPreview", scene: QGraphicsScene) -> None:
+    def __init__(self, controller: VideoPreview, scene: QGraphicsScene) -> None:
         super().__init__(scene)
         self._controller = controller
-        self._pressed_item: "ResizableRect | None" = None
+        self._pressed_item: ResizableRect | None = None
 
-    def _forward_to_item(self, item, event, scene_pos) -> "QGraphicsSceneMouseEvent":
+    def _forward_to_item(self, item, event, scene_pos) -> QGraphicsSceneMouseEvent:
         """Builds a QGraphicsSceneMouseEvent in the item's local coords."""
-        from PySide6.QtWidgets import QGraphicsSceneMouseEvent
-
         local = item.mapFromScene(scene_pos)
         scene_ev = QGraphicsSceneMouseEvent(event.type())
         scene_ev.setScenePos(scene_pos)
@@ -389,7 +388,7 @@ class PreviewView(QGraphicsView):
                 return
         super().mousePressEvent(event)
 
-    def _crop_item_at(self, scene_pos) -> "ResizableRect | None":
+    def _crop_item_at(self, scene_pos) -> ResizableRect | None:
         """Returns the crop box item at scene_pos, including its handle ring."""
         pad = ResizableRect.HANDLE
         for rr in self._controller.crop_rect_items():
@@ -613,7 +612,7 @@ class VideoPreview(QWidget):
     def is_drawing(self) -> bool:
         return self._drawing is not None
 
-    def crop_rect_items(self) -> list["ResizableRect"]:
+    def crop_rect_items(self) -> list[ResizableRect]:
         """Returns the live ResizableRect items for the current crop boxes."""
         return [b.get("_item") for b in self._crop_boxes if b.get("_item") is not None]
 

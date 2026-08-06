@@ -9,6 +9,7 @@ Ported from the legacy GUI's ``run_videocr`` / ``run_batch_thread`` logic:
 
 from __future__ import annotations
 
+import contextlib
 import os
 import shutil
 import subprocess
@@ -86,16 +87,12 @@ def set_process_pause_state(pid: int, pause: bool = True) -> bool:
         if pause:
             parent.suspend()
             for child in parent.children(recursive=True):
-                try:
+                with contextlib.suppress(Exception):
                     child.suspend()
-                except Exception:
-                    pass
         else:
             for child in parent.children(recursive=True):
-                try:
+                with contextlib.suppress(Exception):
                     child.resume()
-                except Exception:
-                    pass
             parent.resume()
         return True
     except Exception as e:

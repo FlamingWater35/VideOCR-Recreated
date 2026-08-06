@@ -12,6 +12,15 @@ LANGUAGES_DIR = os.path.join(APP_DIR, "languages")
 
 LANG: dict[str, str] = {}
 _current_code = "en"
+_en_cache: dict[str, str] | None = None
+
+
+def _english() -> dict[str, str]:
+    """Returns the English language dict, cached after first load."""
+    global _en_cache
+    if _en_cache is None:
+        _en_cache = _load_file("en") or {}
+    return _en_cache
 
 
 def get_available_languages() -> dict[str, str]:
@@ -76,8 +85,8 @@ def tr(key: str, default: str = "") -> str:
         return LANG[key]
     # Fall back to English for keys the active language lacks.
     if _current_code != "en":
-        en = _load_file("en")
-        if en and key in en:
+        en = _english()
+        if key in en:
             return en[key]
     if default:
         return default

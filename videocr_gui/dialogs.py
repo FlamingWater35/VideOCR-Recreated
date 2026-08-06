@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from PySide6.QtCore import QTimer, Qt
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import (
     QDialog,
     QDialogButtonBox,
@@ -89,6 +89,7 @@ class CountdownDialog(QDialog):
         self._timeout = timeout_seconds
         self._counter = timeout_seconds
         self._proceed = False
+        self._action_text = action_text
 
         layout = QVBoxLayout(self)
         layout.setSpacing(12)
@@ -125,12 +126,9 @@ class CountdownDialog(QDialog):
             return
         self._label.setText(
             i18n.tr("lbl_action_countdown", "System will execute '{}' in {} seconds.").format(
-                self._action_text_placeholder(), self._counter
+                self._action_text, self._counter
             )
         )
-
-    def _action_text_placeholder(self) -> str:
-        return self._label.text().split("'")[1] if "'" in self._label.text() else ""
 
     def _on_proceed(self) -> None:
         self._proceed = True

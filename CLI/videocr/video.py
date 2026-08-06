@@ -80,7 +80,6 @@ class Video:
         self.start_time_offset_ms = props['start_time_offset_ms']
         self.fps = float(props.get('fps', 0.0) or 0.0)
 
-
     def _run_easyocr_directml_ffmpeg_hw_scan(
             self, temp_dir: str, target_end_str: str, ssim_threshold_ratio: float, subtitle_position: str,
             brightness_threshold: int | None, frames_to_skip: int, max_stitch_width: int, max_stitch_height: int,
@@ -445,7 +444,6 @@ class Video:
             return max(512, int(directml_grid_max_width or 2400)), max(512, int(directml_grid_max_height or 2400)), "DirectML preset=manual"
         except Exception:
             return 2400, 2400, "DirectML preset=manual fallback"
-
 
     def run_ocr(self, use_gpu: bool, ocr_engine: str, lang: str, use_angle_cls: bool, time_start: str, time_end: str, conf_threshold: int,
                 use_fullframe: bool, brightness_threshold: int | None, ssim_threshold: int, subtitle_position: str, frames_to_skip: int,
@@ -969,7 +967,7 @@ class Video:
                             timestamp_ms, images_to_process, curr_str = buffer.pop(expected_index)
                             self.frame_timestamps[expected_index] = timestamp_ms
 
-                            if current_index % 15 == 0:
+                            if expected_index % 15 == 0:
                                 print(f"\rStep 1/3: Processing video... Current: {curr_str} / {target_end_str}, Frame: {expected_index + 1}", end="", flush=True)
 
                             if images_to_process is not None:
