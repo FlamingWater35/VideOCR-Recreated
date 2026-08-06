@@ -252,5 +252,22 @@
     "status_completed": "已完成",
     "status_cancelled_queue": "已取消",
     "status_error": "错误",
-    "status_paused": "已暂停"
+    "status_paused": "已暂停",
+    "lbl_dml_device": "DirectML GPU：",
+    "lbl_dml_preset": "AMD 性能预设：",
+    "lbl_dml_recognition": "DirectML 识别模式：",
+    "lbl_dml_frame_scan": "AMD 帧扫描模式：",
+    "lbl_onnx_tuning": "ONNX DirectML 调优：",
+    "lbl_dml_grid_w": "DirectML 网格最大宽度：",
+    "lbl_dml_grid_h": "DirectML 网格最大高度：",
+    "lbl_ocr_mode": "OCR 模式：",
+    "btn_refresh": "刷新",
+    "tip_dml_preset": "适用于 AMD GPU 的网格/性能预设。兼容性最安全；Max 会向 GPU 发送更大的批次。",
+    "tip_dml_recognition": "Stable Hybrid 为了兼容性将识别保持在 CPU 上；AMD Max Auto 会尝试 GPU 识别并在失败时回退到 CPU。",
+    "tip_dml_frame_scan": "第 1 步如何比较帧相似度。CPU SSIM 最安全；DirectML SSIM 和 FFmpeg D3D11VA 原型会将更多工作转移到 GPU。",
+    "tip_onnx_tuning": "ONNX Runtime DirectML 内存/吞吐量调优。低 VRAM 最安全；Max 会预留更多 VRAM。",
+    "tip_dml_grid_w": "手动 DirectML 模式下拼接 OCR 网格的最大宽度。",
+    "tip_dml_grid_h": "手动 DirectML 模式下拼接 OCR 网格的最大高度。",
+    "lbl_dml_section": "DirectML（AMD GPU）：",
+    "tip_dml_device": "选择用于 OCR 的 DirectML 适配器（GPU）。该选择会被保存，并在下次启动时恢复。"
 }

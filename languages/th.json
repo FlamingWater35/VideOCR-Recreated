@@ -252,5 +252,22 @@
     "status_completed": "เสร็จสมบูรณ์",
     "status_cancelled_queue": "ยกเลิกแล้ว",
     "status_error": "ข้อผิดพลาด",
-    "status_paused": "หยุดชั่วคราว"
+    "status_paused": "หยุดชั่วคราว",
+    "lbl_dml_device": "GPU DirectML:",
+    "lbl_dml_preset": "ค่าที่ตั้งไว้ประสิทธิภาพ AMD:",
+    "lbl_dml_recognition": "โหมดการรู้จำ DirectML:",
+    "lbl_dml_frame_scan": "โหมดสแกนเฟรม AMD:",
+    "lbl_onnx_tuning": "การปรับแต่ง ONNX DirectML:",
+    "lbl_dml_grid_w": "ความกว้างสูงสุดของกริด DirectML:",
+    "lbl_dml_grid_h": "ความสูงสูงสุดของกริด DirectML:",
+    "lbl_ocr_mode": "โหมด OCR:",
+    "btn_refresh": "รีเฟรช",
+    "tip_dml_preset": "ค่าที่ตั้งไว้กริด/ประสิทธิภาพสำหรับ GPU AMD โหมดเข้ากันได้ปลอดภัยที่สุด Max จะส่งชุดข้อมูลขนาดใหญ่กว่าไปยัง GPU",
+    "tip_dml_recognition": "Stable Hybrid คงการรู้จำไว้ที่ CPU เพื่อความเข้ากันได้ AMD Max Auto จะลองรู้จำด้วย GPU และสำรองไปใช้ CPU หากไม่สำเร็จ",
+    "tip_dml_frame_scan": "วิธีที่ขั้นตอนที่ 1 เปรียบเทียบความคล้ายคลึงของเฟรม CPU SSIM ปลอดภัยที่สุด DirectML SSIM และต้นแบบ FFmpeg D3D11VA จะย้ายงานมากขึ้นไปยัง GPU",
+    "tip_onnx_tuning": "การปรับแต่งหน่วยความจำ/ปริมาณงานของ ONNX Runtime DirectML VRAM ต่ำปลอดภัยที่สุด Max จะสำรอง VRAM มากขึ้น",
+    "tip_dml_grid_w": "ความกว้างสูงสุดของกริด OCR ที่ต่อกันสำหรับโหมด DirectML แบบกำหนดเอง",
+    "tip_dml_grid_h": "ความสูงสูงสุดของกริด OCR ที่ต่อกันสำหรับโหมด DirectML แบบกำหนดเอง",
+    "lbl_dml_section": "DirectML (GPU AMD):",
+    "tip_dml_device": "เลือกอะแดปเตอร์ DirectML (GPU) ที่ใช้สำหรับ OCR การเลือกจะถูกบันทึกและเรียกคืนเมื่อเปิดใช้ครั้งถัดไป"
 }

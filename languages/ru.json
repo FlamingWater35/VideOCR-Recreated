@@ -252,5 +252,22 @@
     "status_completed": "Завершено",
     "status_cancelled_queue": "Отменено",
     "status_error": "Ошибка",
-    "status_paused": "Пауза"
+    "status_paused": "Пауза",
+    "lbl_dml_device": "DirectML GPU:",
+    "lbl_dml_preset": "Пресет производительности AMD:",
+    "lbl_dml_recognition": "Режим распознавания DirectML:",
+    "lbl_dml_frame_scan": "Режим сканирования кадров AMD:",
+    "lbl_onnx_tuning": "Настройка ONNX DirectML:",
+    "lbl_dml_grid_w": "Максимальная ширина сетки DirectML:",
+    "lbl_dml_grid_h": "Максимальная высота сетки DirectML:",
+    "lbl_ocr_mode": "Режим OCR:",
+    "btn_refresh": "Обновить",
+    "tip_dml_preset": "Пресет сетки/производительности для GPU AMD. Совместимость — самый безопасный вариант; Max отправляет на GPU более крупные пакеты.",
+    "tip_dml_recognition": "Stable Hybrid оставляет распознавание на CPU для совместимости; AMD Max Auto пробует распознавание на GPU с возвратом к CPU.",
+    "tip_dml_frame_scan": "Как Шаг 1 сравнивает похожесть кадров. SSIM на CPU — самый безопасный; SSIM DirectML и прототип FFmpeg D3D11VA переносят больше работы на GPU.",
+    "tip_onnx_tuning": "Настройка памяти/пропускной способности ONNX Runtime DirectML. Низкий VRAM — самый безопасный; Max резервирует больше VRAM.",
+    "tip_dml_grid_w": "Максимальная ширина склеенной сетки OCR для ручного режима DirectML.",
+    "tip_dml_grid_h": "Максимальная высота склеенной сетки OCR для ручного режима DirectML.",
+    "lbl_dml_section": "DirectML (GPU AMD):",
+    "tip_dml_device": "Выберите адаптер DirectML (GPU), используемый для OCR. Выбор сохраняется и восстанавливается при следующем запуске."
 }

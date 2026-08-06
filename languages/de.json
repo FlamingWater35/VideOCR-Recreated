@@ -252,5 +252,22 @@
     "status_completed": "Abgeschlossen",
     "status_cancelled_queue": "Abgebrochen",
     "status_error": "Fehler",
-    "status_paused": "Pausiert"
+    "status_paused": "Pausiert",
+    "lbl_dml_device": "DirectML-GPU:",
+    "lbl_dml_preset": "AMD-Leistungsvorgabe:",
+    "lbl_dml_recognition": "DirectML-Erkennungsmodus:",
+    "lbl_dml_frame_scan": "AMD-Frame-Scan-Modus:",
+    "lbl_onnx_tuning": "ONNX-DirectML-Abstimmung:",
+    "lbl_dml_grid_w": "Maximale DirectML-Rasterbreite:",
+    "lbl_dml_grid_h": "Maximale DirectML-Rasterhöhe:",
+    "lbl_ocr_mode": "OCR-Modus:",
+    "btn_refresh": "Aktualisieren",
+    "tip_dml_preset": "Raster-/Leistungsvorgabe für AMD-GPUs. Kompatibilität ist am sichersten; Max sendet größere Stapel an die GPU.",
+    "tip_dml_recognition": "Stable Hybrid hält die Erkennung aus Kompatibilitätsgründen auf der CPU; AMD Max Auto versucht GPU-Erkennung mit CPU-Fallback.",
+    "tip_dml_frame_scan": "Wie Schritt 1 die Frame-Ähnlichkeit vergleicht. CPU-SSIM ist am sichersten; DirectML-SSIM und der FFmpeg-D3D11VA-Prototyp verlagern mehr Arbeit auf die GPU.",
+    "tip_onnx_tuning": "ONNX-Runtime-DirectML-Speicher-/Durchsatz-Abstimmung. Geringer VRAM ist am sichersten; Max reserviert mehr VRAM.",
+    "tip_dml_grid_w": "Maximale gestitchte OCR-Rasterbreite für den manuellen DirectML-Modus.",
+    "tip_dml_grid_h": "Maximale gestitchte OCR-Rasterhöhe für den manuellen DirectML-Modus.",
+    "lbl_dml_section": "DirectML (AMD-GPU):",
+    "tip_dml_device": "Wählen Sie den DirectML-Adapter (GPU) für die OCR. Die Auswahl wird gespeichert und beim nächsten Start wiederhergestellt."
 }

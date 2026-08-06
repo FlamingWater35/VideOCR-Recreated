@@ -252,5 +252,22 @@
     "status_completed": "Completado",
     "status_cancelled_queue": "Cancelado",
     "status_error": "Error",
-    "status_paused": "Pausado"
+    "status_paused": "Pausado",
+    "lbl_dml_device": "GPU DirectML:",
+    "lbl_dml_preset": "Ajuste de rendimiento AMD:",
+    "lbl_dml_recognition": "Modo de reconocimiento DirectML:",
+    "lbl_dml_frame_scan": "Modo de escaneo de fotogramas AMD:",
+    "lbl_onnx_tuning": "Ajuste de ONNX DirectML:",
+    "lbl_dml_grid_w": "Ancho máx. de cuadrícula DirectML:",
+    "lbl_dml_grid_h": "Alto máx. de cuadrícula DirectML:",
+    "lbl_ocr_mode": "Modo OCR:",
+    "btn_refresh": "Actualizar",
+    "tip_dml_preset": "Ajuste de cuadrícula/rendimiento para GPU AMD. Compatibilidad es lo más seguro; Máx. envía lotes más grandes a la GPU.",
+    "tip_dml_recognition": "Stable Hybrid mantiene el reconocimiento en la CPU por compatibilidad; AMD Max Auto intenta el reconocimiento por GPU con respaldo en CPU.",
+    "tip_dml_frame_scan": "Cómo compara la similitud de fotogramas el Paso 1. SSIM por CPU es lo más seguro; SSIM DirectML y el prototipo FFmpeg D3D11VA mueven más trabajo a la GPU.",
+    "tip_onnx_tuning": "Ajuste de memoria/rendimiento de ONNX Runtime DirectML. VRAM baja es lo más seguro; Máx. reserva más VRAM.",
+    "tip_dml_grid_w": "Ancho máximo de la cuadrícula OCR unida para el modo DirectML manual.",
+    "tip_dml_grid_h": "Alto máximo de la cuadrícula OCR unida para el modo DirectML manual.",
+    "lbl_dml_section": "DirectML (GPU AMD):",
+    "tip_dml_device": "Seleccione el adaptador DirectML (GPU) utilizado para OCR. La selección se guarda y se restaura en el siguiente inicio."
 }

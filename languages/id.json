@@ -252,5 +252,22 @@
     "status_completed": "Selesai",
     "status_cancelled_queue": "Dibatalkan",
     "status_error": "Kesalahan",
-    "status_paused": "Dijeda"
+    "status_paused": "Dijeda",
+    "lbl_dml_device": "GPU DirectML:",
+    "lbl_dml_preset": "Pratetap Kinerja AMD:",
+    "lbl_dml_recognition": "Mode Pengenalan DirectML:",
+    "lbl_dml_frame_scan": "Mode Pindai Bingkai AMD:",
+    "lbl_onnx_tuning": "Penyetelan ONNX DirectML:",
+    "lbl_dml_grid_w": "Lebar Maks. Grid DirectML:",
+    "lbl_dml_grid_h": "Tinggi Maks. Grid DirectML:",
+    "lbl_ocr_mode": "Mode OCR:",
+    "btn_refresh": "Segarkan",
+    "tip_dml_preset": "Pratetap grid/kinerja untuk GPU AMD. Kompatibilitas paling aman; Max mengirim batch yang lebih besar ke GPU.",
+    "tip_dml_recognition": "Stable Hybrid menjaga pengenalan di CPU untuk kompatibilitas; AMD Max Auto mencoba pengenalan GPU dengan cadangan ke CPU.",
+    "tip_dml_frame_scan": "Cara Langkah 1 membandingkan kemiripan bingkai. SSIM CPU paling aman; SSIM DirectML dan prototipe FFmpeg D3D11VA memindahkan lebih banyak pekerjaan ke GPU.",
+    "tip_onnx_tuning": "Penyetelan memori/throughput ONNX Runtime DirectML. VRAM rendah paling aman; Max mencadangkan lebih banyak VRAM.",
+    "tip_dml_grid_w": "Lebar maksimum grid OCR yang disambung untuk mode DirectML manual.",
+    "tip_dml_grid_h": "Tinggi maksimum grid OCR yang disambung untuk mode DirectML manual.",
+    "lbl_dml_section": "DirectML (GPU AMD):",
+    "tip_dml_device": "Pilih adaptor DirectML (GPU) yang digunakan untuk OCR. Pilihan disimpan dan dipulihkan pada peluncuran berikutnya."
 }

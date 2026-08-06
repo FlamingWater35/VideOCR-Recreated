@@ -252,5 +252,22 @@
     "status_completed": "Terminé",
     "status_cancelled_queue": "Annulé",
     "status_error": "Erreur",
-    "status_paused": "En pause"
+    "status_paused": "En pause",
+    "lbl_dml_device": "GPU DirectML :",
+    "lbl_dml_preset": "Préréglage de performance AMD :",
+    "lbl_dml_recognition": "Mode de reconnaissance DirectML :",
+    "lbl_dml_frame_scan": "Mode de balayage de frames AMD :",
+    "lbl_onnx_tuning": "Réglage ONNX DirectML :",
+    "lbl_dml_grid_w": "Largeur max. de la grille DirectML :",
+    "lbl_dml_grid_h": "Hauteur max. de la grille DirectML :",
+    "lbl_ocr_mode": "Mode OCR :",
+    "btn_refresh": "Actualiser",
+    "tip_dml_preset": "Préréglage de grille/performance pour les GPU AMD. Compatibilité est le plus sûr ; Max envoie des lots plus grands au GPU.",
+    "tip_dml_recognition": "Stable Hybrid garde la reconnaissance sur le CPU pour la compatibilité ; AMD Max Auto essaie la reconnaissance GPU avec repli sur le CPU.",
+    "tip_dml_frame_scan": "Comment l'étape 1 compare la similarité des frames. SSIM CPU est le plus sûr ; SSIM DirectML et le prototype FFmpeg D3D11VA déplacent plus de travail vers le GPU.",
+    "tip_onnx_tuning": "Réglage mémoire/débit d'ONNX Runtime DirectML. Faible VRAM est le plus sûr ; Max réserve plus de VRAM.",
+    "tip_dml_grid_w": "Largeur maximale de la grille OCR fusionnée pour le mode DirectML manuel.",
+    "tip_dml_grid_h": "Hauteur maximale de la grille OCR fusionnée pour le mode DirectML manuel.",
+    "lbl_dml_section": "DirectML (GPU AMD) :",
+    "tip_dml_device": "Sélectionnez l'adaptateur DirectML (GPU) utilisé pour l'OCR. La sélection est enregistrée et restaurée au prochain lancement."
 }

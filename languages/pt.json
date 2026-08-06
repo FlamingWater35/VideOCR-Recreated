@@ -252,5 +252,22 @@
     "status_completed": "Concluído",
     "status_cancelled_queue": "Cancelado",
     "status_error": "Erro",
-    "status_paused": "Pausado"
+    "status_paused": "Pausado",
+    "lbl_dml_device": "GPU DirectML:",
+    "lbl_dml_preset": "Predefinição de desempenho AMD:",
+    "lbl_dml_recognition": "Modo de reconhecimento DirectML:",
+    "lbl_dml_frame_scan": "Modo de varredura de quadros AMD:",
+    "lbl_onnx_tuning": "Ajuste de ONNX DirectML:",
+    "lbl_dml_grid_w": "Largura máx. da grade DirectML:",
+    "lbl_dml_grid_h": "Altura máx. da grade DirectML:",
+    "lbl_ocr_mode": "Modo OCR:",
+    "btn_refresh": "Atualizar",
+    "tip_dml_preset": "Predefinição de grade/desempenho para GPUs AMD. Compatibilidade é a mais segura; Máx. envia lotes maiores para a GPU.",
+    "tip_dml_recognition": "Stable Hybrid mantém o reconhecimento na CPU para compatibilidade; AMD Max Auto tenta reconhecimento na GPU com fallback para CPU.",
+    "tip_dml_frame_scan": "Como o Passo 1 compara a similaridade dos quadros. SSIM na CPU é o mais seguro; SSIM DirectML e o protótipo FFmpeg D3D11VA movem mais trabalho para a GPU.",
+    "tip_onnx_tuning": "Ajuste de memória/throughput do ONNX Runtime DirectML. VRAM baixa é a mais segura; Máx. reserva mais VRAM.",
+    "tip_dml_grid_w": "Largura máxima da grade OCR unida para o modo DirectML manual.",
+    "tip_dml_grid_h": "Altura máxima da grade OCR unida para o modo DirectML manual.",
+    "lbl_dml_section": "DirectML (GPU AMD):",
+    "tip_dml_device": "Selecione o adaptador DirectML (GPU) usado para OCR. A seleção é salva e restaurada na próxima inicialização."
 }

@@ -252,5 +252,22 @@
     "status_completed": "完了",
     "status_cancelled_queue": "キャンセル済み",
     "status_error": "エラー",
-    "status_paused": "一時停止"
+    "status_paused": "一時停止",
+    "lbl_dml_device": "DirectML GPU:",
+    "lbl_dml_preset": "AMD パフォーマンスプリセット:",
+    "lbl_dml_recognition": "DirectML 認識モード:",
+    "lbl_dml_frame_scan": "AMD フレームスキャンモード:",
+    "lbl_onnx_tuning": "ONNX DirectML チューニング:",
+    "lbl_dml_grid_w": "DirectML グリッド最大幅:",
+    "lbl_dml_grid_h": "DirectML グリッド最大高さ:",
+    "lbl_ocr_mode": "OCR モード:",
+    "btn_refresh": "更新",
+    "tip_dml_preset": "AMD GPU 用のグリッド/パフォーマンスプリセット。互換性が最も安全です。Max はより大きなバッチを GPU に送ります。",
+    "tip_dml_recognition": "Stable Hybrid は互換性のため認識を CPU で行います。AMD Max Auto は GPU 認識を試み、失敗時は CPU にフォールバックします。",
+    "tip_dml_frame_scan": "ステップ1でのフレーム類似度の比較方法。CPU SSIM が最も安全です。DirectML SSIM と FFmpeg D3D11VA プロトタイプは GPU に多くの処理を移します。",
+    "tip_onnx_tuning": "ONNX Runtime DirectML のメモリ/スループット調整。低 VRAM が最も安全です。Max はより多くの VRAM を確保します。",
+    "tip_dml_grid_w": "手動 DirectML モードでの合成 OCR グリッドの最大幅。",
+    "tip_dml_grid_h": "手動 DirectML モードでの合成 OCR グリッドの最大高さ。",
+    "lbl_dml_section": "DirectML (AMD GPU):",
+    "tip_dml_device": "OCR に使用する DirectML アダプター（GPU）を選択します。選択内容は保存され、次回起動時に復元されます。"
 }

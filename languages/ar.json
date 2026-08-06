@@ -252,5 +252,22 @@
     "status_completed": "مكتمل",
     "status_cancelled_queue": "تم الإلغاء",
     "status_error": "خطأ",
-    "status_paused": "متوقف مؤقتاً"
+    "status_paused": "متوقف مؤقتاً",
+    "lbl_dml_device": "GPU DirectML:",
+    "lbl_dml_preset": "إعداد الأداء AMD:",
+    "lbl_dml_recognition": "وضع التعرف DirectML:",
+    "lbl_dml_frame_scan": "وضع فحص الإطارات AMD:",
+    "lbl_onnx_tuning": "ضبط ONNX DirectML:",
+    "lbl_dml_grid_w": "أقصى عرض لشبكة DirectML:",
+    "lbl_dml_grid_h": "أقصى ارتفاع لشبكة DirectML:",
+    "lbl_ocr_mode": "وضع OCR:",
+    "btn_refresh": "تحديث",
+    "tip_dml_preset": "إعداد الشبكة/الأداء لوحدات معالجة AMD. وضع التوافق هو الأكثر أمانًا؛ Max يرسل دفعات أكبر إلى GPU.",
+    "tip_dml_recognition": "Stable Hybrid يُبقي التعرف على وحدة المعالجة المركزية للتوافق؛ AMD Max Auto يحاول التعرف عبر GPU مع الرجوع إلى CPU عند الفشل.",
+    "tip_dml_frame_scan": "كيف تقارن الخطوة 1 تشابه الإطارات. SSIM عبر CPU هو الأكثر أمانًا؛ SSIM DirectML والنموذج الأولي FFmpeg D3D11VA ينقلان مزيدًا من العمل إلى GPU.",
+    "tip_onnx_tuning": "ضبط الذاكرة/الإنتاجية لـ ONNX Runtime DirectML. ذاكرة VRAM المنخفضة هي الأكثر أمانًا؛ Max يحجز المزيد من VRAM.",
+    "tip_dml_grid_w": "أقصى عرض لشبكة OCR المدمجة لوضع DirectML اليدوي.",
+    "tip_dml_grid_h": "أقصى ارتفاع لشبكة OCR المدمجة لوضع DirectML اليدوي.",
+    "lbl_dml_section": "DirectML (GPU AMD):",
+    "tip_dml_device": "حدد محول DirectML (GPU) المستخدم لـ OCR. يتم حفظ التحديد واستعادته عند التشغيل التالي."
 }
