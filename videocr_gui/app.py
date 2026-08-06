@@ -8,7 +8,7 @@ import subprocess
 import sys
 from typing import Any
 
-from PySide6.QtCore import QTimer, Qt
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QAction, QIcon, QKeySequence
 from PySide6.QtWidgets import (
     QFileDialog,
@@ -25,7 +25,8 @@ from PySide6.QtWidgets import (
 )
 
 from . import args as argsmod
-from . import config, constants as C, i18n, resources
+from . import config, i18n, resources
+from . import constants as C
 from .about_tab import AboutTab
 from .dialogs import CountdownDialog, ask_yes_no, info
 from .progress import ProgressUpdate
@@ -33,7 +34,7 @@ from .queue_tab import QueueTab
 from .settings_tab import SettingsTab
 from .video_preview import VideoPreview
 from .widgets import ClickableSlider, WheelGuardComboBox
-from .workers import CLIWorker, VIDEOCR_PATH
+from .workers import VIDEOCR_PATH, CLIWorker
 
 try:  # pragma: no cover
     import psutil
@@ -212,8 +213,10 @@ class MainWindow(QMainWindow):
         # run row
         run_row = QHBoxLayout()
         self.run_btn = QPushButton(i18n.tr("btn_run", "Run"))
+        self.run_btn.setObjectName("primaryButton")
         self.pause_btn = QPushButton(i18n.tr("btn_pause", "Pause"))
         self.cancel_btn = QPushButton(i18n.tr("btn_cancel", "Cancel"))
+        self.cancel_btn.setObjectName("dangerButton")
         self.pause_btn.setEnabled(False)
         self.cancel_btn.setEnabled(False)
         self.run_btn.clicked.connect(self._on_run)

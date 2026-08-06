@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QBrush, QColor
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QHBoxLayout,
@@ -75,7 +76,9 @@ class QueueTab(QWidget):
         # start/stop/pause row
         row1 = QHBoxLayout()
         self.start_btn = QPushButton(i18n.tr("btn_start_queue", "Start Queue"))
+        self.start_btn.setObjectName("primaryButton")
         self.stop_btn = QPushButton(i18n.tr("btn_stop_queue", "Stop Queue"))
+        self.stop_btn.setObjectName("dangerButton")
         self.pause_btn = QPushButton(i18n.tr("btn_pause", "Pause"))
         self.stop_btn.setEnabled(False)
         self.pause_btn.setEnabled(False)
@@ -88,7 +91,9 @@ class QueueTab(QWidget):
         # reorder/edit row
         row2 = QHBoxLayout()
         up_btn = QPushButton("▲")
+        up_btn.setProperty("reorder", True)
         down_btn = QPushButton("▼")
+        down_btn.setProperty("reorder", True)
         self._tooltip_map[up_btn] = "tip_batch_up"
         self._tooltip_map[down_btn] = "tip_batch_down"
         up_btn.setToolTip(i18n.tr("tip_batch_up", "Move up"))
@@ -133,8 +138,10 @@ class QueueTab(QWidget):
         for row, job in enumerate(self._jobs):
             self.table.setItem(row, 0, QTableWidgetItem(job.get("filename", "")))
             self.table.setItem(row, 1, QTableWidgetItem(job.get("output", "")))
-            status_item = QTableWidgetItem(self._translated_status(job.get("status", "Pending")))
-            status_item.setData(Qt.ItemDataRole.UserRole, job.get("status", "Pending"))
+            status = job.get("status", "Pending")
+            status_item = QTableWidgetItem(self._translated_status(status))
+            status_item.setData(Qt.ItemDataRole.UserRole, status)
+            status_item.setForeground(QBrush(QColor(self._status_color(status))))
             self.table.setItem(row, 2, status_item)
 
     def selected_rows(self) -> list[int]:
@@ -156,6 +163,18 @@ class QueueTab(QWidget):
     def _translated_status(self, status: str) -> str:
         key = STATUS_TRANSLATIONS.get(status, "status_pending")
         return i18n.tr(key, status)
+
+    @staticmethod
+    def _status_color(status: str) -> str:
+        """Accent color for each queue status (matches the theme palette)."""
+        return {
+            "Pending": "#9aa4b6",
+            "Processing": "#22d3ee",
+            "Paused": "#fbbf24",
+            "Completed": "#34d399",
+            "Cancelled": "#f87171",
+            "Error": "#f87171",
+        }.get(status, "#9aa4b6")
 
     def _pause_clicked(self) -> None:
         if self.pause_btn.text() == i18n.tr("btn_resume", "Resume"):
