@@ -244,9 +244,9 @@ class SettingsTab(QWidget):
 
         out_row = QHBoxLayout()
         self._widgets["--default_output_dir"] = QLineEdit()
-        browse_btn = QPushButton(i18n.tr("btn_browse_folder", "Open Folder..."))
+        self.browse_output_btn = QPushButton(i18n.tr("btn_browse_folder", "Open Folder..."))
         out_row.addWidget(self._widgets["--default_output_dir"])
-        out_row.addWidget(browse_btn)
+        out_row.addWidget(self.browse_output_btn)
         vo_form.addRow(self._lbl("lbl_output_dir", "Output Directory:"), out_row)
 
         self._add_line(vo_form, "--keyboard_seek_step", "lbl_seek_step", "Keyboard Seek Step (seconds):", "1", "tip_seek_step")
@@ -260,7 +260,7 @@ class SettingsTab(QWidget):
         outer.addWidget(scroll)
 
         # wire browse
-        browse_btn.clicked.connect(self._browse_output_dir)
+        self.browse_output_btn.clicked.connect(self._browse_output_dir)
 
     def _lbl(self, key: str, fallback: str) -> QLabel:
         label = QLabel(_translated_label(key, fallback))
@@ -510,6 +510,9 @@ class SettingsTab(QWidget):
 
         # DirectML refresh button
         self.refresh_btn.setText(i18n.tr("btn_refresh", "Refresh"))
+
+        # Output directory browse button
+        self.browse_output_btn.setText(i18n.tr("btn_browse_folder", "Open Folder..."))
 
         # Tooltips
         for widget, tip_key in self._tooltips.items():

@@ -899,6 +899,7 @@ class MainWindow(QMainWindow):
             self._set_system_awake(True)
         self._is_processing = True
         self._cancelled_by_user = False
+        self._paused = False
         self.queue_tab.set_processing_state(True)
         self.run_btn.setEnabled(False)
         self.cancel_btn.setEnabled(True)
@@ -984,6 +985,7 @@ class MainWindow(QMainWindow):
 
     def _finish_processing(self) -> None:
         self._is_processing = False
+        self._paused = False
         self._set_system_awake(False)
         self.queue_tab.set_processing_state(False)
         self.run_btn.setEnabled(True)
@@ -1057,8 +1059,6 @@ class MainWindow(QMainWindow):
         if self._worker is None or not self._worker.isRunning():
             return
         if self._paused:
-            if self._settings.get("prevent_system_sleep", True):
-                self._set_system_awake(True)
             if self._worker.resume():
                 self._paused = False
                 self.pause_btn.setText(i18n.tr("btn_pause", "Pause"))
@@ -1069,6 +1069,8 @@ class MainWindow(QMainWindow):
                     if j["status"] == "Paused":
                         j["status"] = "Processing"
                         break
+                if self._settings.get("prevent_system_sleep", True):
+                    self._set_system_awake(True)
         else:
             self._set_system_awake(False)
             if self._worker.pause():
@@ -1180,6 +1182,11 @@ class MainWindow(QMainWindow):
         settings["subtitle_language"] = disp
         for arg_key, arg_val in args.items():
             if arg_key in ("ocr_engine", "lang", "video_path", "output", "send_notification", "allow_system_sleep", "subtitle_position"):
+                continue
+            # Crop coordinates are restored separately via restore_box below;
+            # writing them into settings would pollute the config file.
+            if arg_key in ("crop_x", "crop_y", "crop_width", "crop_height",
+                           "crop_x2", "crop_y2", "crop_width2", "crop_height2"):
                 continue
             gui_key = f"--{arg_key}"
             if arg_key == "enable_label_detection":

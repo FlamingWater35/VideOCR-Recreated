@@ -176,8 +176,12 @@ def build_args(
         args["lang"] = lang_abbr
 
     # subtitle position
-    display_to_internal = {i18n.tr(key, key): internal for key, internal in C.SUBTITLE_POSITIONS_LIST}
-    pos_value = display_to_internal.get(str(settings.get("subtitle_position", "")), C.DEFAULT_INTERNAL_SUBTITLE_POSITION)
+    # settings store the internal value (e.g. "left"); also accept the
+    # localized display text for compatibility with older configs.
+    pos_internal_values = [internal for _, internal in C.SUBTITLE_POSITIONS_LIST]
+    pos_display_to_internal = {i18n.tr(key, key): internal for key, internal in C.SUBTITLE_POSITIONS_LIST}
+    pos_raw = str(settings.get("subtitle_position", ""))
+    pos_value = pos_raw if pos_raw in pos_internal_values else pos_display_to_internal.get(pos_raw, C.DEFAULT_INTERNAL_SUBTITLE_POSITION)
     args["subtitle_position"] = pos_value
 
     # generic -- args (excluding GUI-only keys)
@@ -207,11 +211,19 @@ def build_args(
             args[stripped] = str(value).strip()
 
     # subtitle alignment
+    # settings store the internal value (e.g. "top-left"); also accept the
+    # localized display text for compatibility with older configs.
     if settings.get("enable_subtitle_alignment"):
+        align_internal_values = [internal for _, internal in C.SUBTITLE_ALIGNMENT_LIST]
         align_map = {i18n.tr(key, internal): internal for key, internal in C.SUBTITLE_ALIGNMENT_LIST}
-        args["subtitle_alignment"] = align_map.get(str(settings.get("--subtitle_alignment", "")), C.DEFAULT_SUBTITLE_ALIGNMENT)
+
+        def _align_value(raw: Any) -> str:
+            s = str(raw)
+            return s if s in align_internal_values else align_map.get(s, C.DEFAULT_SUBTITLE_ALIGNMENT)
+
+        args["subtitle_alignment"] = _align_value(settings.get("--subtitle_alignment", ""))
         if use_dual_zone:
-            args["subtitle_alignment2"] = align_map.get(str(settings.get("--subtitle_alignment2", "")), C.DEFAULT_SUBTITLE_ALIGNMENT)
+            args["subtitle_alignment2"] = _align_value(settings.get("--subtitle_alignment2", ""))
 
     # label detection (text outside the subtitle crop, e.g. names)
     if settings.get("enable_label_detection"):
