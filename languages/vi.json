@@ -138,6 +138,8 @@
     "tip_batch_clear": "Xóa hàng đợi hiện tại",
 
     "lbl_about_version": "Phiên Bản: {version}",
+    "lbl_about_fork": "Dự án này là một bản fork của VideOCR gốc của timminator.",
+    "lbl_about_fork_repo": "Kho lưu trữ fork:",
     "lbl_get_newest": "Tải phiên bản mới nhất tại đây:",
     "lbl_bug_report": "Tìm thấy lỗi hoặc có đề xuất? Hãy mở một vấn đề tại:",
 
@@ -284,5 +286,19 @@
     "dml_onnx_low_vram": "VRAM Thấp / an toàn hơn",
     "dml_onnx_balanced": "ONNX Cân Bằng (khuyến nghị)",
     "dml_onnx_max": "Thông Lượng Tối Đa / VRAM cao hơn",
-    "dml_onnx_manual": "Kích Thước Lưới Thủ Công"
+    "dml_onnx_manual": "Kích Thước Lưới Thủ Công",
+    "lbl_label_section": "Phát hiện nhãn:",
+    "chk_label_detection": "Bật phát hiện nhãn (phát hiện văn bản ngoài vùng cắt phụ đề)",
+    "tip_label_detection": "Phát hiện văn bản ngoài vùng cắt phụ đề, chẳng hạn như tên người hoặc địa điểm khi chúng xuất hiện lần đầu. Kết quả cuối cùng được lưu dưới dạng tệp .ass với các sự kiện Label được định vị.",
+    "lbl_label_ocr_width": "Chiều Rộng Ảnh OCR Nhãn Tối Đa (pixel):",
+    "tip_label_ocr_width": "Chiều rộng ảnh tối đa dùng cho OCR trong vùng phát hiện nhãn (ngoài vùng cắt phụ đề).",
+    "lbl_label_min_duration": "Thời Gian Hiển Thị Nhãn Tối Thiểu (giây):",
+    "tip_label_min_duration": "Thời gian hiển thị tối thiểu tính bằng giây cho các nhãn được phát hiện.",
+    "lbl_label_conf_frames": "Số Khung Xác Nhận Nhãn Tối Thiểu:",
+    "tip_label_conf_frames": "Một nhãn phải xuất hiện trong ít nhất số khung mẫu này trước khi được xuất ra. Giá trị cao hơn lọc nhiều nhiễu OCR hơn.",
+    "lbl_label_reappear_gap": "Khoảng Cách Gộp Nhãn Xuất Hiện Lại (giây):",
+    "tip_label_reappear_gap": "Các lần xuất hiện lại của cùng một nhãn trong khoảng cách này được gộp thành một sự kiện duy nhất.",
+    "chk_label_filter_single": "Lọc Nhiễu Nhãn Một Ký Tự",
+    "tip_label_filter_single": "Loại bỏ các nhãn một ký tự/chữ số ASCII (ví dụ: \"M\", \"3\") thường là nhiễu OCR. Các ký tự Trung Quốc đơn lẻ được giữ lại.",
+    "save_as_ass_filter_name": "Phụ đề Advanced SubStation Alpha"
 }

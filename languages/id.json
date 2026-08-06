@@ -138,6 +138,8 @@
     "tip_batch_clear": "Bersihkan antrean saat ini",
 
     "lbl_about_version": "Versi: {version}",
+    "lbl_about_fork": "Proyek ini adalah fork dari VideOCR asli oleh timminator.",
+    "lbl_about_fork_repo": "Repositori fork:",
     "lbl_get_newest": "Dapatkan versi terbaru di sini:",
     "lbl_bug_report": "Menemukan bug atau punya saran? Silakan buka issue di:",
 
@@ -284,5 +286,19 @@
     "dml_onnx_low_vram": "VRAM Rendah / lebih aman",
     "dml_onnx_balanced": "ONNX Seimbang (disarankan)",
     "dml_onnx_max": "Throughput Maksimum / VRAM lebih tinggi",
-    "dml_onnx_manual": "Ukuran Grid Manual"
+    "dml_onnx_manual": "Ukuran Grid Manual",
+    "lbl_label_section": "Deteksi Label:",
+    "chk_label_detection": "Aktifkan Deteksi Label (deteksi teks di luar area potong subtitle)",
+    "tip_label_detection": "Mendeteksi teks di luar area potong subtitle, seperti nama orang atau tempat saat pertama kali muncul. Hasil akhir disimpan sebagai file .ass dengan event Label berposisi.",
+    "lbl_label_ocr_width": "Lebar Gambar OCR Label Maksimum (piksel):",
+    "tip_label_ocr_width": "Lebar gambar maksimum yang digunakan untuk OCR di area deteksi label (di luar potongan subtitle).",
+    "lbl_label_min_duration": "Durasi Tampil Minimum Label (detik):",
+    "tip_label_min_duration": "Durasi tampil minimum dalam detik untuk label yang terdeteksi.",
+    "lbl_label_conf_frames": "Frame Konfirmasi Minimum Label:",
+    "tip_label_conf_frames": "Sebuah label harus muncul di setidaknya jumlah frame sampel ini sebelum dikeluarkan. Nilai lebih tinggi menyaring lebih banyak noise OCR.",
+    "lbl_label_reappear_gap": "Jeda Penggabungan Kemunculan Ulang Label (detik):",
+    "tip_label_reappear_gap": "Kemunculan ulang label yang sama dalam jeda ini digabungkan menjadi satu event.",
+    "chk_label_filter_single": "Saring Noise Label Karakter Tunggal",
+    "tip_label_filter_single": "Buang label karakter/angka ASCII tunggal (mis. \"M\", \"3\") yang biasanya noise OCR. Karakter Cina tunggal dipertahankan.",
+    "save_as_ass_filter_name": "Subtitle Advanced SubStation Alpha"
 }

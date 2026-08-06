@@ -138,6 +138,8 @@
     "tip_batch_clear": "Svuota la coda attuale",
 
     "lbl_about_version": "Versione: {version}",
+    "lbl_about_fork": "Questo progetto è un fork del VideOCR originale di timminator.",
+    "lbl_about_fork_repo": "Repository del fork:",
     "lbl_get_newest": "Ottieni l'ultima versione qui:",
     "lbl_bug_report": "Hai trovato un bug o un suggerimento? Apri una segnalazione qui:",
 
@@ -284,5 +286,19 @@
     "dml_onnx_low_vram": "VRAM bassa / più sicuro",
     "dml_onnx_balanced": "ONNX bilanciato (consigliato)",
     "dml_onnx_max": "Massimo throughput / più VRAM",
-    "dml_onnx_manual": "Dimensione griglia manuale"
+    "dml_onnx_manual": "Dimensione griglia manuale",
+    "lbl_label_section": "Rilevamento etichette:",
+    "chk_label_detection": "Abilita rilevamento etichette (rileva testo fuori dal ritaglio dei sottotitoli)",
+    "tip_label_detection": "Rileva testo fuori dall'area di ritaglio dei sottotitoli, come nomi di persone o luoghi alla loro prima apparizione. Il risultato finale viene salvato come file .ass con eventi Label posizionati.",
+    "lbl_label_ocr_width": "Larghezza massima immagine OCR etichette (pixel):",
+    "tip_label_ocr_width": "Larghezza massima dell'immagine usata per l'OCR nell'area di rilevamento etichette (fuori dal ritaglio dei sottotitoli).",
+    "lbl_label_min_duration": "Durata minima di visualizzazione etichette (secondi):",
+    "tip_label_min_duration": "Durata minima di visualizzazione in secondi per le etichette rilevate.",
+    "lbl_label_conf_frames": "Frames minimi di conferma etichette:",
+    "tip_label_conf_frames": "Un'etichetta deve apparire in almeno questo numero di frame campionati prima di essere emessa. Valori più alti filtrano più rumore OCR.",
+    "lbl_label_reappear_gap": "Intervallo di fusione riapparizione etichette (secondi):",
+    "tip_label_reappear_gap": "Le riapparizioni della stessa etichetta in questo intervallo vengono fuse in un singolo evento.",
+    "chk_label_filter_single": "Filtra rumore etichette a carattere singolo",
+    "tip_label_filter_single": "Elimina etichette con un singolo carattere/cifra ASCII (es. \"M\", \"3\") che di solito sono rumore OCR. I singoli caratteri cinesi vengono conservati.",
+    "save_as_ass_filter_name": "Sottotitolo Advanced SubStation Alpha"
 }

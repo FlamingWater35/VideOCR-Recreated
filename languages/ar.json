@@ -138,6 +138,8 @@
     "tip_batch_clear": "مسح القائمة الحالية",
 
     "lbl_about_version": "الإصدار: {version}",
+    "lbl_about_fork": "هذا المشروع هو fork من VideOCR الأصلي بواسطة timminator.",
+    "lbl_about_fork_repo": "مستودع الفورك:",
     "lbl_get_newest": "احصل على أحدث إصدار هنا:",
     "lbl_bug_report": "وجدت خطأ أو لديك اقتراح؟ افتح مشكلة هنا:",
 
@@ -284,5 +286,19 @@
     "dml_onnx_low_vram": "VRAM منخفض / أكثر أمانًا",
     "dml_onnx_balanced": "ONNX متوازن (موصى به)",
     "dml_onnx_max": "أقصى إنتاجية / VRAM أعلى",
-    "dml_onnx_manual": "حجم شبكة يدوي"
+    "dml_onnx_manual": "حجم شبكة يدوي",
+    "lbl_label_section": "كشف التسميات:",
+    "chk_label_detection": "تفعيل كشف التسميات (كشف النص خارج منطقة قص الترجمة)",
+    "tip_label_detection": "يكشف النص خارج منطقة قص الترجمة، مثل أسماء الأشخاص أو الأماكن عند ظهورها لأول مرة. تُحفظ النتيجة النهائية كملف .ass مع أحداث Label محددة المواضع.",
+    "lbl_label_ocr_width": "أقصى عرض لصورة OCR للتسميات (بكسل):",
+    "tip_label_ocr_width": "أقصى عرض للصورة المستخدمة في OCR بمنطقة كشف التسميات (خارج منطقة قص الترجمة).",
+    "lbl_label_min_duration": "الحد الأدنى لمدة عرض التسميات (بالثواني):",
+    "tip_label_min_duration": "الحد الأدنى لمدة العرض بالثواني للتسميات المكتشفة.",
+    "lbl_label_conf_frames": "الحد الأدنى لإطارات تأكيد التسميات:",
+    "tip_label_conf_frames": "يجب أن تظهر التسمية في هذا العدد على الأقل من الإطارات المأخوذة قبل إخراجها. القيم الأعلى ترشح مزيدًا من ضوضاء OCR.",
+    "lbl_label_reappear_gap": "فجوة دمج إعادة ظهور التسميات (بالثواني):",
+    "tip_label_reappear_gap": "يتم دمج إعادة ظهور التسمية نفسها ضمن هذه الفجوة في حدث واحد.",
+    "chk_label_filter_single": "تصفية ضوضاء التسميات ذات الحرف الواحد",
+    "tip_label_filter_single": "يتجاهل التسميات المكونة من حرف/رقم ASCII واحد (مثل \"M\"، \"3\") والتي عادة ما تكون ضوضاء OCR. تُحفظ الأحرف الصينية المفردة.",
+    "save_as_ass_filter_name": "ترجمة Advanced SubStation Alpha"
 }

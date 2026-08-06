@@ -132,6 +132,8 @@
   "tip_batch_remove": "Remove selected job from queue",
   "tip_batch_clear": "Clear the current queue",
   "lbl_about_version": "Version: {version}",
+  "lbl_about_fork": "This project is a fork of the original VideOCR by timminator.",
+  "lbl_about_fork_repo": "Fork repository:",
   "lbl_get_newest": "Get the newest version here:",
   "lbl_bug_report": "Found a bug or have a suggestion? Feel free to open an issue at:",
   "update_title": "Update Available",

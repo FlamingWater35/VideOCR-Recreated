@@ -9,6 +9,10 @@ from PySide6.QtWidgets import QLabel, QVBoxLayout, QWidget
 
 from . import i18n
 
+FORK_REPO_URL = "https://github.com/FlamingWater35/VideOCR-Recreated"
+ORIGINAL_RELEASES_URL = "https://github.com/timminator/VideOCR/releases"
+ORIGINAL_ISSUES_URL = "https://github.com/timminator/VideOCR/issues"
+
 
 class ClickableLabel(QLabel):
     clicked = Signal()
@@ -38,15 +42,34 @@ class AboutTab(QWidget):
 
         layout.addSpacing(12)
 
+        # Fork notice: this project is a fork of the original VideOCR.
+        self.fork_lbl = QLabel(i18n.tr("lbl_about_fork", "This project is a fork of the original VideOCR by timminator."))
+        self.fork_lbl.setWordWrap(True)
+        self.fork_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(self.fork_lbl)
+
+        self.fork_repo_lbl = QLabel(i18n.tr("lbl_about_fork_repo", "Fork repository:"))
+        self.fork_repo_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(self.fork_repo_lbl)
+
+        fork_link = ClickableLabel(FORK_REPO_URL)
+        fork_link.setObjectName("linkLabel")
+        fork_link.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        fork_link.setCursor(Qt.CursorShape.PointingHandCursor)
+        fork_link.clicked.connect(lambda: webbrowser.open(FORK_REPO_URL))
+        layout.addWidget(fork_link)
+
+        layout.addSpacing(12)
+
         self.newest_lbl = QLabel(i18n.tr("lbl_get_newest", "Get the newest version here:"))
         self.newest_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(self.newest_lbl)
 
-        releases = ClickableLabel("https://github.com/timminator/VideOCR/releases")
+        releases = ClickableLabel(ORIGINAL_RELEASES_URL)
         releases.setObjectName("linkLabel")
         releases.setAlignment(Qt.AlignmentFlag.AlignCenter)
         releases.setCursor(Qt.CursorShape.PointingHandCursor)
-        releases.clicked.connect(lambda: webbrowser.open("https://github.com/timminator/VideOCR/releases"))
+        releases.clicked.connect(lambda: webbrowser.open(ORIGINAL_RELEASES_URL))
         layout.addWidget(releases)
 
         layout.addSpacing(8)
@@ -56,11 +79,11 @@ class AboutTab(QWidget):
         self.bug_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(self.bug_lbl)
 
-        issues = ClickableLabel("https://github.com/timminator/VideOCR/issues")
+        issues = ClickableLabel(ORIGINAL_ISSUES_URL)
         issues.setObjectName("linkLabel")
         issues.setAlignment(Qt.AlignmentFlag.AlignCenter)
         issues.setCursor(Qt.CursorShape.PointingHandCursor)
-        issues.clicked.connect(lambda: webbrowser.open("https://github.com/timminator/VideOCR/issues"))
+        issues.clicked.connect(lambda: webbrowser.open(ORIGINAL_ISSUES_URL))
         layout.addWidget(issues)
 
         layout.addStretch(1)
@@ -71,5 +94,7 @@ class AboutTab(QWidget):
                 label.setText(i18n.tr("lbl_about_version", "Version: {}").replace("{}", "{version}").format(version=version))
             elif label.objectName() == "aboutTitle":
                 label.setText("VideOCR Recreated")
+        self.fork_lbl.setText(i18n.tr("lbl_about_fork", "This project is a fork of the original VideOCR by timminator."))
+        self.fork_repo_lbl.setText(i18n.tr("lbl_about_fork_repo", "Fork repository:"))
         self.newest_lbl.setText(i18n.tr("lbl_get_newest", "Get the newest version here:"))
         self.bug_lbl.setText(i18n.tr("lbl_bug_report", "Found a bug or have a suggestion? Feel free to open an issue at:"))

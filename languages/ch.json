@@ -138,6 +138,8 @@
     "tip_batch_clear": "清空当前队列",
 
     "lbl_about_version": "版本：{version}",
+    "lbl_about_fork": "本项目是 timminator 原创 VideOCR 的一个分支（fork）。",
+    "lbl_about_fork_repo": "分支仓库：",
     "lbl_get_newest": "获取最新版本：",
     "lbl_bug_report": "发现错误或有建议？欢迎在此提交问题：",
 

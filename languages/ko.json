@@ -138,6 +138,8 @@
     "tip_batch_clear": "현재 대기열 비우기",
 
     "lbl_about_version": "버전: {version}",
+    "lbl_about_fork": "이 프로젝트는 timminator의 원본 VideOCR의 포크입니다.",
+    "lbl_about_fork_repo": "포크 저장소:",
     "lbl_get_newest": "최신 버전을 여기서 받으세요:",
     "lbl_bug_report": "버그를 발견했거나 제안이 있으신가요? 여기서 이슈를 열어주세요:",
 
@@ -284,5 +286,19 @@
     "dml_onnx_low_vram": "낮은 VRAM / 더 안전",
     "dml_onnx_balanced": "균형 ONNX (권장)",
     "dml_onnx_max": "최대 처리량 / 더 많은 VRAM",
-    "dml_onnx_manual": "수동 그리드 크기"
+    "dml_onnx_manual": "수동 그리드 크기",
+    "lbl_label_section": "라벨 감지:",
+    "chk_label_detection": "라벨 감지 활성화(자막 크롭 영역 밖의 텍스트 감지)",
+    "tip_label_detection": "자막 크롭 영역 밖의 텍스트(예: 사람 이름이나 장소 이름이 처음 나타날 때)를 감지합니다. 최종 결과는 위치가 지정된 Label 이벤트가 포함된 .ass 자막 파일로 저장됩니다.",
+    "lbl_label_ocr_width": "라벨 최대 OCR 이미지 너비(픽셀):",
+    "tip_label_ocr_width": "라벨 감지 영역(자막 크롭 밖)에서 OCR에 사용되는 최대 이미지 너비입니다.",
+    "lbl_label_min_duration": "라벨 최소 표시 시간(초):",
+    "tip_label_min_duration": "감지된 라벨의 최소 표시 시간(초)입니다.",
+    "lbl_label_conf_frames": "라벨 최소 확인 프레임 수:",
+    "tip_label_conf_frames": "라벨이 출력되려면 최소한 이 수만큼의 샘플링된 프레임에 나타나야 합니다. 값이 높을수록 OCR 노이즈가 더 많이 필터링됩니다.",
+    "lbl_label_reappear_gap": "라벨 재등장 병합 간격(초):",
+    "tip_label_reappear_gap": "이 간격 내에서 같은 라벨의 재등장은 단일 이벤트로 병합됩니다.",
+    "chk_label_filter_single": "단일 문자 라벨 노이즈 필터링",
+    "tip_label_filter_single": "일반적으로 OCR 노이즈인 단일 ASCII 문자/숫자 라벨(예: \"M\", \"3\")을 제거합니다. 단일 한자는 유지됩니다.",
+    "save_as_ass_filter_name": "고급 SubStation Alpha 자막"
 }

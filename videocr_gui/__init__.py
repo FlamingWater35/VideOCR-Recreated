@@ -7,4 +7,4 @@ APP_NAME = "VideOCR Recreated"
 try:
     from _version import __version__  # type: ignore
 except Exception:  # pragma: no cover - fallback when _version is unavailable
-    __version__ = "1.5.1"
+    __version__ = "1.6.0"

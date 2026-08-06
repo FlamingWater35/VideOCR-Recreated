@@ -138,6 +138,8 @@
     "tip_batch_clear": "Die aktuelle Warteschlange leeren",
 
     "lbl_about_version": "Version: {version}",
+    "lbl_about_fork": "Dieses Projekt ist ein Fork des ursprünglichen VideOCR von timminator.",
+    "lbl_about_fork_repo": "Fork-Repository:",
     "lbl_get_newest": "Laden Sie die neueste Version hier herunter:",
     "lbl_bug_report": "Sie haben einen Fehler gefunden oder haben einen Vorschlag? Erstellen Sie gerne ein Issue unter:",
 
@@ -284,5 +286,19 @@
     "dml_onnx_low_vram": "Geringer VRAM / sicherer",
     "dml_onnx_balanced": "Ausgewogenes ONNX (empfohlen)",
     "dml_onnx_max": "Maximaler Durchsatz / höherer VRAM",
-    "dml_onnx_manual": "Manuelle Rastergröße"
+    "dml_onnx_manual": "Manuelle Rastergröße",
+    "lbl_label_section": "Label-Erkennung:",
+    "chk_label_detection": "Label-Erkennung aktivieren (Text außerhalb des Untertitel-Ausschnitts erkennen)",
+    "tip_label_detection": "Erkennt Text außerhalb des Untertitel-Ausschnitts, z. B. Namen von Personen oder Orten bei ihrem ersten Erscheinen. Das Ergebnis wird als .ass-Datei mit positionierten Label-Events gespeichert.",
+    "lbl_label_ocr_width": "Maximale Label-OCR-Bildbreite (Pixel):",
+    "tip_label_ocr_width": "Maximale Bildbreite für OCR im Label-Erkennungsbereich (außerhalb des Untertitel-Ausschnitts).",
+    "lbl_label_min_duration": "Mindestanzeigedauer für Labels (Sekunden):",
+    "tip_label_min_duration": "Mindestanzeigedauer in Sekunden für erkannte Labels.",
+    "lbl_label_conf_frames": "Mindest-Bestätigungsframes für Labels:",
+    "tip_label_conf_frames": "Ein Label muss in mindestens dieser Anzahl an Stichproben-Frames erscheinen, bevor es ausgegeben wird. Höhere Werte filtern mehr OCR-Rauschen.",
+    "lbl_label_reappear_gap": "Wiedererscheinungs-Zusammenführungslücke (Sekunden):",
+    "tip_label_reappear_gap": "Wiedererscheinungen desselben Labels innerhalb dieser Lücke werden zu einem einzelnen Event zusammengeführt.",
+    "chk_label_filter_single": "Einzelzeichen-Label-Rauschen filtern",
+    "tip_label_filter_single": "Verwirft einzelne ASCII-Zeichen-/Ziffern-Labels (z. B. \"M\", \"3\"), die normalerweise OCR-Rauschen sind. Einzelne chinesische Zeichen bleiben erhalten.",
+    "save_as_ass_filter_name": "Advanced SubStation Alpha Untertitel"
 }

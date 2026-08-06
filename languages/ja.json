@@ -138,6 +138,8 @@
     "tip_batch_clear": "現在のキューをクリア",
 
     "lbl_about_version": "バージョン: {version}",
+    "lbl_about_fork": "このプロジェクトは timminator によるオリジナルの VideOCR のフォークです。",
+    "lbl_about_fork_repo": "フォークリポジトリ:",
     "lbl_get_newest": "最新バージョンはこちらから入手:",
     "lbl_bug_report": "バグを見つけたり提案がありますか？こちらでイシューを開いてください:",
 
@@ -284,5 +286,19 @@
     "dml_onnx_low_vram": "低VRAM / より安全",
     "dml_onnx_balanced": "バランスONNX（推奨）",
     "dml_onnx_max": "最大スループット / 高VRAM",
-    "dml_onnx_manual": "手動グリッドサイズ"
+    "dml_onnx_manual": "手動グリッドサイズ",
+    "lbl_label_section": "ラベル検出:",
+    "chk_label_detection": "ラベル検出を有効にする（字幕トリミング領域外のテキストを検出）",
+    "tip_label_detection": "字幕トリミング領域外のテキスト（人物名や地名などが最初に表示されたとき）を検出します。最終結果は位置指定された Label イベント付きの .ass 字幕ファイルとして保存されます。",
+    "lbl_label_ocr_width": "ラベル最大 OCR 画像幅（ピクセル）:",
+    "tip_label_ocr_width": "ラベル検出領域（字幕トリミング外）の OCR に使用する最大画像幅。",
+    "lbl_label_min_duration": "ラベル最小表示時間（秒）:",
+    "tip_label_min_duration": "検出されたラベルの最小表示時間（秒）。",
+    "lbl_label_conf_frames": "ラベル最小確認フレーム数:",
+    "tip_label_conf_frames": "ラベルが出力されるには、少なくともこの数のサンプリングフレームに出現する必要があります。値が大きいほど OCR ノイズを多く除去します。",
+    "lbl_label_reappear_gap": "ラベル再出現マージ間隔（秒）:",
+    "tip_label_reappear_gap": "この間隔内での同じラベルの再出現は単一のイベントにマージされます。",
+    "chk_label_filter_single": "単一文字ラベルのノイズを除去",
+    "tip_label_filter_single": "通常 OCR ノイズである単一の ASCII 文字/数字ラベル（例: 「M」、「3」）を除外します。単一の漢字は保持されます。",
+    "save_as_ass_filter_name": "Advanced SubStation Alpha 字幕"
 }

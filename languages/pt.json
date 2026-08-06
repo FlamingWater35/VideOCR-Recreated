@@ -138,6 +138,8 @@
     "tip_batch_clear": "Limpar a fila atual",
 
     "lbl_about_version": "Versão: {version}",
+    "lbl_about_fork": "Este projeto é um fork do VideOCR original de timminator.",
+    "lbl_about_fork_repo": "Repositório do fork:",
     "lbl_get_newest": "Obtenha a versão mais recente aqui:",
     "lbl_bug_report": "Encontrou um bug ou sugestão? Abra um ticket aqui:",
 
@@ -284,5 +286,19 @@
     "dml_onnx_low_vram": "VRAM baixa / mais seguro",
     "dml_onnx_balanced": "ONNX equilibrado (recomendado)",
     "dml_onnx_max": "Máximo rendimento / mais VRAM",
-    "dml_onnx_manual": "Tamanho de grade manual"
+    "dml_onnx_manual": "Tamanho de grade manual",
+    "lbl_label_section": "Detecção de etiquetas:",
+    "chk_label_detection": "Ativar detecção de etiquetas (detectar texto fora do recorte de legendas)",
+    "tip_label_detection": "Detecta texto fora da área de recorte de legendas, como nomes de pessoas ou lugares na primeira aparição. O resultado final é salvo como arquivo .ass com eventos Label posicionados.",
+    "lbl_label_ocr_width": "Largura máxima da imagem OCR de etiquetas (pixels):",
+    "tip_label_ocr_width": "Largura máxima da imagem usada para OCR na área de detecção de etiquetas (fora do recorte de legendas).",
+    "lbl_label_min_duration": "Duração mínima de exibição de etiquetas (segundos):",
+    "tip_label_min_duration": "Duração mínima de exibição em segundos para etiquetas detectadas.",
+    "lbl_label_conf_frames": "Frames mínimos de confirmação de etiquetas:",
+    "tip_label_conf_frames": "Uma etiqueta deve aparecer em pelo menos esta quantidade de frames amostrados antes de ser emitida. Valores mais altos filtram mais ruído de OCR.",
+    "lbl_label_reappear_gap": "Intervalo de fusão de re-aparecimento de etiquetas (segundos):",
+    "tip_label_reappear_gap": "Reaparições da mesma etiqueta dentro deste intervalo são fundidas em um único evento.",
+    "chk_label_filter_single": "Filtrar ruído de etiquetas de caractere único",
+    "tip_label_filter_single": "Descarta etiquetas de caractere/dígito ASCII único (ex.: \"M\", \"3\") que geralmente são ruído de OCR. Caracteres chineses únicos são mantidos.",
+    "save_as_ass_filter_name": "Legenda Advanced SubStation Alpha"
 }

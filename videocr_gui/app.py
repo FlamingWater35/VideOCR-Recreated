@@ -106,7 +106,7 @@ class MainWindow(QMainWindow):
         self.tabs.addTab(self.queue_tab, i18n.tr("tab_batch", "Queue"))
         self.settings_tab = SettingsTab()
         self.tabs.addTab(self.settings_tab, i18n.tr("tab_advanced", "Advanced Settings"))
-        self.about_tab = AboutTab(config.__version__ if hasattr(config, "__version__") else "1.5.1")
+        self.about_tab = AboutTab(config.__version__ if hasattr(config, "__version__") else "1.6.0")
         self.tabs.addTab(self.about_tab, i18n.tr("tab_about", "About"))
 
         # wire queue signals
@@ -484,7 +484,7 @@ class MainWindow(QMainWindow):
         self._populate_engine_lang_pos()
 
     def _version(self) -> str:
-        return getattr(config, "__version__", "1.5.1")
+        return getattr(config, "__version__", "1.6.0")
 
     def _resize_to_work_area(self) -> None:
         screen = self.screen()

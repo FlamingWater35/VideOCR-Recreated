@@ -52,6 +52,26 @@ DML_OPTION_COMBOS = (
     "--onnx_directml_tuning",
 )
 
+# Widgets disabled while "Enable GPU Usage" is unchecked.
+DML_DEPENDENT_WIDGETS = (
+    "-DML_ADAPTER_COMBO-",
+    "--directml_performance_preset",
+    "--directml_recognition_mode",
+    "--directml_frame_scan_mode",
+    "--onnx_directml_tuning",
+    "--directml_grid_max_width",
+    "--directml_grid_max_height",
+)
+
+# Widgets disabled while label detection is disabled.
+LABEL_DEPENDENT_WIDGETS = (
+    "--label_ocr_image_max_width",
+    "--label_min_display_duration",
+    "--label_min_confirmation_frames",
+    "--label_reappear_merge_gap",
+    "--label_filter_single_char",
+)
+
 
 def _translated_label(key: str, fallback: str) -> str:
     """Returns the translated text for a label key, falling back to the default."""
@@ -365,8 +385,34 @@ class SettingsTab(QWidget):
             internal_keys = [k for k, _ in C.GUI_SCALING_LIST]
             idx = internal_keys.index(saved) if saved in internal_keys else 0
             scale_combo.setCurrentIndex(idx)
+
+            self._update_dependent_states()
         finally:
             self._block_signals = False
+
+    def _update_dependent_states(self) -> None:
+        """Enables/disables dependent widgets based on master toggles.
+
+        DirectML controls are disabled while "Enable GPU Usage" is unchecked;
+        label-detection controls are disabled while label detection is disabled.
+        """
+        use_gpu = self._widgets.get("--use_gpu")
+        gpu_enabled = isinstance(use_gpu, QCheckBox) and use_gpu.isChecked()
+        for key in DML_DEPENDENT_WIDGETS:
+            widget = self._widgets.get(key)
+            if isinstance(widget, (QComboBox, QLineEdit, QPushButton)):
+                widget.setEnabled(gpu_enabled)
+        # The refresh button next to the adapter combo follows the same state.
+        refresh_btn = getattr(self, "refresh_btn", None)
+        if isinstance(refresh_btn, QPushButton):
+            refresh_btn.setEnabled(gpu_enabled)
+
+        label_check = self._widgets.get("enable_label_detection")
+        labels_enabled = isinstance(label_check, QCheckBox) and label_check.isChecked()
+        for key in LABEL_DEPENDENT_WIDGETS:
+            widget = self._widgets.get(key)
+            if isinstance(widget, (QComboBox, QLineEdit)):
+                widget.setEnabled(labels_enabled)
 
     def read_settings(self) -> dict[str, Any]:
         """Reads current widget values back into a settings dict.
@@ -498,6 +544,14 @@ class SettingsTab(QWidget):
         elif key == "--use_dual_zone":
             self.settings_changed.emit([key, "--use_dual_zone"])
             return
+        elif key == "--use_gpu":
+            # Re-evaluate DirectML controls' enabled state when the master
+            # toggle flips, then emit the change.
+            self._update_dependent_states()
+        elif key == "enable_label_detection":
+            # Re-evaluate label-detection controls' enabled state when the
+            # master toggle flips, then emit the change.
+            self._update_dependent_states()
         self.settings_changed.emit(keys)
 
     def _directml_index(self) -> str:

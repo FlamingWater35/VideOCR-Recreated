@@ -138,6 +138,8 @@
     "tip_batch_clear": "Vider la file d'attente actuelle",
 
     "lbl_about_version": "Version : {version}",
+    "lbl_about_fork": "Ce projet est un fork du VideOCR original de timminator.",
+    "lbl_about_fork_repo": "Dépôt du fork :",
     "lbl_get_newest": "Obtenez la dernière version ici :",
     "lbl_bug_report": "Vous avez trouvé un bug ou une suggestion ? Ouvrez un ticket ici :",
 
@@ -284,5 +286,19 @@
     "dml_onnx_low_vram": "VRAM faible / plus sûr",
     "dml_onnx_balanced": "ONNX équilibré (recommandé)",
     "dml_onnx_max": "Débit maximal / VRAM supérieure",
-    "dml_onnx_manual": "Taille de grille manuelle"
+    "dml_onnx_manual": "Taille de grille manuelle",
+    "lbl_label_section": "Détection d'étiquettes :",
+    "chk_label_detection": "Activer la détection d'étiquettes (détecter le texte en dehors du recadrage des sous-titres)",
+    "tip_label_detection": "Détecte le texte en dehors de la zone de recadrage des sous-titres, comme les noms de personnes ou de lieux lors de leur première apparition. Le résultat est enregistré en fichier .ass avec des événements Label positionnés.",
+    "lbl_label_ocr_width": "Largeur d'image OCR maximale des étiquettes (pixels) :",
+    "tip_label_ocr_width": "Largeur d'image maximale utilisée pour l'OCR dans la zone de détection des étiquettes (en dehors du recadrage des sous-titres).",
+    "lbl_label_min_duration": "Durée d'affichage minimale des étiquettes (secondes) :",
+    "tip_label_min_duration": "Durée d'affichage minimale en secondes pour les étiquettes détectées.",
+    "lbl_label_conf_frames": "Frames de confirmation minimales des étiquettes :",
+    "tip_label_conf_frames": "Une étiquette doit apparaître dans au moins cette quantité de frames échantillonnées avant d'être émise. Des valeurs plus élevées filtrent davantage le bruit OCR.",
+    "lbl_label_reappear_gap": "Écart de fusion de réapparition des étiquettes (secondes) :",
+    "tip_label_reappear_gap": "Les réapparitions de la même étiquette dans cet écart sont fusionnées en un seul événement.",
+    "chk_label_filter_single": "Filtrer le bruit des étiquettes à un seul caractère",
+    "tip_label_filter_single": "Supprime les étiquettes d'un seul caractère/chiffre ASCII (p. ex. « M », « 3 ») qui sont généralement du bruit OCR. Les caractères chinois isolés sont conservés.",
+    "save_as_ass_filter_name": "Sous-titre Advanced SubStation Alpha"
 }
