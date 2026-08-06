@@ -70,7 +70,8 @@ class Video:
             directml_recognition_mode: str, use_gpu: bool, ocr_engine: str, conf_threshold_ratio: float, lang: str,
             normalize_to_simplified_chinese: bool, step1_start: float, perf_total_start: float,
             onnx_directml_tuning: str = "balanced", benchmark_compare_engine: bool = False,
-            benchmark_compare_sample_grids: int = 3) -> bool:
+            benchmark_compare_sample_grids: int = 3, target_start_ms: float = 0.0,
+            target_end_ms: float | None = None) -> bool:
         """Experimental AMD path: FFmpeg D3D11VA decode + raw cropped frames.
 
         This mode supports the common single subtitle crop workflow first. FFmpeg
@@ -143,6 +144,7 @@ class Video:
             "-hide_banner",
             "-loglevel", "warning",
             "-hwaccel", "d3d11va",
+            "-ss", str(target_start_ms / 1000.0),
             "-i", self.path,
             "-vf", vf,
             # -vsync 0 was removed in newer ffmpeg; use -fps_mode vfr (equivalent
@@ -150,10 +152,12 @@ class Video:
             "-fps_mode", "vfr",
             "-an",
             "-sn",
-            "-f", "rawvideo",
-            "-pix_fmt", "rgb24",
-            "pipe:1",
         ]
+        # Limit decoding to the requested time window (ffmpeg -t is a duration,
+        # not an absolute end time).
+        if target_end_ms is not None and target_end_ms > target_start_ms:
+            cmd += ["-t", str((target_end_ms - target_start_ms) / 1000.0)]
+        cmd += ["-f", "rawvideo", "-pix_fmt", "rgb24", "pipe:1"]
 
         print("Starting FFmpeg D3D11VA hardware decode prototype...", flush=True)
         print(f"[Perf] FFmpeg filter: {vf}", flush=True)
@@ -190,9 +194,15 @@ class Video:
                     raise RuntimeError(f"FFmpeg returned a partial raw frame ({len(data)} / {frame_bytes} bytes).")
 
                 frame_index = ocr_end
-                timestamp_ms = self.start_time_offset_ms + (frame_index * modulo * 1000.0 / self.fps)
+                # With input seeking (-ss), decoded frame 0 corresponds to
+                # target_start_ms (container time), not the video's own start.
+                timestamp_ms = target_start_ms + (frame_index * modulo * 1000.0 / self.fps)
                 self.frame_timestamps[frame_index] = timestamp_ms
                 curr_str = utils.get_srt_timestamp_from_ms(timestamp_ms - self.start_time_offset_ms).split(',')[0]
+
+                # Stop if we have reached the requested end time.
+                if target_end_ms is not None and timestamp_ms > target_end_ms:
+                    break
 
                 img = np.frombuffer(data, dtype=np.uint8).reshape((target_h, target_w, 3)).copy()
 
@@ -237,7 +247,16 @@ class Video:
                     skipped_similar += 1
 
                 if frame_index % 15 == 0:
+                    # Clamp displayed position so it never exceeds the target.
+                    if target_end_ms is not None and timestamp_ms > target_end_ms:
+                        show_ts = target_end_ms
+                    else:
+                        show_ts = timestamp_ms
+                    curr_str = utils.get_srt_timestamp_from_ms(show_ts - self.start_time_offset_ms).split(',')[0]
                     print(f"\rStep 1/3: FFmpeg/D3D11VA scan... Current: {curr_str} / {target_end_str}, Sample: {frame_index + 1}", end="", flush=True)
+                    # Also emit the standard progress line the GUI parses for the
+                    # smooth progress bar / ETA.
+                    print(f"\nStep {1}/3: Processing video... Current: {curr_str} / {target_end_str}, Frame: {frame_index + 1}", flush=True)
 
                 ocr_end += 1
         finally:
@@ -528,7 +547,8 @@ class Video:
                     brightness_threshold, frames_to_skip, ffmpeg_grid_w, ffmpeg_grid_h,
                     directml_recognition_mode, use_gpu, ocr_engine, conf_threshold_ratio,
                     lang, normalize_to_simplified_chinese, step1_start, perf_total_start,
-                    onnx_directml_tuning, benchmark_compare_engine, benchmark_compare_sample_grids
+                    onnx_directml_tuning, benchmark_compare_engine, benchmark_compare_sample_grids,
+                    target_start_ms, target_end_ms
                 )
                 if used_ffmpeg_hw_path:
                     return

@@ -407,6 +407,15 @@ class MainWindow(QMainWindow):
         config.save_settings(self._settings)
         self._update_output_path()
 
+    def _current_settings(self) -> dict[str, Any]:
+        """Merges settings-tab widget values with the process-tab engine /
+        language / position selections (which live in self._settings)."""
+        merged = self.settings_tab.read_settings()
+        for key in ("ocr_engine", "subtitle_language", "subtitle_position"):
+            if key in self._settings:
+                merged[key] = self._settings[key]
+        return merged
+
     def _on_lang_changed(self) -> None:
         if self.lang_combo.signalsBlocked():
             return
@@ -529,7 +538,7 @@ class MainWindow(QMainWindow):
         if not self._video_path:
             return
         try:
-            out = argsmod.generate_output_path(self._video_path, self.settings_tab.read_settings())
+            out = argsmod.generate_output_path(self._video_path, self._current_settings())
             self.output_edit.setText(str(out))
             self._settings["--output"] = str(out)
         except Exception as e:
@@ -684,7 +693,7 @@ class MainWindow(QMainWindow):
     def _on_add_to_queue(self) -> None:
         if not self._video_path:
             return
-        settings = self.settings_tab.read_settings()
+        settings = self._current_settings()
         settings["_video_duration_ms"] = self._duration_ms
         args, errors = argsmod.build_args(self._video_path, settings, self.preview.crop_boxes, self.output_edit.text() or None)
         if errors or args is None:
@@ -721,7 +730,7 @@ class MainWindow(QMainWindow):
         skipped: list[str] = []
         existing_outputs = {j["args"]["output"] for j in self._batch_queue}
         for v in videos:
-            out = str(argsmod.generate_output_path(v, self.settings_tab.read_settings()))
+            out = str(argsmod.generate_output_path(v, self._current_settings()))
             if out in existing_outputs:
                 skipped.append(f"{os.path.basename(v)} ({i18n.tr('reason_dup_path', 'Duplicate Output path')})")
                 continue
@@ -753,7 +762,7 @@ class MainWindow(QMainWindow):
         if self._worker is not None and self._worker.isRunning():
             self._append_log(i18n.tr("error_already_running", "Process is already running.\n"))
             return
-        settings = self.settings_tab.read_settings()
+        settings = self._current_settings()
         settings["_video_duration_ms"] = self._duration_ms
         args, errors = argsmod.build_args(self._video_path, settings, self.preview.crop_boxes, self.output_edit.text() or None)
         if errors or args is None:
@@ -764,9 +773,9 @@ class MainWindow(QMainWindow):
         # add to queue then start
         target = args["output"]
         existing = next((i for i, j in enumerate(self._batch_queue) if j["args"]["output"] == target), None)
-        if existing is not None and existing["status"] in ("Cancelled", "Error", "Completed"):
+        if existing is not None and self._batch_queue[existing]["status"] in ("Cancelled", "Error", "Completed"):
             if ask_yes_no(self, i18n.tr("title_duplicate_job", "Duplicate Job"),
-                          i18n.tr("popup_duplicate_msg", "A job for this output file already exists (Status: {}).\n\nDo you want to restart it with current settings?").format(existing["status"])):
+                          i18n.tr("popup_duplicate_msg", "A job for this output file already exists (Status: {}).\n\nDo you want to restart it with current settings?").format(self._batch_queue[existing]["status"])):
                 self._batch_queue[existing]["args"] = args
                 self._batch_queue[existing]["status"] = "Pending"
         elif existing is None:

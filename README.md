@@ -947,6 +947,46 @@ Recognition: CPU
 
 Do not force recognition to DirectML unless testing.
 
+### ONNX DirectML: `DmlExecutionProvider` not available / not found
+
+When running the **ONNX Runtime DirectML (AMD GPU Experimental)** engine you may see output like:
+
+```text
+ONNX DirectML status: ONNX Runtime is installed, but DmlExecutionProvider is not available. Providers: ['AzureExecutionProvider', 'CPUExecutionProvider']
+ONNX DirectML OCR is not ready on this install. Falling back to EasyOCR DirectML Hybrid for this run.
+```
+
+This means the ONNX Runtime package is installed but its **DirectML execution provider** is missing, so the ONNX engine automatically falls back to EasyOCR DirectML Hybrid (the run still completes). To actually use the ONNX DirectML engine, install the DirectML-enabled ONNX Runtime build:
+
+```bat
+python -m pip uninstall -y onnxruntime
+python -m pip install onnxruntime-directml
+```
+
+Verify the DirectML provider is now registered:
+
+```bat
+python -c "import onnxruntime as ort; print(ort.get_available_providers())"
+```
+
+Expected output includes `DmlExecutionProvider`, for example:
+
+```text
+['DmlExecutionProvider', 'CPUExecutionProvider']
+```
+
+If it is still missing after installing `onnxruntime-directml`, try forcing a reinstall of the exact package:
+
+```bat
+python -m pip install --force-reinstall --no-cache-dir onnxruntime-directml
+```
+
+Notes:
+
+- The `onnxruntime-directml` wheel is Windows-only and requires a DirectX 12 capable GPU.
+- `onnxruntime` (plain CPU) and `onnxruntime-directml` cannot be installed at the same time — installing one removes the other.
+- If the DirectML provider still does not appear, your Python environment may not match the wheel's platform (use a 64-bit Python 3.12 venv, as recommended for this project).
+
 ## Credits
 
 This project is based on the original **VideOCR** project by `timminator`, with a recreated PySide6 GUI and an AMD DirectML backend.
