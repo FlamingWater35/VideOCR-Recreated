@@ -119,6 +119,42 @@ def check_7zip() -> None:
     print("7-Zip found.")
 
 
+def clean_pyside6_qml_artifacts() -> None:
+    """Removes CMake build artifacts shipped inside the PySide6 wheel.
+
+    Recent PySide6 wheels ship 'objects-RelWithDebInfo' directories below
+    'PySide6/qml' that contain ELF relocatable object files ('*.cpp.o').
+    When Nuitka's PySide6 plugin bundles the QML directory, it tries to
+    fix the rpath of every ELF file with patchelf, which fails with:
+
+        FATAL: Error, call to 'patchelf' failed: ... -> b'patchelf: wrong ELF type'
+
+    because patchelf can only handle shared libraries and executables.
+    These object files are compile-time artifacts not needed at runtime,
+    so it is safe to delete them before compilation.
+    """
+    try:
+        import PySide6  # noqa: F401
+    except ImportError:
+        return
+    pyside6_init = getattr(PySide6, "__file__", None)
+    if not pyside6_init:
+        return
+
+    pyside6_dir = Path(pyside6_init).resolve().parent
+    removed = 0
+    for directory in pyside6_dir.rglob("objects-*"):
+        if directory.is_dir():
+            print(f"Removing PySide6 build artifact: {directory}")
+            shutil.rmtree(directory, ignore_errors=True)
+            removed += 1
+
+    if removed:
+        print(f"Removed {removed} PySide6 'objects-*' artifact folder(s).")
+    else:
+        print("No PySide6 'objects-*' artifact folders found.")
+
+
 def run_command(command: list[str], cwd: str | Path | None = None) -> None:
     """Runs a command in the shell, streams its output, and exits if it fails."""
     try:
@@ -549,6 +585,9 @@ def main() -> None:
             print('  python -m pip install ".[directml]"')
             sys.exit(1)
         print("DirectML dependencies found.")
+
+    # Remove PySide6 QML build artifacts that break patchelf on Linux
+    clean_pyside6_qml_artifacts()
 
     paddle_version = get_latest_paddle_version()
     chrome_lens_version = get_latest_chrome_lens_version()
