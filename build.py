@@ -609,7 +609,14 @@ def main() -> None:
         if gui_dist_folder.exists():
             shutil.rmtree(gui_dist_folder)
         run_command(
-            [sys.executable, "-m", "nuitka", "--assume-yes-for-downloads", gui_script]
+            [
+                sys.executable,
+                "-m",
+                "nuitka",
+                "--assume-yes-for-downloads",
+                "--nofollow-import-to=sympy,mpmath",
+                gui_script,
+            ]
         )
         if not gui_dist_folder.is_dir():
             print(
@@ -629,7 +636,14 @@ def main() -> None:
     if cli_dist_folder.exists():
         shutil.rmtree(cli_dist_folder)
     run_command(
-        [sys.executable, "-m", "nuitka", "--assume-yes-for-downloads", cli_script],
+        [
+            sys.executable,
+            "-m",
+            "nuitka",
+            "--assume-yes-for-downloads",
+            "--nofollow-import-to=sympy,mpmath",
+            cli_script,
+        ],
         cwd=str(cli_folder),
     )
     if not cli_dist_folder.is_dir():
