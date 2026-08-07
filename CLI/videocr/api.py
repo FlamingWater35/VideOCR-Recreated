@@ -61,9 +61,9 @@ def save_subtitles_to_file(
         except FileNotFoundError as e:
             helper = "PaddleOCR" if ocr_engine == "paddleocr" else "PaddleOCR (text detection) and Chrome Lens (recognition)"
             install_hint = (
-                "install the VideOCR PaddleOCR support files (see the build/install instructions)"
+                "install the VideOCR Recreated PaddleOCR support files (see the build/install instructions)"
                 if ocr_engine == "paddleocr"
-                else "install the VideOCR PaddleOCR and Chrome Lens support files (see the build/install instructions)"
+                else "install the VideOCR Recreated PaddleOCR and Chrome Lens support files (see the build/install instructions)"
             )
             print(
                 f"Error: {helper} helper executable not found.\n"
@@ -93,7 +93,7 @@ def save_subtitles_to_file(
             print(
                 f"Error: Chrome Lens helper executable not found.\n"
                 f"{e}\n\n"
-                f"To use the 'google_lens' OCR engine, install the VideOCR Chrome Lens support files. "
+                f"To use the 'google_lens' OCR engine, install the VideOCR Recreated Chrome Lens support files. "
                 f"Alternatively select the 'EasyOCR DirectML (AMD GPU)' engine, which runs fully from "
                 f"Python without external helper executables.",
                 flush=True,

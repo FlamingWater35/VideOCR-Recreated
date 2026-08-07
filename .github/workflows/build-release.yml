@@ -50,7 +50,7 @@ jobs:
         run: |
           gh release create "$TAG" \
             --draft \
-            --title "VideOCR $TAG" \
+            --title "VideOCR Recreated $TAG" \
             --generate-notes \
             || echo "Draft release for $TAG already exists — continuing."
 

@@ -85,7 +85,7 @@
     "tip_normalize_chinese": "عند التفعيل، سيتم تحويل أحرف الصينية التقليدية إلى\nالصينية المبسطة قبل المعالجة. يعمل فقط مع \"Chinese & English\".",
     "chk_server_model": "استخدام نموذج الخادم",
     "tip_server_model": "يفعل نموذج الخادم بقدرات OCR أعلى.\nهذا الوضع يمكن أن يقدم نتائج أفضل لكنه يتطلب أيضاً قوة حاسوبية أكثر.\nGPU مُوصى به بشدة عند استخدام هذا الوضع.",
-    "lbl_videocr_settings": "إعدادات VideOCR:",
+    "lbl_videocr_settings": "إعدادات VideOCR Recreated:",
     "lbl_ui_lang": "لغة الواجهة:",
     "tip_ui_lang": "تغيير لغة عرض التطبيق.",
     "lbl_gui_scaling": "تحجيم واجهة المستخدم:",
@@ -106,7 +106,7 @@
     "chk_prevent_sleep": "منع النظام من السكون",
     "tip_prevent_sleep": "عند التحديد، سيتم منع الكمبيوتر من الدخول في وضع السكون أثناء المعالجة.",
     "chk_check_updates": "فحص التحديثات عند البدء",
-    "tip_check_updates": "فحص تلقائي لإصدارات جديدة من VideOCR عند بدء التطبيق.",
+    "tip_check_updates": "فحص تلقائي لإصدارات جديدة من VideOCR Recreated عند بدء التطبيق.",
 
     "btn_browse": "فتح ملف...",
     "btn_browse_folder": "فتح مجلد...",
@@ -144,11 +144,11 @@
     "lbl_bug_report": "وجدت خطأ أو لديك اقتراح؟ افتح مشكلة هنا:",
 
     "update_title": "تحديث متاح",
-    "update_available_1": "إصدار جديد من VideOCR ({}) متاح!",
+    "update_available_1": "إصدار جديد من VideOCR Recreated ({}) متاح!",
     "update_available_2": "أنت تستخدم حالياً الإصدار {}.",
     "update_available_3": "انقر على الرابط أدناه لزيارة صفحة التحميل:",
     "update_title_uptodate": "محدث",
-    "update_msg_uptodate": "أنت تشغل أحدث إصدار من VideOCR.",
+    "update_msg_uptodate": "أنت تشغل أحدث إصدار من VideOCR Recreated.",
     "update_title_error": "خطأ",
     "update_msg_error": "فشل في فحص التحديثات.\nيرجى فحص اتصال الإنترنت.",
 

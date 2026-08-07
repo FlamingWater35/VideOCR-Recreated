@@ -208,7 +208,7 @@ def run_preset(args: argparse.Namespace, preset: Preset, crop: tuple[int, int, i
 
 def main(argv: Iterable[str] | None = None) -> int:
     repo_root = Path(__file__).resolve().parents[1]
-    parser = argparse.ArgumentParser(description="Benchmark VideOCR AMD DirectML presets on a short sample and rank them.")
+    parser = argparse.ArgumentParser(description="Benchmark VideOCR Recreated AMD DirectML presets on a short sample and rank them.")
     parser.add_argument("video_path", type=Path, help="Video file to test")
     parser.add_argument("--crop", type=parse_crop, required=True, help="Crop as x,y,width,height, example: 0,793,1920,287")
     parser.add_argument("--seconds", type=int, default=180, help="Sample length to test from the start, default: 180 seconds")
@@ -247,7 +247,7 @@ def main(argv: Iterable[str] | None = None) -> int:
     if args.skip_easyocr:
         presets = [p for p in presets if p.ocr_engine == "onnx_directml"]
 
-    print(f"VideOCR AMD preset benchmark")
+    print(f"VideOCR Recreated AMD preset benchmark")
     print(f"Video: {args.video_path}")
     print(f"Crop: {args.crop}")
     print(f"Sample: {args.time_start} -> {format_time(args.seconds)}")

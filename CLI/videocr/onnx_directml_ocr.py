@@ -173,7 +173,7 @@ def run_onnx_directml_on_stitched_images(
     """Experimental ONNXRuntime DirectML OCR pass.
 
     When RapidOCR + ONNXRuntime DirectML are available, this reads the already
-    stitched VideOCR grids with ONNXRuntime. If the optional ONNX stack is not
+    stitched VideOCR Recreated grids with ONNXRuntime. If the optional ONNX stack is not
     available or cannot initialize on DirectML, it falls back to the proven
     EasyOCR DirectML Hybrid backend so the run still finishes.
     """

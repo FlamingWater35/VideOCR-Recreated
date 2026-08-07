@@ -14,11 +14,11 @@ def run(cmd: list[str]) -> tuple[int, str]:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Quick FFmpeg D3D11VA decode/crop throughput test for VideOCR AMD mode.")
+    parser = argparse.ArgumentParser(description="Quick FFmpeg D3D11VA decode/crop throughput test for VideOCR Recreated AMD mode.")
     parser.add_argument("video", help="Input video path")
     parser.add_argument("--crop", default="1920:287:0:793", help="FFmpeg crop as w:h:x:y")
     parser.add_argument("--scale", default="720:-2", help="FFmpeg scale as w:h")
-    parser.add_argument("--frames-to-skip", type=int, default=1, help="Match VideOCR frames_to_skip. 1 means select every 2nd frame.")
+    parser.add_argument("--frames-to-skip", type=int, default=1, help="Match VideOCR Recreated frames_to_skip. 1 means select every 2nd frame.")
     parser.add_argument("--seconds", type=float, default=60.0, help="Benchmark only the first N seconds")
     args = parser.parse_args()
 

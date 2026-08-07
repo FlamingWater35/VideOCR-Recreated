@@ -27,7 +27,7 @@ def main() -> int:
 
     app = QApplication(sys.argv)
     app.setApplicationName("VideOCR Recreated")
-    app.setOrganizationName("VideOCR")
+    app.setOrganizationName("VideOCR Recreated")
 
     from videocr_gui import resources
 

@@ -14,7 +14,7 @@
 #     nuitka-project-set: APP_VERSION = __import__("_version").__version__
 #     nuitka-project: --file-description="VideOCR Recreated"
 #     nuitka-project: --file-version={APP_VERSION}
-#     nuitka-project: --product-name="VideOCR-GUI"
+#     nuitka-project: --product-name="VideOCR Recreated GUI"
 #     nuitka-project: --product-version={APP_VERSION}
 #     nuitka-project: --copyright="timminator"
 #     nuitka-project: --windows-icon-from-ico=Installer/VideOCR.ico

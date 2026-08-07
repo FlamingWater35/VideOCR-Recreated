@@ -85,7 +85,7 @@
     "tip_normalize_chinese": "Si activé, les caractères chinois traditionnels seront convertis en\nchinois simplifié avant le traitement. Actif uniquement pour \"Chinese & English\".",
     "chk_server_model": "Utiliser le modèle serveur",
     "tip_server_model": "Active le modèle serveur avec de meilleures capacités OCR.\nCe mode peut donner de meilleurs résultats mais nécessite plus de puissance de calcul.\nUn GPU est fortement recommandé.",
-    "lbl_videocr_settings": "Paramètres VideOCR :",
+    "lbl_videocr_settings": "Paramètres VideOCR Recreated :",
     "lbl_ui_lang": "Langue de l'interface :",
     "tip_ui_lang": "Modifier la langue d'affichage de l'application.",
     "lbl_gui_scaling": "Mise à l'échelle de l'interface :",
@@ -106,7 +106,7 @@
     "chk_prevent_sleep": "Empêcher la mise en veille du système",
     "tip_prevent_sleep": "Si coché, l’ordinateur ne passera pas en veille pendant le traitement.",    
     "chk_check_updates": "Vérifier les mises à jour au démarrage",
-    "tip_check_updates": "Vérifie automatiquement les nouvelles versions de VideOCR au démarrage.",
+    "tip_check_updates": "Vérifie automatiquement les nouvelles versions de VideOCR Recreated au démarrage.",
 
     "btn_browse": "Ouvrir fichier...",
     "btn_browse_folder": "Ouvrir dossier...",
@@ -144,11 +144,11 @@
     "lbl_bug_report": "Vous avez trouvé un bug ou une suggestion ? Ouvrez un ticket ici :",
 
     "update_title": "Mise à jour disponible",
-    "update_available_1": "Une nouvelle version de VideOCR ({}) est disponible !",
+    "update_available_1": "Une nouvelle version de VideOCR Recreated ({}) est disponible !",
     "update_available_2": "Vous utilisez actuellement la version {}.",
     "update_available_3": "Cliquez sur le lien ci-dessous pour accéder à la page de téléchargement :",
     "update_title_uptodate": "À jour",
-    "update_msg_uptodate": "Vous utilisez la dernière version de VideOCR.",
+    "update_msg_uptodate": "Vous utilisez la dernière version de VideOCR Recreated.",
     "update_title_error": "Erreur",
     "update_msg_error": "Échec de la vérification des mises à jour.\nVeuillez vérifier votre connexion Internet.",
 

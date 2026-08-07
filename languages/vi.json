@@ -85,7 +85,7 @@
     "tip_normalize_chinese": "Khi bật, các ký tự Trung phồn thể sẽ được chuyển sang\nTrung giản thể trước khi xử lý. Chỉ hoạt động với \"Chinese & English\".",
     "chk_server_model": "Sử Dụng Mô Hình Máy Chủ",
     "tip_server_model": "Bật mô hình máy chủ với khả năng OCR cao hơn.\nChế độ này có thể mang lại kết quả tốt hơn nhưng cũng yêu cầu nhiều sức mạnh tính toán hơn.\nGPU được khuyến nghị cao khi sử dụng chế độ này.",
-    "lbl_videocr_settings": "Cài Đặt VideOCR:",
+    "lbl_videocr_settings": "Cài Đặt VideOCR Recreated:",
     "lbl_ui_lang": "Ngôn Ngữ Giao Diện:",
     "tip_ui_lang": "Thay đổi ngôn ngữ hiển thị của ứng dụng.",
     "lbl_gui_scaling": "Tỷ lệ giao diện:",
@@ -106,7 +106,7 @@
     "chk_prevent_sleep": "Ngăn hệ thống ngủ",
     "tip_prevent_sleep": "Nếu được chọn, máy tính sẽ không chuyển sang chế độ ngủ trong quá trình xử lý.",
     "chk_check_updates": "Kiểm Tra Cập Nhật Khi Khởi Động",
-    "tip_check_updates": "Tự động kiểm tra phiên bản mới của VideOCR khi ứng dụng khởi động.",
+    "tip_check_updates": "Tự động kiểm tra phiên bản mới của VideOCR Recreated khi ứng dụng khởi động.",
     
     "btn_browse": "Mở Tệp...",
     "btn_browse_folder": "Mở Thư Mục...",
@@ -144,11 +144,11 @@
     "lbl_bug_report": "Tìm thấy lỗi hoặc có đề xuất? Hãy mở một vấn đề tại:",
 
     "update_title": "Có Cập Nhật",
-    "update_available_1": "Phiên bản mới của VideOCR ({}) đã có sẵn!",
+    "update_available_1": "Phiên bản mới của VideOCR Recreated ({}) đã có sẵn!",
     "update_available_2": "Bạn hiện đang sử dụng phiên bản {}.",
     "update_available_3": "Nhấp vào liên kết bên dưới để truy cập trang tải xuống:",
     "update_title_uptodate": "Đã Cập Nhật",
-    "update_msg_uptodate": "Bạn đang chạy phiên bản mới nhất của VideOCR.",
+    "update_msg_uptodate": "Bạn đang chạy phiên bản mới nhất của VideOCR Recreated.",
     "update_title_error": "Lỗi",
     "update_msg_error": "Không thể kiểm tra cập nhật.\nVui lòng kiểm tra kết nối internet của bạn.",
 

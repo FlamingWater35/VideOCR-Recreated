@@ -85,7 +85,7 @@
     "tip_normalize_chinese": "Se ativado, os caracteres chineses tradicionais serão convertidos para\nchinês simplificado antes do processamento. Ativo apenas para \"Chinese & English\".",
     "chk_server_model": "Usar modelo de servidor",
     "tip_server_model": "Ativa o modelo de servidor com melhor capacidade de OCR.\nPode gerar resultados melhores, mas exige mais poder de processamento.\nÉ altamente recomendado o uso de GPU.",
-    "lbl_videocr_settings": "Configurações do VideOCR:",
+    "lbl_videocr_settings": "Configurações do VideOCR Recreated:",
     "lbl_ui_lang": "Idioma da interface:",
     "tip_ui_lang": "Altere o idioma de exibição do aplicativo.",
     "lbl_gui_scaling": "Escala da Interface:",
@@ -106,7 +106,7 @@
     "chk_prevent_sleep": "Impedir suspensão do sistema",
     "tip_prevent_sleep": "Se marcado, o computador será impedido de entrar em modo de suspensão durante o processamento.",
     "chk_check_updates": "Verificar atualizações ao iniciar",
-    "tip_check_updates": "Verifica automaticamente novas versões do VideOCR ao iniciar.",
+    "tip_check_updates": "Verifica automaticamente novas versões do VideOCR Recreated ao iniciar.",
 
     "btn_browse": "Abrir Arquivo...",
     "btn_browse_folder": "Abrir Pasta...",
@@ -144,11 +144,11 @@
     "lbl_bug_report": "Encontrou um bug ou sugestão? Abra um ticket aqui:",
 
     "update_title": "Atualização disponível",
-    "update_available_1": "Uma nova versão do VideOCR ({}) está disponível!",
+    "update_available_1": "Uma nova versão do VideOCR Recreated ({}) está disponível!",
     "update_available_2": "Você está usando atualmente a versão {}.",
     "update_available_3": "Clique no link abaixo para acessar a página de download:",
     "update_title_uptodate": "Atualizado",
-    "update_msg_uptodate": "Você está usando a versão mais recente do VideOCR.",
+    "update_msg_uptodate": "Você está usando a versão mais recente do VideOCR Recreated.",
     "update_title_error": "Erro",
     "update_msg_error": "Falha ao verificar atualizações.\nVerifique sua conexão com a Internet.",
 

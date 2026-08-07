@@ -85,7 +85,7 @@
     "tip_normalize_chinese": "Jika diaktifkan, karakter Mandarin Tradisional akan dikonversi ke\nMandarin Sederhana sebelum pemrosesan. Hanya aktif untuk \"Chinese & English\".",
     "chk_server_model": "Gunakan Model Server",
     "tip_server_model": "Mengaktifkan model server dengan kemampuan OCR yang lebih tinggi.\nMode ini dapat memberikan hasil yang lebih baik tetapi juga memerlukan daya komputasi yang lebih besar.\nGPU sangat disarankan saat menggunakan mode ini.",
-    "lbl_videocr_settings": "Pengaturan VideOCR:",
+    "lbl_videocr_settings": "Pengaturan VideOCR Recreated:",
     "lbl_ui_lang": "Bahasa UI:",
     "tip_ui_lang": "Ubah bahasa tampilan aplikasi.",
     "lbl_gui_scaling": "Skala GUI:",
@@ -106,7 +106,7 @@
     "chk_prevent_sleep": "Cegah Sistem Tidur",
     "tip_prevent_sleep": "Jika dicentang, komputer akan dicegah masuk ke mode tidur selama pemrosesan.",    
     "chk_check_updates": "Periksa Pembaruan Saat Startup",
-    "tip_check_updates": "Otomatis memeriksa versi baru VideOCR saat aplikasi dimulai.",
+    "tip_check_updates": "Otomatis memeriksa versi baru VideOCR Recreated saat aplikasi dimulai.",
     
     "btn_browse": "Buka File...",
     "btn_browse_folder": "Buka Folder...",
@@ -144,11 +144,11 @@
     "lbl_bug_report": "Menemukan bug atau punya saran? Silakan buka issue di:",
 
     "update_title": "Pembaruan Tersedia",
-    "update_available_1": "Versi baru VideOCR ({}) tersedia!",
+    "update_available_1": "Versi baru VideOCR Recreated ({}) tersedia!",
     "update_available_2": "Anda saat ini menggunakan versi {}.",
     "update_available_3": "Klik tautan di bawah untuk mengunjungi halaman unduhan:",
     "update_title_uptodate": "Sudah Terbaru",
-    "update_msg_uptodate": "Anda menjalankan versi terbaru VideOCR.",
+    "update_msg_uptodate": "Anda menjalankan versi terbaru VideOCR Recreated.",
     "update_title_error": "Error",
     "update_msg_error": "Gagal memeriksa pembaruan.\nSilakan periksa koneksi internet Anda.",
 

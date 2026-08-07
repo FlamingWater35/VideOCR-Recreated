@@ -85,7 +85,7 @@
     "tip_normalize_chinese": "활성화하면 처리 전에 번체 중국어 문자가\n간체 중국어로 변환됩니다. \"Chinese & English\"에서만 활성화됩니다.",
     "chk_server_model": "서버 모델 사용",
     "tip_server_model": "더 높은 OCR 기능을 가진 서버 모델을 활성화합니다.\n이 모드는 더 나은 결과를 제공할 수 있지만 더 많은 컴퓨팅 파워도 필요합니다.\n이 모드를 사용할 때는 GPU를 강력히 권장합니다.",
-    "lbl_videocr_settings": "VideOCR 설정:",
+    "lbl_videocr_settings": "VideOCR Recreated 설정:",
     "lbl_ui_lang": "UI 언어:",
     "tip_ui_lang": "애플리케이션의 표시 언어를 변경합니다.",
     "lbl_gui_scaling": "GUI 배율:",
@@ -106,7 +106,7 @@
     "chk_prevent_sleep": "시스템 절전 방지",
     "tip_prevent_sleep": "체크하면 처리 중 컴퓨터가 절전 모드로 들어가지 않습니다.",
     "chk_check_updates": "시작 시 업데이트 확인",
-    "tip_check_updates": "애플리케이션 시작 시 VideOCR의 새 버전을 자동으로 확인합니다.",
+    "tip_check_updates": "애플리케이션 시작 시 VideOCR Recreated의 새 버전을 자동으로 확인합니다.",
     
     "btn_browse": "파일 열기...",
     "btn_browse_folder": "폴더 열기...",
@@ -144,11 +144,11 @@
     "lbl_bug_report": "버그를 발견했거나 제안이 있으신가요? 여기서 이슈를 열어주세요:",
 
     "update_title": "업데이트 사용 가능",
-    "update_available_1": "VideOCR의 새 버전 ({})이 사용 가능합니다!",
+    "update_available_1": "VideOCR Recreated의 새 버전 ({})이 사용 가능합니다!",
     "update_available_2": "현재 버전 {}을 사용하고 있습니다.",
     "update_available_3": "아래 링크를 클릭하여 다운로드 페이지를 방문하세요:",
     "update_title_uptodate": "최신 상태",
-    "update_msg_uptodate": "VideOCR의 최신 버전을 실행하고 있습니다.",
+    "update_msg_uptodate": "VideOCR Recreated의 최신 버전을 실행하고 있습니다.",
     "update_title_error": "오류",
     "update_msg_error": "업데이트 확인에 실패했습니다.\n인터넷 연결을 확인해주세요.",
 

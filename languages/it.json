@@ -85,7 +85,7 @@
     "tip_normalize_chinese": "Se abilitato, i caratteri cinesi tradizionali verranno convertiti in\ncinese semplificato prima dell’elaborazione. Attivo solo per \"Chinese & English\".",
     "chk_server_model": "Usa modello server",
     "tip_server_model": "Attiva il modello server con migliori capacità OCR.\nPuò produrre risultati migliori ma richiede più potenza di calcolo.\nSi consiglia vivamente l'uso della GPU.",
-    "lbl_videocr_settings": "Impostazioni VideOCR:",
+    "lbl_videocr_settings": "Impostazioni VideOCR Recreated:",
     "lbl_ui_lang": "Lingua interfaccia:",
     "tip_ui_lang": "Cambia la lingua di visualizzazione dell'applicazione.",
     "lbl_gui_scaling": "Ridimensionamento GUI:",
@@ -106,7 +106,7 @@
     "chk_prevent_sleep": "Impedisci sospensione del sistema",
     "tip_prevent_sleep": "Se selezionato, il computer non entrerà in modalità sospensione durante l’elaborazione.",    
     "chk_check_updates": "Controlla aggiornamenti all'avvio",
-    "tip_check_updates": "Verifica automaticamente la presenza di nuove versioni di VideOCR all'avvio.",
+    "tip_check_updates": "Verifica automaticamente la presenza di nuove versioni di VideOCR Recreated all'avvio.",
 
     "btn_browse": "Apri file...",
     "btn_browse_folder": "Apri cartella...",
@@ -144,11 +144,11 @@
     "lbl_bug_report": "Hai trovato un bug o un suggerimento? Apri una segnalazione qui:",
 
     "update_title": "Aggiornamento disponibile",
-    "update_available_1": "È disponibile una nuova versione di VideOCR ({})!",
+    "update_available_1": "È disponibile una nuova versione di VideOCR Recreated ({})!",
     "update_available_2": "Attualmente stai usando la versione {}.",
     "update_available_3": "Clicca sul link qui sotto per andare alla pagina di download:",
     "update_title_uptodate": "Aggiornato",
-    "update_msg_uptodate": "Stai usando l'ultima versione di VideOCR.",
+    "update_msg_uptodate": "Stai usando l'ultima versione di VideOCR Recreated.",
     "update_title_error": "Errore",
     "update_msg_error": "Impossibile verificare gli aggiornamenti.\nControlla la connessione a Internet.",
 

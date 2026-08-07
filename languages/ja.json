@@ -85,7 +85,7 @@
     "tip_normalize_chinese": "有効にすると、処理前に繁体字中国語が\n簡体字中国語に変換されます。「Chinese & English」のみ有効です。",
     "chk_server_model": "サーバーモデルを使用",
     "tip_server_model": "より高いOCR機能を持つサーバーモデルを有効にします。\nこのモードはより良い結果を提供できますが、より多くの計算能力も必要です。\nこのモードを使用する際はGPUを強く推奨します。",
-    "lbl_videocr_settings": "VideOCR設定:",
+    "lbl_videocr_settings": "VideOCR Recreated設定:",
     "lbl_ui_lang": "UI言語:",
     "tip_ui_lang": "アプリケーションの表示言語を変更します。",
     "lbl_gui_scaling": "GUI スケーリング:",
@@ -106,7 +106,7 @@
     "chk_prevent_sleep": "システムのスリープを防止",
     "tip_prevent_sleep": "チェックすると、処理中にコンピューターがスリープしないようにします。",
     "chk_check_updates": "起動時に更新をチェック",
-    "tip_check_updates": "アプリケーション起動時にVideOCRの新しいバージョンを自動的にチェックします。",
+    "tip_check_updates": "アプリケーション起動時にVideOCR Recreatedの新しいバージョンを自動的にチェックします。",
     
     "btn_browse": "ファイルを開く...",
     "btn_browse_folder": "フォルダを開く...",
@@ -144,11 +144,11 @@
     "lbl_bug_report": "バグを見つけたり提案がありますか？こちらでイシューを開いてください:",
 
     "update_title": "アップデート利用可能",
-    "update_available_1": "VideOCRの新しいバージョン ({}) が利用可能です！",
+    "update_available_1": "VideOCR Recreatedの新しいバージョン ({}) が利用可能です！",
     "update_available_2": "現在バージョン {} を使用しています。",
     "update_available_3": "以下のリンクをクリックしてダウンロードページにアクセス:",
     "update_title_uptodate": "最新",
-    "update_msg_uptodate": "VideOCRの最新バージョンを実行しています。",
+    "update_msg_uptodate": "VideOCR Recreatedの最新バージョンを実行しています。",
     "update_title_error": "エラー",
     "update_msg_error": "更新の確認に失敗しました。\nインターネット接続を確認してください。",
 

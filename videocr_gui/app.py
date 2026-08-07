@@ -1022,11 +1022,11 @@ class MainWindow(QMainWindow):
     def _send_notification(self, title: str, message: str) -> None:
         try:
             if sys.platform == "win32" and Notification is not None:
-                toast = Notification(app_id="VideOCR", title=title, msg=message, icon=resources.notification_icon_path())
+                toast = Notification(app_id="VideOCR Recreated", title=title, msg=message, icon=resources.notification_icon_path())
                 toast.set_audio(audio.Default, loop=False)
                 toast.show()
             elif notification is not None:
-                notification.notify(title=title, message=message, app_name="VideOCR", app_icon=resources.notification_icon_path())
+                notification.notify(title=title, message=message, app_name="VideOCR Recreated", app_icon=resources.notification_icon_path())
         except Exception as e:
             config.log_error(f"Failed to send notification: {e}")
 

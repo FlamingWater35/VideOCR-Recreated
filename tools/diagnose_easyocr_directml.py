@@ -46,7 +46,7 @@ def main() -> int:
         all_ok = check_module(module) and all_ok
 
     if not all_ok:
-        print("\nOne or more imports failed. Fix those before running VideOCR.")
+        print("\nOne or more imports failed. Fix those before running VideOCR Recreated.")
         return 1
 
     try:

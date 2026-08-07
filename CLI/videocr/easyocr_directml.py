@@ -37,7 +37,7 @@ EASYOCR_LANG_MAP: dict[str, list[str]] = {
 
 
 def normalize_easyocr_lang(lang: str) -> list[str]:
-    """Return the EasyOCR language list for a VideOCR language code."""
+    """Return the EasyOCR language list for a VideOCR Recreated language code."""
     key = (lang or "en").strip()
     if key in EASYOCR_LANG_MAP:
         return EASYOCR_LANG_MAP[key]
@@ -49,7 +49,7 @@ def normalize_easyocr_lang(lang: str) -> list[str]:
     supported = ", ".join(sorted(EASYOCR_LANG_MAP.keys()))
     raise ValueError(
         f"EasyOCR DirectML does not have a language mapping for '{lang}'. "
-        f"Use one of these VideOCR language codes or add a mapping in easyocr_directml.py: {supported}"
+        f"Use one of these VideOCR Recreated language codes or add a mapping in easyocr_directml.py: {supported}"
     )
 
 
@@ -252,7 +252,7 @@ def get_directml_device() -> Any:
         raise RuntimeError(
             "EasyOCR DirectML dependencies are missing. Install them with:\n"
             "  python -m pip install easyocr torch-directml\n"
-            "Then run VideOCR again."
+            "Then run VideOCR Recreated again."
         ) from e
 
     errors: list[str] = []
@@ -489,7 +489,7 @@ def create_easyocr_reader(lang: str, use_gpu: bool) -> Any:
             return easyocr.Reader(langs, gpu=device, verbose=False, quantize=False)
         except Exception as e:
             raise RuntimeError(
-                "EasyOCR failed to start on DirectML after applying the VideOCR DirectML patch.\n\n"
+                "EasyOCR failed to start on DirectML after applying the VideOCR Recreated DirectML patch.\n\n"
                 "Original startup error:\n"
                 f"{_format_exception(e)}\n\n"
                 "Try CPU mode once to confirm the OCR models downloaded correctly. If CPU mode works but "
@@ -550,7 +550,7 @@ def run_easyocr_on_stitched_images(
         if mode == "stable":
             print("DirectML hybrid note: detector runs on the selected AMD/DirectML adapter; EasyOCR text recognition stays on CPU for LSTM compatibility.", flush=True)
         else:
-            print(f"DirectML recognition mode: {mode}. VideOCR will fall back to stable CPU recognition if the DirectML LSTM path is unsupported.", flush=True)
+            print(f"DirectML recognition mode: {mode}. VideOCR Recreated will fall back to stable CPU recognition if the DirectML LSTM path is unsupported.", flush=True)
 
     for index, filename in enumerate(filenames, 1):
         image_path = os.path.join(input_dir, filename)

@@ -85,7 +85,7 @@
     "tip_normalize_chinese": "启用后，将在处理前把繁体中文字符转换为\n简体中文。仅在“Chinese & English”下生效。",
     "chk_server_model": "使用高精度模型",
     "tip_server_model": "启用高精度模型以获得更高的 OCR 能力。\n该模式可提供更好的结果，但也需要更多计算能力。\n建议在此模式下使用 GPU。",
-    "lbl_videocr_settings": "VideOCR 设置：",
+    "lbl_videocr_settings": "VideOCR Recreated 设置：",
     "lbl_ui_lang": "界面语言：",
     "tip_ui_lang": "更改应用程序的显示语言。",
     "lbl_gui_scaling": "界面缩放:",
@@ -106,7 +106,7 @@
     "chk_prevent_sleep": "防止系统休眠",
     "tip_prevent_sleep": "勾选后，处理过程中将阻止计算机进入休眠状态。",
     "chk_check_updates": "启动时检查更新",
-    "tip_check_updates": "应用启动时自动检查 VideOCR 的新版本。",
+    "tip_check_updates": "应用启动时自动检查 VideOCR Recreated 的新版本。",
 
     "btn_browse": "打开文件...",
     "btn_browse_folder": "打开文件夹...",
@@ -144,11 +144,11 @@
     "lbl_bug_report": "发现错误或有建议？欢迎在此提交问题：",
 
     "update_title": "有更新可用",
-    "update_available_1": "发现新版本 VideOCR ({})！",
+    "update_available_1": "发现新版本 VideOCR Recreated ({})！",
     "update_available_2": "当前版本：{}。",
     "update_available_3": "点击下方链接访问下载页面：",
     "update_title_uptodate": "已是最新版本",
-    "update_msg_uptodate": "您正在运行最新版本的 VideOCR。",
+    "update_msg_uptodate": "您正在运行最新版本的 VideOCR Recreated。",
     "update_title_error": "错误",
     "update_msg_error": "检查更新失败。\n请检查您的网络连接。",
 

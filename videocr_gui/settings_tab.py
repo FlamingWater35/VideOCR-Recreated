@@ -219,10 +219,10 @@ class SettingsTab(QWidget):
                         "Filter Single-Character Label Noise", "tip_label_filter_single", True)
         root.addWidget(label_box)
 
-        # VideOCR settings
+        # VideOCR Recreated settings
         vo_box = QGroupBox()
         vo_box.setObjectName("sectionBox")
-        self._section_boxes.append((vo_box, "lbl_videocr_settings", "VideOCR Settings:"))
+        self._section_boxes.append((vo_box, "lbl_videocr_settings", "VideOCR Recreated Settings:"))
         vo_form = QFormLayout(vo_box)
         vo_form.setLabelAlignment(Qt.AlignmentFlag.AlignLeft)
         vo_form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow)

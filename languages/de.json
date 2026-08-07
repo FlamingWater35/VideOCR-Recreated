@@ -85,7 +85,7 @@
     "tip_normalize_chinese": "Wenn aktiviert, werden traditionelle chinesische Zeichen vor der Verarbeitung in\nvereinfachtes Chinesisch umgewandelt. Nur aktiv für \"Chinese & English\".",
     "chk_server_model": "Servermodell verwenden",
     "tip_server_model": "Aktiviert das Servermodell mit höherer OCR-Leistung.\nKann bessere Ergebnisse liefern, benötigt aber auch mehr Rechenleistung.\nEine GPU wird dringend empfohlen, wenn dieser Modus verwendet wird.",
-    "lbl_videocr_settings": "VideOCR-Einstellungen:",
+    "lbl_videocr_settings": "VideOCR-Recreated-Einstellungen:",
     "lbl_ui_lang": "Anzeigesprache:",
     "tip_ui_lang": "Ändern Sie die Anzeigesprache der Anwendung.",
     "lbl_gui_scaling": "GUI-Skalierung:",
@@ -106,7 +106,7 @@
     "chk_prevent_sleep": "Systemruhemodus verhindern",
     "tip_prevent_sleep": "Wenn aktiviert, wird verhindert, dass der Computer während der Verarbeitung in den Ruhemodus wechselt.",    
     "chk_check_updates": "Beim Start nach Updates suchen",
-    "tip_check_updates": "Prüft beim Start der Anwendung automatisch, ob neue Versionen von VideOCR verfügbar sind.",
+    "tip_check_updates": "Prüft beim Start der Anwendung automatisch, ob neue Versionen von VideOCR Recreated verfügbar sind.",
 
     "btn_browse": "Datei öffnen...",
     "btn_browse_folder": "Ordner öffnen...",
@@ -144,11 +144,11 @@
     "lbl_bug_report": "Sie haben einen Fehler gefunden oder haben einen Vorschlag? Erstellen Sie gerne ein Issue unter:",
 
     "update_title": "Update verfügbar",
-    "update_available_1": "Eine neue Version von VideOCR ({}) ist verfügbar!",
+    "update_available_1": "Eine neue Version von VideOCR Recreated ({}) ist verfügbar!",
     "update_available_2": "Sie verwenden derzeit Version {}.",
     "update_available_3": "Klicken Sie auf den untenstehenden Link, um zur Download-Seite zu gelangen:",
     "update_title_uptodate": "Auf dem neuesten Stand",
-    "update_msg_uptodate": "Sie verwenden die neueste Version von VideOCR.",
+    "update_msg_uptodate": "Sie verwenden die neueste Version von VideOCR Recreated.",
     "update_title_error": "Fehler",
     "update_msg_error": "Fehler beim Prüfen auf Updates.\nBitte überprüfen Sie Ihre Internetverbindung.",
 
