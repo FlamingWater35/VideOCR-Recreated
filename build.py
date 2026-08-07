@@ -608,7 +608,9 @@ def main() -> None:
         gui_dist_folder = Path("VideOCR_qt.dist")
         if gui_dist_folder.exists():
             shutil.rmtree(gui_dist_folder)
-        run_command([sys.executable, "-m", "nuitka", gui_script])
+        run_command(
+            [sys.executable, "-m", "nuitka", "--assume-yes-for-downloads", gui_script]
+        )
         if not gui_dist_folder.is_dir():
             print(
                 f"ERROR: Nuitka failed to create the GUI dist folder: {gui_dist_folder}"
@@ -626,7 +628,10 @@ def main() -> None:
     cli_dist_folder = cli_folder / "videocr_cli.dist"
     if cli_dist_folder.exists():
         shutil.rmtree(cli_dist_folder)
-    run_command([sys.executable, "-m", "nuitka", cli_script], cwd=str(cli_folder))
+    run_command(
+        [sys.executable, "-m", "nuitka", "--assume-yes-for-downloads", cli_script],
+        cwd=str(cli_folder),
+    )
     if not cli_dist_folder.is_dir():
         print(f"ERROR: Nuitka failed to create the CLI dist folder: {cli_dist_folder}")
         sys.exit(1)
