@@ -65,10 +65,10 @@ all = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/timminator/VideOCR"
-documentation = "https://github.com/timminator/VideOCR/blob/master/README.md"
-Repository = "https://github.com/timminator/VideOCR.git"
-Issues = "https://github.com/timminator/VideOCR/issues"
+Homepage = "https://github.com/FlamingWater35/VideOCR-Recreated"
+documentation = "https://github.com/FlamingWater35/VideOCR-Recreated/blob/master/README.md"
+Repository = "https://github.com/FlamingWater35/VideOCR-Recreated.git"
+Issues = "https://github.com/FlamingWater35/VideOCR-Recreated/issues"
 
 [tool.mypy]
 strict = true

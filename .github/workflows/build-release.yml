@@ -1,0 +1,266 @@
+# =============================================================================
+# VideOCR Recreated — Build & Release
+#
+# Triggers automatically whenever a tag is pushed.
+#
+# Builds (via the existing build.py: Nuitka compile + 7-Zip packaging +
+# Inno Setup installer, WITHOUT code signing — --signtool is never passed):
+#
+#   Windows : cpu, gpu-cuda11.8, gpu-cuda12.9, gpu-directml
+#   Linux   : cpu, gpu-cuda11.8, gpu-cuda12.9
+#             (gpu-directml intentionally omitted — DirectML is Windows-only
+#              and build.py rejects it on Linux)
+#
+# A draft release is created first; every build job attaches its archives
+# (.7z, split volumes, Windows installers) directly to that draft.
+# =============================================================================
+
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - "*" # run for any new tag (v1.6.0, 1.6.0, ...)
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  PYTHON_VERSION: "3.12" # recommended by README (torch-directml needs <3.13)
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # 1. Create the empty draft release up-front so all build jobs can upload
+  #    assets into it without racing over creation.
+  # ---------------------------------------------------------------------------
+  create-release:
+    name: Create draft release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create draft release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          gh release create "$TAG" \
+            --draft \
+            --title "VideOCR $TAG" \
+            --generate-notes \
+            || echo "Draft release for $TAG already exists — continuing."
+
+  # ---------------------------------------------------------------------------
+  # 2. Windows builds: CPU, CUDA 11.8, CUDA 12.9, DirectML
+  # ---------------------------------------------------------------------------
+  build-windows:
+    name: Windows / ${{ matrix.target }}
+    needs: create-release
+    runs-on: windows-latest
+    timeout-minutes: 300
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [cpu, gpu-cuda11.8, gpu-cuda12.9, gpu-directml]
+    env:
+      BUILD_TARGET: ${{ matrix.target }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Install 7-Zip and Inno Setup
+        run: choco install 7zip innosetup -y --no-progress
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          # Base deps + AMD DirectML backend (easyocr, torch-directml, ONNX
+          # Runtime DirectML). Installed for EVERY Windows target so the
+          # Nuitka standalone bundle always contains the full engine set —
+          # this mirrors building all targets from one environment locally.
+          python -m pip install ".[directml]"
+          # Build tooling used by build.py (Nuitka compiler, downloads).
+          python -m pip install nuitka requests
+          # Ensure the DirectML build of ONNX Runtime wins over plain
+          # onnxruntime pulled in by rapidocr-onnxruntime (README fix).
+          python -m pip uninstall -y onnxruntime
+          python -m pip install --no-cache-dir onnxruntime-directml
+          # SymPy/mpMath pins from the README (torch-directml compatibility).
+          python -m pip install --force-reinstall --no-cache-dir "sympy==1.13.3" "mpmath==1.3.0"
+
+      - name: Restore Nuitka cache
+        uses: actions/cache@v4
+        with:
+          path: ~\AppData\Local\Nuitka
+          key: nuitka-win-${{ hashFiles('VideOCR_qt.py', '_version.py', 'videocr_gui/**', 'CLI/**') }}
+          restore-keys: nuitka-win-
+
+      - name: Compile and package (Nuitka + 7-Zip + Inno Setup)
+        run: |
+          # NOTE: code signing is intentionally NOT performed here
+          # (build.py only signs when --signtool/--sign-cert-name are given).
+          $candidates = @(
+            'C:\Program Files (x86)\Inno Setup 6\ISCC.exe',
+            'C:\Program Files\Inno Setup 6\ISCC.exe'
+          )
+          $iscc = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $iscc) { $iscc = (Get-Command iscc.exe -ErrorAction SilentlyContinue).Source }
+          if (-not $iscc) { throw 'Inno Setup compiler (ISCC.exe) was not found.' }
+
+          python build.py `
+            --target $env:BUILD_TARGET `
+            --archive true `
+            --windows-installer true `
+            --iscc $iscc
+          if ($LASTEXITCODE -ne 0) { throw "build.py failed with exit code $LASTEXITCODE" }
+
+      - name: Split archives larger than the 2 GB release-asset limit
+        run: |
+          # GitHub rejects release assets > 2 GB. Re-archive oversized .7z
+          # files into 1950 MB volumes (same approach build.py uses for
+          # Linux CUDA 12.9).
+          $limit = 1950MB
+          Get-ChildItem -Path Releases -Filter *.7z -File |
+            Where-Object Length -gt $limit |
+            ForEach-Object {
+              $folder = Join-Path Releases $_.BaseName
+              if (Test-Path $folder) {
+                Write-Host "Splitting $($_.Name) into 1950 MB volumes..."
+                Remove-Item $_.FullName
+                Push-Location Releases
+                & 7z a -t7z -mx=9 -m0=lzma2 -md=64m -mfb=64 -ms=on -v1950m $_.Name $_.BaseName
+                $code = $LASTEXITCODE
+                Pop-Location
+                if ($code -ne 0) { throw "7z failed while splitting $($_.Name)" }
+              }
+            }
+
+      - name: Free disk space (unpacked folders no longer needed)
+        run: |
+          Get-ChildItem -Path Releases -Directory | Remove-Item -Recurse -Force
+          Remove-Item -Recurse -Force VideOCR_qt.build, CLI\videocr_cli.build -ErrorAction SilentlyContinue
+
+      - name: Set aside oversized installers
+        run: |
+          # A single-file installer cannot be split; keep it out of the
+          # upload instead of failing the asset upload.
+          Get-ChildItem -Path Releases -Filter *.exe -File |
+            Where-Object Length -gt 1990MB |
+            ForEach-Object {
+              Write-Warning "$($_.Name) exceeds 2 GB and cannot be attached to the release."
+              New-Item -ItemType Directory -Force -Path Releases\oversized | Out-Null
+              Move-Item $_.FullName (Join-Path Releases\oversized $_.Name)
+            }
+
+      - name: Show final release assets
+        run: Get-ChildItem -Path Releases -File | Format-Table Name, @{n='SizeMB';e={[math]::Round($_.Length/1MB,1)}}
+
+      - name: Upload assets to draft release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          draft: true
+          files: |
+            Releases/*.7z
+            Releases/*.7z.0*
+            Releases/*.exe
+
+  # ---------------------------------------------------------------------------
+  # 3. Linux builds: CPU, CUDA 11.8, CUDA 12.9  (NO DirectML — Windows-only)
+  # ---------------------------------------------------------------------------
+  build-linux:
+    name: Linux / ${{ matrix.target }}
+    needs: create-release
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [cpu, gpu-cuda11.8, gpu-cuda12.9]
+    env:
+      BUILD_TARGET: ${{ matrix.target }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Install system packages (7-Zip, Qt runtime libraries)
+        run: |
+          sudo apt-get update
+          # build.py expects a `7z` binary on PATH.
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y p7zip-full \
+            || { sudo DEBIAN_FRONTEND=noninteractive apt-get install -y 7zip && sudo ln -sf "$(command -v 7zz)" /usr/local/bin/7z; }
+          # Qt runtime libs so PySide6 can be imported during Nuitka compilation.
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
+            libgl1 libegl1 libopengl0 libxkbcommon0 libdbus-1-3 libfontconfig1 libglib2.0-0 \
+            || sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
+            libgl1 libegl1 libopengl0 libxkbcommon0 libdbus-1-3 libfontconfig1 libglib2.0-0t64
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          python -m pip install .
+          python -m pip install nuitka requests patchelf
+
+      - name: Restore Nuitka cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/Nuitka
+          key: nuitka-linux-${{ hashFiles('VideOCR_qt.py', '_version.py', 'videocr_gui/**', 'CLI/**') }}
+          restore-keys: nuitka-linux-
+
+      - name: Compile and package (Nuitka + 7-Zip)
+        run: |
+          # No code signing, no Inno Setup on Linux.
+          python build.py \
+            --target "$BUILD_TARGET" \
+            --archive true
+
+      - name: Split archives larger than the 2 GB release-asset limit
+        run: |
+          # Linux CUDA 12.9 is already split by build.py (-v1999m); this is a
+          # safety net for any other oversized archive.
+          LIMIT=$((1950 * 1024 * 1024))
+          for archive in Releases/*.7z; do
+            [ -f "$archive" ] || continue
+            size=$(stat -c%s "$archive")
+            name=$(basename "$archive")
+            folder="Releases/${name%.7z}"
+            if [ "$size" -gt "$LIMIT" ] && [ -d "$folder" ]; then
+              echo "Splitting $name into 1950 MB volumes..."
+              rm "$archive"
+              (cd Releases && 7z a -t7z -mx=9 -m0=lzma2 -md=64m -mfb=64 -ms=on -v1950m "$name" "${name%.7z}")
+            fi
+          done
+
+      - name: Free disk space (unpacked folders no longer needed)
+        run: |
+          find Releases -mindepth 1 -maxdepth 1 -type d -exec rm -rf {} +
+          rm -rf VideOCR_qt.build CLI/videocr_cli.build
+
+      - name: Show final release assets
+        run: ls -lh Releases
+
+      - name: Upload assets to draft release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          draft: true
+          files: |
+            Releases/*.7z
+            Releases/*.7z.0*

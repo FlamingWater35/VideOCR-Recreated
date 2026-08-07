@@ -25,7 +25,7 @@ mkdir -p "$DESKTOP_DIR"
 # Create the .desktop file
 cat > "$DESKTOP_FILE" <<EOL
 [Desktop Entry]
-Name=VideOCR
+Name=VideOCR Recreated
 Comment=Extract hardcoded subtitles from video
 Exec=$EXEC
 Icon=$ICON
@@ -43,5 +43,5 @@ if [ -f "$PORTABLE_FLAG" ]; then
     echo "Removed portable flag. Settings will now be saved to ~/.config/VideOCR/"
 fi
 
-echo "Installed VideOCR desktop shortcut to:"
+echo "Installed VideOCR Recreated desktop shortcut to:"
 echo "$DESKTOP_FILE"

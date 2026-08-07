@@ -16,7 +16,7 @@
 VideOCR Recreated extracts hardcoded / burned-in subtitles from videos and exports them as `.srt` (or `.ass` with label detection) subtitle files.
 
 <p align="center">
-  <img src="Pictures/GUI.jpg" alt="VideOCR GUI" width="720">
+  <img src="Pictures/GUI.jpg" alt="VideOCR Recreated GUI" width="720">
   <br />
   <em>VideOCR Recreated main window</em>
 </p>
@@ -95,7 +95,7 @@ The hybrid mode is intentional. It avoids the crash while still using the AMD GP
 
 ### Windows CPU / CUDA / Normal Use
 
-You can either install VideOCR with the setup installer or download a folder containing the executable and required files, then unzip it to your desired location.
+You can either install VideOCR Recreated with the setup installer or download a folder containing the executable and required files, then unzip it to your desired location.
 
 ### Windows AMD DirectML Development Setup
 
@@ -144,6 +144,84 @@ python VideOCR_qt.py
 
 > **DirectML GPU persistence:** in the GUI, the DirectML GPU dropdown (Advanced Settings) is saved to `videocr_gui_config.ini` and restored on the next launch. The default is **GPU 0**. If your discrete Radeon card is adapter `1`, select `GPU 1` once — the GUI will remember it.
 
+### NVIDIA CUDA Development Setup
+
+Use this setup to run VideOCR Recreated from source with NVIDIA GPU (CUDA) acceleration. Local CUDA OCR uses the **PaddleOCR** engine with GPU usage enabled. The `easyocr_directml` / `onnx_directml` engines are AMD/Windows-only and are not needed here.
+
+#### Requirements
+
+- An NVIDIA GPU with a compatible driver. Verify with `nvidia-smi`.
+- Python 3.12 recommended.
+- The matching CUDA build of the PaddleOCR helper (see compatibility below).
+
+The CLI runs an automatic NVIDIA hardware check against this table:
+
+| Build | GPU Compute Capability | Minimum NVIDIA Driver |
+| --- | --- | --- |
+| CUDA 11.8 | 6.1 – 8.9 (Windows) / 6.0 – 8.9 (Linux) | 451.22 (Windows) / 450.36.06 (Linux) |
+| CUDA 12.9 | 7.5 – 12.0 | 527.41 (Windows) / 525.60.13 (Linux) |
+
+#### Windows
+
+Open CMD in the repository folder and run:
+
+```bat
+py -3.12 -m venv .venv --upgrade-deps
+call .venv\Scripts\activate.bat
+python -m pip install --upgrade pip setuptools wheel
+python -m pip install -e .
+```
+
+Verify the GPU is visible:
+
+```bat
+nvidia-smi
+```
+
+#### Linux
+
+```bash
+python3.12 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip setuptools wheel
+python -m pip install -e .
+```
+
+A working `dbus` installation is recommended for notifications:
+
+```bash
+sudo apt-get install dbus
+nvidia-smi
+```
+
+#### Getting the CUDA PaddleOCR helper
+
+From source the PaddleOCR / Chrome Lens helper executables are not bundled. Either download a prebuilt GPU release and copy the `PaddleOCR...` / `Chrome-Lens-OCR...` folders next to the CLI, or build a CUDA target (this downloads and packages the correct helper automatically):
+
+```bash
+python build.py --target gpu-cuda11.8
+# or
+python build.py --target gpu-cuda12.9
+```
+
+#### Running with CUDA
+
+Enable GPU usage so the CLI performs the NVIDIA hardware check and uses the CUDA device:
+
+```bat
+python CLI\videocr_cli.py --video_path "C:\Path\To\video.mp4" --output "C:\Path\To\output.en.srt" --ocr_engine paddleocr --lang en --use_gpu true
+```
+
+Then start the GUI:
+
+```bat
+python VideOCR_qt.py
+```
+
+In the GUI select **OCR Engine: PaddleOCR (Det. + Rec.)** and check **Enable GPU Usage**.
+
+> NVIDIA users should use the CUDA builds, not the AMD DirectML builds. The DirectML path is intended for AMD GPUs on Windows.
+
 ### Windows Graphics Preference
 
 If Windows still sends DirectML workloads to the integrated GPU, force Python to use the high-performance GPU:
@@ -165,13 +243,13 @@ Windows Settings
 
 Download the tarball archive from the releases page and unzip it to your desired location.
 
-Optionally, you can add VideOCR to your app menus. Open a terminal where you unpacked the archive and run:
+Optionally, you can add VideOCR Recreated to your app menus. Open a terminal where you unpacked the archive and run:
 
 ```bash
 ./install_videocr.sh
 ```
 
-This creates a shortcut for VideOCR.
+This creates a shortcut for VideOCR Recreated.
 
 You can remove it with:
 
@@ -221,7 +299,7 @@ OCR Image Max Width: 720
 
 ## CLI Usage
 
-There is also a CLI version available. Open a terminal in the VideOCR folder and run:
+There is also a CLI version available. Open a terminal in the VideOCR Recreated folder and run:
 
 ### Windows
 

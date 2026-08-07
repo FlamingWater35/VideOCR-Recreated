@@ -12,8 +12,8 @@
 #endif
 
 
-#define MyAppName "VideOCR"
-#define MyAppURL "https://github.com/timminator/VideOCR"
+#define MyAppName "VideOCR Recreated"
+#define MyAppURL "https://github.com/FlamingWater35/VideOCR-Recreated"
 #define MyAppExeName "VideOCR.exe"
 #define MyInstallerVersion MyAppVersion + ".0"
 #define MyAppCopyright "timminator"
