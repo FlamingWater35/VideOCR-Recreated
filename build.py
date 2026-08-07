@@ -271,7 +271,7 @@ def create_final_archive(folder_path: Path, build_target: str) -> None:
             seven_zip_exe,
             "a",
             "-t7z",
-            "-mx=9",
+            "-mx=7",
             "-m0=lzma2",
             "-md=64m",
             "-mfb=64",
@@ -615,6 +615,7 @@ def main() -> None:
                 "nuitka",
                 "--assume-yes-for-downloads",
                 "--nofollow-import-to=sympy,mpmath",
+                "--jobs=1",
                 gui_script,
             ]
         )
@@ -642,6 +643,7 @@ def main() -> None:
             "nuitka",
             "--assume-yes-for-downloads",
             "--nofollow-import-to=sympy,mpmath",
+            "--jobs=1",
             cli_script,
         ],
         cwd=str(cli_folder),
