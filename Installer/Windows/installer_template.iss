@@ -59,7 +59,7 @@ Name: "portuguese"; MessagesFile: "compiler:Languages\Portuguese.isl"
 Name: "italian"; MessagesFile: "compiler:Languages\Italian.isl"
 Name: "arabic"; MessagesFile: "compiler:Languages\Arabic.isl"
 Name: "russian"; MessagesFile: "compiler:Languages\Russian.isl"
-Name: "indonesian"; MessagesFile: "compiler:Languages\Indonesian.isl"
+; Name: "indonesian"; MessagesFile: "compiler:Languages\Indonesian.isl"
 Name: "Thai"; MessagesFile: "compiler:Languages\Thai.isl"
 Name: "Korean"; MessagesFile: "compiler:Languages\Korean.isl"
 Name: "japanese"; MessagesFile: "compiler:Languages\Japanese.isl"
@@ -194,7 +194,7 @@ begin
         'italian':           SetIniString('Settings', '--language', 'it', NewConfigPath);
         'arabic':            SetIniString('Settings', '--language', 'ar', NewConfigPath);
         'russian':           SetIniString('Settings', '--language', 'ru', NewConfigPath);
-        'indonesian':        SetIniString('Settings', '--language', 'id', NewConfigPath);
+        // 'indonesian':        SetIniString('Settings', '--language', 'id', NewConfigPath);
         'Thai':              SetIniString('Settings', '--language', 'th', NewConfigPath);
         'Korean':            SetIniString('Settings', '--language', 'ko', NewConfigPath);
         'japanese':          SetIniString('Settings', '--language', 'ja', NewConfigPath);
