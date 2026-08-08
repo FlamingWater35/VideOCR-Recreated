@@ -297,7 +297,7 @@ def create_windows_installer(final_app_path: Path, args: argparse.Namespace) -> 
     # 1. Check explicitly provided argument
     # 2. Check the default Inno Setup installation path
     # 3. Fallback to system PATH
-    default_iscc = r"C:\Program Files (x86)\Inno Setup 7\ISCC.exe"
+    default_iscc = r"C:\Program Files\Inno Setup 7\ISCC.exe"
 
     iscc_exe = (
         args.iscc
