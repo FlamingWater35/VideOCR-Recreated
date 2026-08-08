@@ -855,8 +855,6 @@ git clone https://github.com/FlamingWater35/VideOCR-Recreated.git
 cd VideOCR-Recreated
 ```
 
-If you rename this fork, use your new repository URL instead.
-
 ### Install Dependencies
 
 Standard install:
