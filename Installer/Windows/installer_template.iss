@@ -63,7 +63,7 @@ Name: "russian"; MessagesFile: "compiler:Languages\Russian.isl"
 Name: "Thai"; MessagesFile: "compiler:Languages\Thai.isl"
 Name: "Korean"; MessagesFile: "compiler:Languages\Korean.isl"
 Name: "japanese"; MessagesFile: "compiler:Languages\Japanese.isl"
-Name: "vietnamese"; MessagesFile: "compiler:Languages\Vietnamese.isl"
+; Name: "vietnamese"; MessagesFile: "compiler:Languages\Vietnamese.isl"
 
 [Dirs]
 Name: "{app}"; Permissions: everyone-full
@@ -198,7 +198,7 @@ begin
         'Thai':              SetIniString('Settings', '--language', 'th', NewConfigPath);
         'Korean':            SetIniString('Settings', '--language', 'ko', NewConfigPath);
         'japanese':          SetIniString('Settings', '--language', 'ja', NewConfigPath);
-        'vietnamese':        SetIniString('Settings', '--language', 'vi', NewConfigPath);
+        // 'vietnamese':        SetIniString('Settings', '--language', 'vi', NewConfigPath);
       else
         SetIniString('Settings', '--language', 'en', NewConfigPath);
       end;
