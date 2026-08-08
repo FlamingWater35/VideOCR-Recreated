@@ -355,6 +355,7 @@ def package_target(
 ) -> None:
     """Packages a single distribution for the specified target using pre-compiled files."""
     is_cli_only = args.cli_only.lower() == "true"
+    is_gui_only = args.gui_only.lower() == "true"
 
     if build_target == "gpu-directml":
         display_target_name = "GPU-DirectML"
@@ -452,8 +453,12 @@ def package_target(
 
     cli_final_name = f"videocr-cli-{base_target_name}-v{APP_VERSION}{cuda_suffix}{release_tag}{os_suffix}"
     final_cli_path = releases_dir / cli_final_name
-    print(f"Creating standalone CLI at '{final_cli_path}'")
-    shutil.copytree(temp_cli_dist, final_cli_path)
+
+    if not is_gui_only:
+        print(f"Creating standalone CLI at '{final_cli_path}'")
+        shutil.copytree(temp_cli_dist, final_cli_path)
+    else:
+        print(f"Skipping standalone CLI folder creation (--gui-only).")
 
     if not is_cli_only and temp_gui_dist:
         final_app_folder_name = f"VideOCR-{base_target_name}-v{APP_VERSION}{cuda_suffix}{release_tag}{os_suffix}"
@@ -506,7 +511,8 @@ def package_target(
     if args.archive and args.archive.lower() == "true":
         if not is_cli_only:
             create_final_archive(final_app_path, build_target)
-        create_final_archive(final_cli_path, build_target)
+        if not is_gui_only:
+            create_final_archive(final_cli_path, build_target)
 
 
 def main() -> None:
@@ -524,6 +530,11 @@ def main() -> None:
         "--cli-only",
         default="false",
         help="(Optional) Set to 'true' to skip building the GUI and only build the CLI.",
+    )
+    parser.add_argument(
+        "--gui-only",
+        default="false",
+        help="(Optional) Set to 'true' to skip building the standalone CLI release and only build the GUI.",
     )
     parser.add_argument(
         "--signtool",

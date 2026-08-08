@@ -68,6 +68,7 @@ jobs:
         target: [cpu, gpu-cuda11.8, gpu-cuda12.9, gpu-directml]
     env:
       BUILD_TARGET: ${{ matrix.target }}
+      NUITKA_ASSUME_YES_FOR_DOWNLOADS: "1"
     steps:
       - uses: actions/checkout@v4
 
@@ -121,6 +122,7 @@ jobs:
             --target $env:BUILD_TARGET `
             --archive true `
             --windows-installer true `
+            --gui-only true `
             --iscc $iscc
           if ($LASTEXITCODE -ne 0) { throw "build.py failed with exit code $LASTEXITCODE" }
 
@@ -138,14 +140,14 @@ jobs:
                 Write-Host "Splitting $($_.Name) into 1950 MB volumes..."
                 Remove-Item $_.FullName
                 Push-Location Releases
-                & 7z a -t7z -mx=9 -m0=lzma2 -md=64m -mfb=64 -ms=on -v1950m $_.Name $_.BaseName
+                & 7z a -t7z -mx=7 -m0=lzma2 -md=64m -mfb=64 -ms=on -v1950m $_.Name $_.BaseName
                 $code = $LASTEXITCODE
                 Pop-Location
                 if ($code -ne 0) { throw "7z failed while splitting $($_.Name)" }
               }
             }
 
-      - name: Free disk space (unpacked folders no longer needed)
+      - name: Free disk space
         run: |
           Get-ChildItem -Path Releases -Directory | Remove-Item -Recurse -Force
           Remove-Item -Recurse -Force VideOCR_qt.build, CLI\videocr_cli.build -ErrorAction SilentlyContinue
@@ -189,6 +191,7 @@ jobs:
         target: [cpu, gpu-cuda11.8, gpu-cuda12.9]
     env:
       BUILD_TARGET: ${{ matrix.target }}
+      NUITKA_ASSUME_YES_FOR_DOWNLOADS: "1"
     steps:
       - uses: actions/checkout@v4
 
@@ -199,7 +202,7 @@ jobs:
           cache: pip
           cache-dependency-path: pyproject.toml
 
-      - name: Install system packages (7-Zip, Qt runtime libraries)
+      - name: Install system packages
         run: |
           sudo apt-get update
           # build.py expects a `7z` binary on PATH.
@@ -217,6 +220,18 @@ jobs:
           python -m pip install .
           python -m pip install nuitka requests patchelf
 
+      - name: Clean PySide6 QML artifacts
+        run: |
+          python - <<'PY'
+          import shutil
+          from pathlib import Path
+          import PySide6
+          for d in Path(PySide6.__file__).resolve().parent.rglob("objects-*"):
+              if d.is_dir():
+                  shutil.rmtree(d, ignore_errors=True)
+                  print(f"Removed {d}")
+          PY
+
       - name: Restore Nuitka cache
         uses: actions/cache@v4
         with:
@@ -226,10 +241,10 @@ jobs:
 
       - name: Compile and package (Nuitka + 7-Zip)
         run: |
-          # No code signing, no Inno Setup on Linux.
           python build.py \
             --target "$BUILD_TARGET" \
-            --archive true
+            --archive true \
+            --gui-only true
 
       - name: Split archives larger than the 2 GB release-asset limit
         run: |
@@ -244,11 +259,11 @@ jobs:
             if [ "$size" -gt "$LIMIT" ] && [ -d "$folder" ]; then
               echo "Splitting $name into 1950 MB volumes..."
               rm "$archive"
-              (cd Releases && 7z a -t7z -mx=9 -m0=lzma2 -md=64m -mfb=64 -ms=on -v1950m "$name" "${name%.7z}")
+              (cd Releases && 7z a -t7z -mx=7 -m0=lzma2 -md=64m -mfb=64 -ms=on -v1950m "$name" "${name%.7z}")
             fi
           done
 
-      - name: Free disk space (unpacked folders no longer needed)
+      - name: Free disk space
         run: |
           find Releases -mindepth 1 -maxdepth 1 -type d -exec rm -rf {} +
           rm -rf VideOCR_qt.build CLI/videocr_cli.build
