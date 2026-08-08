@@ -15,6 +15,7 @@ import ast
 import configparser
 import os
 import pathlib
+import sys
 from typing import Any
 
 from . import constants as C
@@ -24,7 +25,10 @@ CONFIG_SECTION = "Settings"
 
 # --- Paths -------------------------------------------------------------------
 def get_app_dir() -> str:
-    """Directory of the application (repo root when run from source)."""
+    """Directory of the application (repo root when run from source, or exe dir when compiled)."""
+    # Nuitka sets __compiled__ in compiled modules
+    if "__compiled__" in globals():
+        return os.path.dirname(sys.executable)
     return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
@@ -37,14 +41,18 @@ def log_error(message: str, log_name: str = "error_log.txt") -> str:
     if os.path.exists(portable_flag):
         log_dir = APP_DIR
     elif os.name == "nt":
-        base = os.environ.get("LOCALAPPDATA") or os.path.join(str(pathlib.Path.home()), "AppData", "Local")
+        base = os.environ.get("LOCALAPPDATA") or os.path.join(
+            str(pathlib.Path.home()), "AppData", "Local"
+        )
         log_dir = os.path.join(base, "VideOCR")
     else:
         xdg_state = os.environ.get("XDG_STATE_HOME")
         if xdg_state:
             log_dir = os.path.join(xdg_state, "VideOCR")
         else:
-            log_dir = os.path.join(str(pathlib.Path.home()), ".local", "state", "VideOCR")
+            log_dir = os.path.join(
+                str(pathlib.Path.home()), ".local", "state", "VideOCR"
+            )
 
     os.makedirs(log_dir, exist_ok=True)
     log_path = os.path.join(log_dir, log_name)
@@ -62,7 +70,9 @@ def get_config_file_path() -> str:
     if os.path.exists(portable_flag):
         config_dir = APP_DIR
     elif os.name == "nt":
-        base = os.environ.get("APPDATA") or os.path.join(str(pathlib.Path.home()), "AppData", "Roaming")
+        base = os.environ.get("APPDATA") or os.path.join(
+            str(pathlib.Path.home()), "AppData", "Roaming"
+        )
         config_dir = os.path.join(base, "VideOCR")
     else:
         xdg_config = os.environ.get("XDG_CONFIG_HOME")

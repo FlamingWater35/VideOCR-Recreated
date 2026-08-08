@@ -294,7 +294,18 @@ def create_windows_installer(final_app_path: Path, args: argparse.Namespace) -> 
     if sys.platform != "win32":
         return
 
-    iscc_exe = args.iscc or shutil.which("iscc") or shutil.which("ISCC.exe")
+    # 1. Check explicitly provided argument
+    # 2. Check the default Inno Setup installation path
+    # 3. Fallback to system PATH
+    default_iscc = r"C:\Program Files (x86)\Inno Setup 7\ISCC.exe"
+
+    iscc_exe = (
+        args.iscc
+        or (default_iscc if Path(default_iscc).is_file() else None)
+        or shutil.which("iscc")
+        or shutil.which("ISCC.exe")
+    )
+
     if not iscc_exe or not Path(iscc_exe).is_file():
         print("\nWARNING: Inno Setup Compiler (iscc.exe) not found.")
         print("         Skipping installer creation.")
@@ -626,6 +637,7 @@ def main() -> None:
                 "nuitka",
                 "--assume-yes-for-downloads",
                 "--nofollow-import-to=sympy,mpmath",
+                "--include-module=av.utils",
                 "--jobs=1",
                 gui_script,
             ]
@@ -654,6 +666,7 @@ def main() -> None:
             "nuitka",
             "--assume-yes-for-downloads",
             "--nofollow-import-to=sympy,mpmath",
+            "--include-module=av.utils",
             "--jobs=1",
             cli_script,
         ],
