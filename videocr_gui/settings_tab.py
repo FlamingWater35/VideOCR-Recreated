@@ -65,6 +65,8 @@ DML_DEPENDENT_WIDGETS = (
 
 # Widgets disabled while label detection is disabled.
 LABEL_DEPENDENT_WIDGETS = (
+    "--label_time_start",
+    "--label_time_end",
     "--label_ocr_image_max_width",
     "--label_min_display_duration",
     "--label_min_confirmation_frames",
@@ -207,6 +209,10 @@ class SettingsTab(QWidget):
 
         self._add_check(label_form, "enable_label_detection", "chk_label_detection",
                         "Enable Label Detection (detect text outside the subtitle crop)", "tip_label_detection", False)
+        self._add_line(label_form, "--label_time_start", "lbl_label_time_start",
+                       "Label Start Time (e.g., 0:00 or 1:23:45):", "", "tip_label_time_start")
+        self._add_line(label_form, "--label_time_end", "lbl_label_time_end",
+                       "Label End Time (e.g., 0:10 or 2:34:56):", "", "tip_label_time_end")
         self._add_line(label_form, "--label_ocr_image_max_width", "lbl_label_ocr_width",
                        "Label Max OCR Image Width (pixel):", "720", "tip_label_ocr_width")
         self._add_line(label_form, "--label_min_display_duration", "lbl_label_min_duration",

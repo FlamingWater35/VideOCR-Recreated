@@ -116,9 +116,16 @@ QSS theme.
   mode, frame scan mode, ONNX tuning, grid max width/height), UI language,
   GUI scaling, save options, output dir, seek step, notification, sleep,
   normalize-chinese.
-- Label detection section: `enable_label_detection`, label OCR width, min
-  display duration, min confirmation frames, reappear merge gap, single-char
-  filter (`.ass` output with positioned Label events).
+- Label detection section: `enable_label_detection`, label start/end time
+  (independent of the subtitle extraction window; empty falls back to the main
+  window), label OCR width, min display duration, min confirmation frames,
+  reappear merge gap, single-char filter (`.ass` output with positioned Label
+  events).
+- OCR engine list: **EasyOCR DirectML is not offered** as a selectable GUI
+  engine. It remains the internal fallback backend for the ONNX Runtime
+  DirectML engine (see `CLI/videocr/onnx_directml_ocr.py`). Old configs /
+  saved queue jobs that reference the removed display name are migrated to the
+  ONNX Runtime DirectML engine via `constants.LEGACY_OCR_ENGINE_MAP`.
 - Config: `videocr_gui_config.ini` (portable mode via `portable_mode.txt`,
   else `%APPDATA%/VideOCR` or XDG), autosave on change, relative crop-box
   persistence, defaults matching the old GUI except DirectML index default 0

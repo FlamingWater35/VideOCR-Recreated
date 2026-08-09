@@ -156,6 +156,8 @@ def main() -> None:
     parser.add_argument('--subtitle_alignment', type=valid_alignment_name, default=None, help='(Zone 1) Subtitle alignment. Allowed: bottom-left, bottom-center, bottom-right, middle-left, middle-center, middle-right, top-left, top-center, top-right')
     parser.add_argument('--subtitle_alignment2', type=valid_alignment_name, default=None, help='(Zone 2) Subtitle alignment. See --subtitle_alignment for allowed values.')
     parser.add_argument('--enable_label_detection', type=lambda x: x.lower() == 'true', default=False, help='Detect text outside the subtitle crop area (e.g. people/place name labels) and write an .ass subtitle file with positioned Label events (default: false)')
+    parser.add_argument('--label_time_start', type=valid_time_string, default='', help='Start time (MM:SS or HH:MM:SS) for label detection, within the subtitle extraction window; defaults to the main start (default: same as --time_start)')
+    parser.add_argument('--label_time_end', type=valid_time_string, default='', help='End time (MM:SS or HH:MM:SS) for label detection, within the subtitle extraction window; defaults to the main end (default: same as --time_end)')
     parser.add_argument('--label_ocr_image_max_width', type=restricted_int(min_val=1), default=720, help='Maximum image width used for OCR in the label detection zone (default: 720)')
     parser.add_argument('--label_min_display_duration', type=restricted_float(min_val=0.0), default=1.0, help='Minimum display duration in seconds for detected labels (default: 1.0)')
     parser.add_argument('--label_min_confirmation_frames', type=restricted_int(min_val=1), default=2, help='Minimum number of sampled frames a label must appear in before it is emitted (filters OCR noise, default: 2)')
@@ -192,6 +194,12 @@ def main() -> None:
             end_ms = utils.get_ms_from_time_str(args.time_end)
             if start_ms > end_ms:
                 raise ValueError(f"Start Time ({args.time_start}) cannot be after End Time ({args.time_end}).")
+
+        if args.label_time_start and args.label_time_end:
+            label_start_ms = utils.get_ms_from_time_str(args.label_time_start)
+            label_end_ms = utils.get_ms_from_time_str(args.label_time_end)
+            if label_start_ms > label_end_ms:
+                raise ValueError(f"Label Start Time ({args.label_time_start}) cannot be after Label End Time ({args.label_time_end}).")
 
         crop_zones: list[dict[str, int]] = []
         if not args.use_fullframe:
@@ -258,6 +266,8 @@ def main() -> None:
                 benchmark_compare_engine=args.benchmark_compare_engine,
                 benchmark_compare_sample_grids=args.benchmark_compare_sample_grids,
                 enable_label_detection=args.enable_label_detection,
+                label_time_start=args.label_time_start,
+                label_time_end=args.label_time_end,
                 label_ocr_image_max_width=args.label_ocr_image_max_width,
                 label_min_display_duration_sec=args.label_min_display_duration,
                 label_min_confirmation_frames=args.label_min_confirmation_frames,

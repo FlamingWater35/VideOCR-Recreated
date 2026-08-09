@@ -144,6 +144,8 @@ def get_default_settings() -> dict[str, Any]:
         "gui_scaling": C.DEFAULT_GUI_SCALING,
         # Label detection (text outside the subtitle crop, e.g. names)
         "enable_label_detection": False,
+        "--label_time_start": "",
+        "--label_time_end": "",
         "--label_ocr_image_max_width": "720",
         "--label_min_display_duration": "1.0",
         "--label_min_confirmation_frames": "2",

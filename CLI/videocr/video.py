@@ -72,6 +72,8 @@ class Video:
         self.avg_frame_duration_ms = 0.0
         self.label_zone = None
         self.label_frames = []
+        self.label_time_start_ms = 0.0
+        self.label_time_end_ms: float | None = None
 
         props = get_video_properties(self.path)
         self.height = props['height']
@@ -456,7 +458,8 @@ class Video:
                 label_min_display_duration_sec: float = 1.0,
                 label_min_confirmation_frames: int = 2,
                 label_reappear_merge_gap_sec: float = 2.0,
-                label_filter_single_char: bool = True) -> None:
+                label_filter_single_char: bool = True,
+                label_time_start: str = '', label_time_end: str = '') -> None:
         perf_total_start = time.perf_counter()
         step1_start = perf_total_start
         conf_threshold_ratio = conf_threshold / 100
@@ -468,6 +471,8 @@ class Video:
         self.pred_frames_zone2 = []
         self.label_zone = None
         self.label_frames = []
+        self.label_time_start_ms = 0.0
+        self.label_time_end_ms = None
         self._label_min_display_duration_ms = float(label_min_display_duration_sec or 1.0) * 1000.0
         self._label_min_confirmation_frames = max(1, int(label_min_confirmation_frames or 1))
         self._label_reappear_merge_gap_ms = float(label_reappear_merge_gap_sec or 0.0) * 1000.0
@@ -492,6 +497,20 @@ class Video:
             target_end_str = utils.get_srt_timestamp_from_ms(user_end_ms).split(',')[0]
         elif self.duration_ms > 0:
             target_end_str = utils.get_srt_timestamp_from_ms(self.duration_ms).split(',')[0]
+
+        # Label-detection time window, independent of the subtitle extraction
+        # window. Empty values fall back to the main window so labels follow
+        # the overall run unless the user explicitly overrides them.
+        label_start_ms = float(user_start_ms)
+        label_end_ms = target_end_ms
+        if label_time_start:
+            label_start_ms = utils.get_ms_from_time_str(label_time_start)
+        if label_time_end:
+            label_end_ms = utils.get_ms_from_time_str(label_time_end)
+        self.label_time_start_ms = label_start_ms + self.start_time_offset_ms
+        self.label_time_end_ms = (
+            label_end_ms + self.start_time_offset_ms if label_end_ms is not None else None
+        )
 
         for zone in crop_zones:
             if zone['y'] >= self.height:
@@ -1194,7 +1213,9 @@ class Video:
 
                 self.pred_frames_zone1 = frame_predictions_list.get(0, [])
                 self.pred_frames_zone2 = frame_predictions_list.get(1, [])
-                self.label_frames = frame_predictions_list.get(2, []) if self.label_zone is not None else []
+                self.label_frames = self._filter_label_frames_by_time(
+                    frame_predictions_list.get(2, [])
+                ) if self.label_zone is not None else []
 
                 total_elapsed = time.perf_counter() - perf_total_start
                 print(f"[Perf] Step 1 frame scan/filter/stitch: {step1_end - step1_start:.2f}s", flush=True)
@@ -1607,7 +1628,9 @@ class Video:
 
             self.pred_frames_zone1 = frame_predictions_list.get(0, [])
             self.pred_frames_zone2 = frame_predictions_list.get(1, [])
-            self.label_frames = frame_predictions_list.get(2, []) if self.label_zone is not None else []
+            self.label_frames = self._filter_label_frames_by_time(
+                frame_predictions_list.get(2, [])
+            ) if self.label_zone is not None else []
 
             total_elapsed = time.perf_counter() - perf_total_start
             print(f"[Perf] Step 1 frame scan/filter/stitch: {step1_end - step1_start:.2f}s", flush=True)
@@ -1882,6 +1905,25 @@ class Video:
         for ev in events:
             if ev["end_ms"] - ev["start_ms"] < min_ms:
                 ev["end_ms"] = max(ev["start_ms"] + min_ms, ev["end_ms"])
+
+        # Clamp events to the label-detection time window so a label never
+        # starts before its window opens or outlives its window close.
+        win_start = float(getattr(self, "label_time_start_ms", 0.0))
+        win_end = getattr(self, "label_time_end_ms", None)
+        if win_start > 0.0 or win_end is not None:
+            clamped: list[dict[str, Any]] = []
+            for ev in events:
+                if win_end is not None and ev["start_ms"] > win_end - self.start_time_offset_ms:
+                    continue  # event starts after the window closed
+                start_ms = max(ev["start_ms"], win_start - self.start_time_offset_ms)
+                end_ms = ev["end_ms"]
+                if win_end is not None:
+                    end_ms = min(end_ms, win_end - self.start_time_offset_ms)
+                if end_ms <= start_ms:
+                    continue
+                ev["start_ms"], ev["end_ms"] = start_ms, end_ms
+                clamped.append(ev)
+            events = clamped
         return events
 
     @staticmethod
@@ -1915,8 +1957,41 @@ class Video:
         frame_ms = self.avg_frame_duration_ms or 33.0
         return max(1, int(round(gap_ms / frame_ms)))
 
+    def _filter_label_frames_by_time(self, frames: list[PredictedFrames]) -> list[PredictedFrames]:
+        """Drop label detections outside the label-detection time window.
+
+        The window is set via --label_time_start/--label_time_end and is
+        independent of the subtitle extraction window. Timestamps come from
+        frame_timestamps (container time, including start_time_offset), so the
+        comparison uses the offset-adjusted label window.
+        """
+        start_ms = float(getattr(self, "label_time_start_ms", 0.0))
+        end_ms = getattr(self, "label_time_end_ms", None)
+        if start_ms <= 0.0 and end_ms is None:
+            return frames
+        kept: list[PredictedFrames] = []
+        for frame in frames:
+            ts = self.frame_timestamps.get(frame.start_index)
+            if ts is None:
+                # Unknown timestamp: keep by default (frame map may be sparse).
+                kept.append(frame)
+                continue
+            if start_ms > 0.0 and ts < start_ms:
+                continue
+            if end_ms is not None and ts > end_ms:
+                continue
+            kept.append(frame)
+        return kept
+
     def _label_frame_start_ms(self, frame: Any) -> float:
-        start_ms = self.frame_timestamps.get(frame.start_index, 0)
+        # frame_timestamps is normally fully populated by the producer, but
+        # fall back to the frame's end timestamp (and then 0) defensively so a
+        # sparse map never yields a spurious 0 start that the label time-window
+        # clamp would misinterpret as "before the window".
+        start_ms = self.frame_timestamps.get(
+            frame.start_index,
+            self.frame_timestamps.get(frame.end_index, 0),
+        )
         return start_ms - self.start_time_offset_ms
 
     def _label_frame_end_ms(self, frame: Any) -> float:

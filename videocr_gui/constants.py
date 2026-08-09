@@ -5,10 +5,18 @@ from __future__ import annotations
 import sys
 
 # --- OCR engines ---
+# EasyOCR DirectML is intentionally NOT listed here: it is no longer a
+# selectable GUI engine. It remains the internal fallback backend for the
+# ONNX Runtime DirectML engine (see CLI/videocr/onnx_directml_ocr.py).
 OCR_ENGINES = ['PaddleOCR (Det. + Rec.)',
  'PaddleOCR (Det.) + Google Lens (Rec.)',
- 'EasyOCR DirectML (AMD GPU)',
  'ONNX Runtime DirectML (AMD GPU Experimental)']
+
+# Display names removed from the GUI but still present in old config files /
+# saved queue args. They map to the engine that still uses them internally.
+LEGACY_OCR_ENGINE_MAP = {
+    'EasyOCR DirectML (AMD GPU)': 'ONNX Runtime DirectML (AMD GPU Experimental)',
+}
 
 # --- Language lists (name, code) ---
 PADDLEOCR_LANGUAGES_LIST = [('Abaza', 'abq'),

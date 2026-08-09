@@ -367,6 +367,10 @@ class MainWindow(QMainWindow):
         self.pos_combo.blockSignals(True)
         try:
             engine = self._settings.get("ocr_engine", C.DEFAULT_OCR_ENGINE)
+            # Old configs may still store a display name from an engine that
+            # was removed from the list (e.g. EasyOCR DirectML); map it to the
+            # engine that still uses it internally.
+            engine = C.LEGACY_OCR_ENGINE_MAP.get(engine, engine)
             self.engine_combo.clear()
             self.engine_combo.addItems(C.OCR_ENGINES)
             idx = self.engine_combo.findText(engine)
@@ -706,7 +710,17 @@ class MainWindow(QMainWindow):
 
     # --- settings changes ------------------------------------------------------
     def _on_settings_changed(self, keys: list[str]) -> None:
-        self._settings.update(self.settings_tab.read_settings())
+        # The settings tab only owns its own widgets; the process-tab OCR
+        # engine / language / position selections live in self._settings and
+        # must NOT be overwritten by the settings-tab snapshot (which is
+        # taken at boot and would clobber a fresh engine selection back to
+        # the boot default).
+        tab_settings = self.settings_tab.read_settings()
+        for key in (
+            "ocr_engine", "subtitle_language", "subtitle_position",
+        ):
+            tab_settings.pop(key, None)
+        self._settings.update(tab_settings)
         for key in keys:
             # Output extension/format changes when the subtitle crop, save dir,
             # or label detection setting changes.
@@ -774,7 +788,7 @@ class MainWindow(QMainWindow):
     # --- info/help -------------------------------------------------------------
     def _show_engine_info(self) -> None:
         info(self, i18n.tr("engine_info", "OCR Engine Information"),
-             i18n.tr("engine_message", "PaddleOCR (Det. + Rec.):\n• 100% local processing.\n\nPaddleOCR (Det.) + Google Lens (Rec.):\n• Hybrid processing.\n• Requires an active internet connection.\n\nEasyOCR DirectML (AMD GPU):\n• Experimental local DirectML backend for Windows AMD GPUs.\n• Uses a stable hybrid mode: DirectML/AMD GPU for detection and CPU for recognition.\n• Requires easyocr and torch-directml."))
+             i18n.tr("engine_message", "PaddleOCR (Det. + Rec.):\n• 100% local processing.\n• Both text detection and recognition are done locally.\n\nPaddleOCR (Det.) + Google Lens (Rec.):\n• Hybrid processing.\n• PaddleOCR handles text detection locally.\n• Google Lens (online) handles text recognition.\n• Requires an active internet connection.\n\nONNX Runtime DirectML (AMD GPU Experimental):\n• Experimental local ONNX Runtime DirectML backend for Windows AMD GPUs.\n• Uses RapidOCR with the DirectML execution provider.\n• Falls back to EasyOCR DirectML Hybrid when the ONNX/DirectML stack is unavailable."))
 
     def _show_help(self) -> None:
         info(self, i18n.tr("help_title", "Cropping Info"),
@@ -1176,13 +1190,25 @@ class MainWindow(QMainWindow):
 
     def _restore_args_to_ui(self, args: dict[str, Any]) -> None:
         settings = self.settings_tab.read_settings()
+        # Old queue args may carry a removed display name (e.g. the EasyOCR
+        # DirectML option); map it to the engine that still uses it internally
+        # BEFORE the internal-code lookup so it never falls through to the
+        # PaddleOCR default.
+        raw_engine = C.LEGACY_OCR_ENGINE_MAP.get(
+            args.get("ocr_engine", "paddleocr"), args.get("ocr_engine", "paddleocr")
+        )
         engine_map = {"google_lens": C.OCR_ENGINES[1], "easyocr_directml": C.OCR_ENGINES[2],
-                      "onnx_directml": C.OCR_ENGINES[3], "paddleocr": C.OCR_ENGINES[0]}
-        engine = engine_map.get(args.get("ocr_engine", "paddleocr"), C.OCR_ENGINES[0])
-        settings["ocr_engine"] = engine
+                      "onnx_directml": C.OCR_ENGINES[2], "paddleocr": C.OCR_ENGINES[0]}
+        engine = engine_map.get(raw_engine)
+        if engine is None and raw_engine in C.OCR_ENGINES:
+            # raw_engine is already a display name (from the legacy map).
+            engine = raw_engine
+        settings["ocr_engine"] = engine or C.OCR_ENGINES[0]
         lang_lookup = {"google_lens": C.lens_abbr_lookup, "easyocr_directml": C.easyocr_abbr_lookup,
                        "onnx_directml": C.easyocr_abbr_lookup, "paddleocr": C.paddle_abbr_lookup}
-        lookup = lang_lookup.get(args.get("ocr_engine", "paddleocr"), C.paddle_abbr_lookup)
+        # Use the mapped engine key (raw_engine) so a legacy display-name arg
+        # resolves to the same language list as its mapped engine.
+        lookup = lang_lookup.get(raw_engine, C.paddle_abbr_lookup)
         disp = next((k for k, v in lookup.items() if v == args.get("lang", "en")), C.DEFAULT_SUBTITLE_LANGUAGE)
         settings["subtitle_language"] = disp
         for arg_key, arg_val in args.items():

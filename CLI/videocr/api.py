@@ -20,6 +20,7 @@ def save_subtitles_to_file(
         directml_frame_scan_mode: str = "cpu_ssim", onnx_directml_tuning: str = "balanced",
         benchmark_compare_engine: bool = False, benchmark_compare_sample_grids: int = 3,
         enable_label_detection: bool = False, label_ocr_image_max_width: int = 720,
+        label_time_start: str = '', label_time_end: str = '',
         label_min_display_duration_sec: float = 1.0,
         label_min_confirmation_frames: int = 2,
         label_reappear_merge_gap_sec: float = 2.0,
@@ -69,7 +70,7 @@ def save_subtitles_to_file(
                 f"Error: {helper} helper executable not found.\n"
                 f"{e}\n\n"
                 f"To use the '{ocr_engine}' OCR engine, {install_hint}. "
-                f"Alternatively select the 'EasyOCR DirectML (AMD GPU)' engine, which runs fully from "
+                f"Alternatively select the 'ONNX Runtime DirectML (AMD GPU Experimental)' engine, which runs fully from "
                 f"Python without external helper executables.",
                 flush=True,
             )
@@ -94,7 +95,7 @@ def save_subtitles_to_file(
                 f"Error: Chrome Lens helper executable not found.\n"
                 f"{e}\n\n"
                 f"To use the 'google_lens' OCR engine, install the VideOCR Recreated Chrome Lens support files. "
-                f"Alternatively select the 'EasyOCR DirectML (AMD GPU)' engine, which runs fully from "
+                f"Alternatively select the 'ONNX Runtime DirectML (AMD GPU Experimental)' engine, which runs fully from "
                 f"Python without external helper executables.",
                 flush=True,
             )
@@ -111,7 +112,8 @@ def save_subtitles_to_file(
             directml_performance_preset, directml_recognition_mode, directml_frame_scan_mode,
             onnx_directml_tuning, benchmark_compare_engine, benchmark_compare_sample_grids,
             enable_label_detection, label_ocr_image_max_width, label_min_display_duration_sec,
-            label_min_confirmation_frames, label_reappear_merge_gap_sec, label_filter_single_char
+            label_min_confirmation_frames, label_reappear_merge_gap_sec, label_filter_single_char,
+            label_time_start, label_time_end
         )
         ocr_end = time.perf_counter()
     except Exception as e:

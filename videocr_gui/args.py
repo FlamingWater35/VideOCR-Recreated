@@ -97,15 +97,23 @@ def build_args(
 
     time_start = str(settings.get("--time_start", "")).strip()
     time_end = str(settings.get("--time_end", "")).strip()
+    label_time_start = str(settings.get("--label_time_start", "")).strip()
+    label_time_end = str(settings.get("--label_time_end", "")).strip()
 
     if not _is_valid_time(time_start):
         errors.append(i18n.tr("val_err_start_time", "Invalid Start Time format."))
     if not _is_valid_time(time_end):
         errors.append(i18n.tr("val_err_end_time", "Invalid End Time format."))
+    if not _is_valid_time(label_time_start):
+        errors.append(i18n.tr("val_err_label_start_time", "Invalid Label Start Time format."))
+    if not _is_valid_time(label_time_end):
+        errors.append(i18n.tr("val_err_label_end_time", "Invalid Label End Time format."))
 
     duration_s = float(settings.get("_video_duration_ms", 0)) / 1000.0
     start_s = _time_to_seconds(time_start)
     end_s = _time_to_seconds(time_end)
+    label_start_s = _time_to_seconds(label_time_start)
+    label_end_s = _time_to_seconds(label_time_end)
 
     if start_s is not None and duration_s > 0 and start_s > duration_s:
         errors.append(i18n.tr("val_err_start_exceeds", "Start Time ({}) exceeds video duration ({}).").format(
@@ -115,6 +123,14 @@ def build_args(
             _fmt_time(end_s), _fmt_time(duration_s)))
     if start_s is not None and end_s is not None and start_s > end_s:
         errors.append(i18n.tr("val_err_start_after_end", "Start Time cannot be after End Time."))
+    if label_start_s is not None and duration_s > 0 and label_start_s > duration_s:
+        errors.append(i18n.tr("val_err_label_start_exceeds", "Label Start Time ({}) exceeds video duration ({}).").format(
+            _fmt_time(label_start_s), _fmt_time(duration_s)))
+    if label_end_s is not None and duration_s > 0 and label_end_s > duration_s:
+        errors.append(i18n.tr("val_err_label_end_exceeds", "Label End Time ({}) exceeds video duration ({}).").format(
+            _fmt_time(label_end_s), _fmt_time(duration_s)))
+    if label_start_s is not None and label_end_s is not None and label_start_s > label_end_s:
+        errors.append(i18n.tr("val_err_label_start_after_end", "Label Start Time cannot be after Label End Time."))
 
     use_dual_zone = settings.get("--use_dual_zone", False)
     if use_dual_zone and len(crop_boxes) != 2:

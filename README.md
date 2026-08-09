@@ -37,8 +37,7 @@ Supported OCR engines:
 
 - Local OCR with **[PaddleOCR](https://github.com/PaddlePaddle/PaddleOCR)**
 - Hybrid cloud recognition with **Google Lens**
-- **EasyOCR DirectML (AMD GPU)** — experimental Windows AMD path
-- **ONNX Runtime DirectML (AMD GPU Experimental)** — experimental
+- **ONNX Runtime DirectML (AMD GPU Experimental)** — experimental; falls back to the EasyOCR DirectML Hybrid backend when the ONNX/DirectML stack is unavailable
 
 ### What changed in this fork
 
