@@ -29,6 +29,10 @@ dependencies = [
     "thefuzz",
     "wakepy",
     "wordninja-enhanced",
+    # ass-qafix (automatic .ass post-processing after label detection) imports
+    # these at module level; rapidfuzz is already a transitive dep of thefuzz.
+    "rich",
+    "jieba3",
     "PyTaskbarProgress @ git+https://github.com/timminator/PyTaskbar.git ; sys_platform == 'win32'",
     "winotify ; sys_platform == 'win32'",
     "plyer ; sys_platform != 'win32'",
