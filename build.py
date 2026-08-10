@@ -658,28 +658,56 @@ def main() -> None:
     cli_dist_folder = cli_folder / "videocr_cli.dist"
     if cli_dist_folder.exists():
         shutil.rmtree(cli_dist_folder)
-    run_command(
-        [
-            sys.executable,
-            "-m",
-            "nuitka",
-            "--assume-yes-for-downloads",
-            "--include-module=av.utils",
-            # Bundle the ass_qafix script as data so runpy can find it
-            "--include-data-files=../tools/ass_qafix/ass_qafix.py=tools/ass_qafix/ass_qafix.py",
-            # Force bundle dependencies that are imported dynamically or by ass_qafix
-            "--include-module=jieba3",
-            "--include-module=rapidfuzz",
-            "--include-module=rich",
-            # Force bundle DirectML/ONNX C-extensions so DmlExecutionProvider is detected
-            "--include-module=onnxruntime",
-            "--include-module=torch_directml",
-            "--include-module=easyocr",
-            "--jobs=4",  # Utilize all 4 cores
-            cli_script,
-        ],
-        cwd=str(cli_folder),
-    )
+
+    cli_command = [
+        sys.executable,
+        "-m",
+        "nuitka",
+        "--assume-yes-for-downloads",
+        "--include-module=av.utils",
+        # Bundle the ass_qafix script as raw data so runpy can execute it
+        "--include-data-files=../tools/ass_qafix/ass_qafix.py=tools/ass_qafix/ass_qafix.py",
+        "--jobs=4",
+        cli_script,
+    ]
+
+    # Conditionally bundle C-extensions and dynamic imports.
+    # We only add them if they are actually installed in the current build environment
+    # (e.g., DirectML/ONNX/EasyOCR are Windows-only and won't be present in Linux CI runners).
+    optional_c_modules = [
+        "jieba3",
+        "rapidfuzz",
+        "rich",
+        "onnxruntime",
+        "torch_directml",
+        "easyocr",
+        "torch",
+        "rapidocr_onnxruntime",
+    ]
+    for mod in optional_c_modules:
+        try:
+            __import__(mod)
+            cli_command.append(f"--include-module={mod}")
+        except ImportError:
+            pass
+
+    # Bundle heavy pure-Python libraries (sympy, mpmath) as bytecode instead of
+    # compiling them to C. This saves massive amounts of CI compile time while
+    # ensuring they are present at runtime to prevent missing module errors.
+    try:
+        __import__("sympy")
+        cli_command.extend(["--nofollow-import-to=sympy", "--include-package=sympy"])
+    except ImportError:
+        pass
+
+    try:
+        __import__("mpmath")
+        cli_command.extend(["--nofollow-import-to=mpmath", "--include-package=mpmath"])
+    except ImportError:
+        pass
+
+    run_command(cli_command, cwd=str(cli_folder))
+
     if not cli_dist_folder.is_dir():
         print(f"ERROR: Nuitka failed to create the CLI dist folder: {cli_dist_folder}")
         sys.exit(1)

@@ -93,13 +93,14 @@ jobs:
           # Build tooling used by build.py (Nuitka compiler, downloads).
           python -m pip install nuitka requests
           # Ensure the DirectML build of ONNX Runtime wins over plain
-          # onnxruntime pulled in by rapidocr-onnxruntime (README fix).
-          python -m pip uninstall -y onnxruntime
+          # onnxruntime pulled in by rapidocr-onnxruntime.
+          python -m pip uninstall -y onnxruntime onnxruntime-directml
           python -m pip install --no-cache-dir onnxruntime-directml
           # SymPy/mpMath pins from the README (torch-directml compatibility).
           python -m pip install --force-reinstall --no-cache-dir "sympy==1.13.3" "mpmath==1.3.0"
 
       - name: Verify critical dependencies (Fail fast if missing)
+        shell: bash
         run: |
           # If this fails, Nuitka would build a broken exe. Catch it in 5 seconds instead of 2 hours.
           python -c "import sympy; print('SymPy OK:', sympy.__version__)"
