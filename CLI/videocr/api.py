@@ -130,43 +130,40 @@ def save_subtitles_to_file(
     if label_detection:
         qafix_errors: list[str] = []
         try:
-            import subprocess as _sp
-            import sys as _sys
+            import runpy
 
-            script = os.path.join(
-                os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
-                "tools", "ass_qafix", "ass_qafix.py",
-            )
-            if not os.path.isfile(script):
-                script = ""
-                for root, _dirs, files in os.walk(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))):
-                    if "ass_qafix.py" in files:
-                        script = os.path.join(root, "ass_qafix.py")
-                        break
-            if script:
-                env = os.environ.copy()
-                # Let the bundled ass-qafix import jieba3/rapidfuzz/rich from the
-                # same interpreter/environment that runs the VideOCR CLI, and
-                # force UTF-8 so any CJK text in its output survives the pipe.
-                env["PYTHONIOENCODING"] = "utf-8"
-                env["PYTHONUNBUFFERED"] = "1"
-                result = _sp.run(
-                    [_sys.executable, script, "--inplace", file_path],
-                    capture_output=True, text=True, encoding="utf-8", errors="replace", env=env,
+            # Determine script path (works for both source and Nuitka frozen builds)
+            if getattr(sys, 'frozen', False) or '__compiled__' in globals():
+                base_dir = os.path.dirname(sys.executable)
+                script = os.path.join(base_dir, "tools", "ass_qafix", "ass_qafix.py")
+            else:
+                script = os.path.join(
+                    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+                    "tools", "ass_qafix", "ass_qafix.py",
                 )
-                if result.returncode == 0:
+
+            if os.path.isfile(script):
+                old_argv = sys.argv
+                os.environ["PYTHONIOENCODING"] = "utf-8"
+                os.environ["PYTHONUNBUFFERED"] = "1"
+
+                sys.argv = ["ass_qafix", "--inplace", file_path]
+                try:
+                    runpy.run_path(script, run_name="__main__")
                     print("ASS post-processing (ass-qafix) completed successfully.", flush=True)
-                else:
-                    print(
-                        f"Warning: ass-qafix exited with code {result.returncode}. "
-                        f"Output: {(result.stdout or '').strip()[:500]}",
-                        flush=True,
-                    )
+                except SystemExit as e:
+                    if e.code == 0 or e.code is None:
+                        print("ASS post-processing (ass-qafix) completed successfully.", flush=True)
+                    else:
+                        print(f"Warning: ass-qafix exited with code {e.code}.", flush=True)
+                finally:
+                    sys.argv = old_argv
             else:
                 print("Warning: ass-qafix script not found; skipping ASS post-processing.", flush=True)
         except Exception as e:
             qafix_errors.append(str(e))
             print(f"Warning: ASS post-processing (ass-qafix) failed: {e}", flush=True)
+
         if qafix_errors:
             print(f"ASS post-processing errors: {'; '.join(qafix_errors)}", flush=True)
 

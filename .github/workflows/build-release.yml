@@ -99,6 +99,13 @@ jobs:
           # SymPy/mpMath pins from the README (torch-directml compatibility).
           python -m pip install --force-reinstall --no-cache-dir "sympy==1.13.3" "mpmath==1.3.0"
 
+      - name: Verify critical dependencies (Fail fast if missing)
+        run: |
+          # If this fails, Nuitka would build a broken exe. Catch it in 5 seconds instead of 2 hours.
+          python -c "import sympy; print('SymPy OK:', sympy.__version__)"
+          python -c "import onnxruntime as ort; providers = ort.get_available_providers(); print('ONNX Providers:', providers); assert 'DmlExecutionProvider' in providers, 'DmlExecutionProvider missing!'"
+          python -c "import torch_directml; print('torch-directml OK')"
+
       - name: Restore Nuitka cache
         uses: actions/cache@v4
         with:

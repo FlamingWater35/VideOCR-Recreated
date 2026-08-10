@@ -636,9 +636,8 @@ def main() -> None:
                 "-m",
                 "nuitka",
                 "--assume-yes-for-downloads",
-                "--nofollow-import-to=sympy,mpmath",
                 "--include-module=av.utils",
-                "--jobs=1",
+                "--jobs=4",  # Utilize all 4 cores of the GitHub Actions runner
                 gui_script,
             ]
         )
@@ -665,9 +664,18 @@ def main() -> None:
             "-m",
             "nuitka",
             "--assume-yes-for-downloads",
-            "--nofollow-import-to=sympy,mpmath",
             "--include-module=av.utils",
-            "--jobs=1",
+            # Bundle the ass_qafix script as data so runpy can find it
+            "--include-data-files=../tools/ass_qafix/ass_qafix.py=tools/ass_qafix/ass_qafix.py",
+            # Force bundle dependencies that are imported dynamically or by ass_qafix
+            "--include-module=jieba3",
+            "--include-module=rapidfuzz",
+            "--include-module=rich",
+            # Force bundle DirectML/ONNX C-extensions so DmlExecutionProvider is detected
+            "--include-module=onnxruntime",
+            "--include-module=torch_directml",
+            "--include-module=easyocr",
+            "--jobs=4",  # Utilize all 4 cores
             cli_script,
         ],
         cwd=str(cli_folder),

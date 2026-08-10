@@ -1,7 +1,7 @@
 # Compilation instructions
 # nuitka-project: --standalone
 # nuitka-project: --enable-plugin=pyside6
-# nuitka-project: --include-qt-plugins=all
+# nuitka-project: --include-qt-plugins=platforms,styles,imageformats,iconengines,platforminputcontexts
 # nuitka-project: --windows-console-mode=disable
 # nuitka-project: --include-windows-runtime-dlls=yes
 # nuitka-project: --output-filename=VideOCR.exe
