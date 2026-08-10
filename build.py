@@ -47,10 +47,19 @@ CHROME_LENS_URLS: dict[str, str] = {
 
 
 # --- Helper Functions ---
+def _github_headers() -> dict[str, str]:
+    """Return headers for GitHub API requests, using GITHUB_TOKEN if available to avoid rate limits."""
+    headers = {"Accept": "application/vnd.github+json"}
+    token = os.environ.get("GITHUB_TOKEN")
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    return headers
+
+
 def get_latest_paddle_version() -> str:
     """Fetches the latest version tag for PaddleOCR."""
     url = "https://api.github.com/repos/timminator/PaddleOCR-Standalone/releases/latest"
-    r = requests.get(url, timeout=15)
+    r = requests.get(url, timeout=15, headers=_github_headers())
     r.raise_for_status()
     tag = str(r.json()["tag_name"])
     return tag.lstrip("v")
@@ -58,10 +67,8 @@ def get_latest_paddle_version() -> str:
 
 def get_latest_chrome_lens_version() -> str:
     """Fetches the latest version tag for Chrome-Lens-OCR."""
-    url = "https://github.com/timminator/Chrome-Lens-OCR/releases/latest".replace(
-        "github.com/", "api.github.com/repos/"
-    ).replace("/releases/latest", "/releases/latest")
-    r = requests.get(url, timeout=15)
+    url = "https://api.github.com/repos/timminator/Chrome-Lens-OCR/releases/latest"
+    r = requests.get(url, timeout=15, headers=_github_headers())
     r.raise_for_status()
     tag = str(r.json()["tag_name"])
     return tag.lstrip("v")

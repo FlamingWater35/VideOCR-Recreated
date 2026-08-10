@@ -69,6 +69,7 @@ jobs:
     env:
       BUILD_TARGET: ${{ matrix.target }}
       NUITKA_ASSUME_YES_FOR_DOWNLOADS: "1"
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v4
 
@@ -200,6 +201,7 @@ jobs:
     env:
       BUILD_TARGET: ${{ matrix.target }}
       NUITKA_ASSUME_YES_FOR_DOWNLOADS: "1"
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v4
 
