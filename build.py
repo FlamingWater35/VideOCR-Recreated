@@ -637,7 +637,11 @@ def main() -> None:
                 "nuitka",
                 "--assume-yes-for-downloads",
                 "--include-module=av.utils",
-                "--jobs=4",  # Utilize all 4 cores of the GitHub Actions runner
+                # The GUI only spawns the CLI. It does not run OCR itself.
+                # Exclude heavy AI/ML libraries to prevent MSVC C1002 "out of heap space"
+                # errors and to slash GUI compile times.
+                "--nofollow-import-to=torch,torchvision,sympy,mpmath,easyocr,onnxruntime,rapidocr_onnxruntime,scipy,scikit-image",
+                "--jobs=4",
                 gui_script,
             ]
         )
