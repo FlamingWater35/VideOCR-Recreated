@@ -83,6 +83,22 @@ jobs:
       - name: Install 7-Zip and Inno Setup
         run: choco install 7zip innosetup -y --no-progress
 
+      - name: Download unofficial Inno Setup languages
+        run: |
+          $langDir = "C:\Program Files (x86)\Inno Setup 6\Languages"
+          if (-not (Test-Path $langDir)) {
+            $langDir = "C:\Program Files\Inno Setup 6\Languages"
+          }
+          $baseUrl = "https://raw.githubusercontent.com/jrsoftware/issrc/main/Files/Languages/Unofficial/"
+          $langs = @("ChineseSimplified.isl", "Arabic.isl", "Thai.isl", "Korean.isl")
+          foreach ($lang in $langs) {
+            $path = Join-Path $langDir $lang
+            if (-not (Test-Path $path)) {
+              Write-Host "Downloading $lang..."
+              Invoke-WebRequest -Uri "$baseUrl$lang" -OutFile $path -UseBasicParsing
+            }
+          }
+
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip setuptools wheel
