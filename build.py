@@ -734,6 +734,8 @@ def main() -> None:
         "--include-module=av.utils",
         # Bundle the ass_qafix script as raw data so runpy can execute it
         "--include-data-files=../tools/ass_qafix/ass_qafix.py=tools/ass_qafix/ass_qafix.py",
+        # Ignore PyTorch's JIT C++ builder and setuptools to save compile time
+        "--nofollow-import-to=setuptools,pkg_resources,distutils,torch.utils.cpp_extension",
         "--jobs=4",
         cli_script,
     ]
