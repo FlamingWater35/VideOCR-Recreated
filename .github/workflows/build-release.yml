@@ -83,21 +83,30 @@ jobs:
       - name: Install 7-Zip and Inno Setup
         run: choco install 7zip innosetup -y --no-progress
 
-      - name: Download unofficial Inno Setup languages
+      - name: Download and install all Inno Setup languages
         run: |
           $langDir = "C:\Program Files (x86)\Inno Setup 6\Languages"
           if (-not (Test-Path $langDir)) {
             $langDir = "C:\Program Files\Inno Setup 6\Languages"
           }
-          $baseUrl = "https://raw.githubusercontent.com/jrsoftware/issrc/main/Files/Languages/Unofficial/"
-          $langs = @("ChineseSimplified.isl", "Arabic.isl", "Thai.isl", "Korean.isl")
-          foreach ($lang in $langs) {
-            $path = Join-Path $langDir $lang
-            if (-not (Test-Path $path)) {
-              Write-Host "Downloading $lang..."
-              Invoke-WebRequest -Uri "$baseUrl$lang" -OutFile $path -UseBasicParsing
-            }
+
+          Write-Host "Cloning Inno Setup source repository to get all language files..."
+          # Use --depth 1 for a fast shallow clone
+          git clone --depth 1 https://github.com/jrsoftware/issrc.git C:\temp\issrc
+
+          # Copy both Official and Unofficial language files to ensure none are missing
+          $officialDir = "C:\temp\issrc\Files\Languages"
+          $unofficialDir = "C:\temp\issrc\Files\Languages\Unofficial"
+
+          if (Test-Path $officialDir) {
+            Copy-Item "$officialDir\*.isl" $langDir -Force -ErrorAction SilentlyContinue
           }
+          if (Test-Path $unofficialDir) {
+            Copy-Item "$unofficialDir\*.isl" $langDir -Force -ErrorAction SilentlyContinue
+          }
+
+          Write-Host "Successfully populated Inno Setup languages folder."
+        shell: pwsh
 
       - name: Install Python dependencies
         run: |
