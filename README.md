@@ -913,8 +913,15 @@ python build.py --target gpu-directml
 | `--archive` | `false` | Set to `true` to create a compressed archive of the final build folder. |
 | `--windows-installer` | `false` | (Windows only) Set to `true` to create an Inno Setup installer. |
 | `--release-type` | — | Release type (e.g. `Beta`, `RC1`) appended to the output artifact names. |
+| `--clean` | `false` | Set to `true` to remove residuals from previous builds — the `Releases` output and the Nuitka `.build` / `.dist` caches (`VideOCR_qt.build`, `VideOCR_qt.dist`, `CLI/videocr_cli.build`, `CLI/videocr_cli.dist`) — before building. With `--clean true` alone, only the cleanup runs and the script exits; combine it with other options to clean and then build. |
 
 > `--target gpu` packages `gpu-cuda11.8` and `gpu-cuda12.9` (plus `gpu-directml` on Windows); `--target all` additionally packages the `cpu` build. DirectML targets require `easyocr` and `torch-directml` installed (see the [AMD DirectML Development Setup](#windows-amd-directml-development-setup)).
+
+A clean-and-build example:
+
+```bash
+python build.py --clean true --target gpu-directml
+```
 
 More information:
 

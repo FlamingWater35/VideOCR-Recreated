@@ -16,6 +16,16 @@ from _version import __version__
 # --- Configuration ---
 APP_VERSION = __version__
 
+# Directories left behind by previous builds (Nuitka .build/.dist caches and
+# the packaged Releases output). --clean removes all of them.
+BUILD_ARTIFACT_DIRS: list[str] = [
+    "Releases",
+    "VideOCR_qt.dist",
+    "CLI/videocr_cli.dist",
+    "VideOCR_qt.build",
+    "CLI/videocr_cli.build",
+]
+
 SUPPORT_FILES_URLS: dict[str, str] = {
     "Windows": "https://github.com/timminator/PaddleOCR-Standalone/releases/download/v{version}/PaddleOCR.PP-OCRv5.support.files.VideOCR.7z",
     "Linux": "https://github.com/timminator/PaddleOCR-Standalone/releases/download/v{version}/PaddleOCR.PP-OCRv5.support.files.VideOCR.tar.xz",
@@ -79,6 +89,26 @@ def print_header(message: str) -> None:
     print("\n" + "=" * 60)
     print(f" {message}")
     print("=" * 60)
+
+
+def clean_build_artifacts() -> None:
+    """Removes residuals left behind by previous builds.
+
+    Deletes the packaged Releases folder and the Nuitka .build/.dist caches
+    (both the GUI's and the CLI's) so a fresh build starts from a clean slate.
+    """
+    print_header("Cleaning Previous Build Artifacts")
+    for rel_path in BUILD_ARTIFACT_DIRS:
+        path = Path(rel_path)
+        if path.exists():
+            if path.is_dir():
+                shutil.rmtree(path)
+                print(f"Removed directory: {rel_path}")
+            else:
+                path.unlink()
+                print(f"Removed file: {rel_path}")
+        else:
+            print(f"Nothing to clean: {rel_path} does not exist.")
 
 
 def check_pyside6() -> None:
@@ -584,9 +614,35 @@ def main() -> None:
         default=None,
         help="(Optional) Specify a release type (e.g., 'Beta', 'RC1') to append to the output artifact names.",
     )
+    parser.add_argument(
+        "--clean",
+        default="false",
+        help="(Optional) Set to 'true' to remove residuals from previous builds (Releases output and Nuitka .build/.dist caches) before building. Can be combined with other options; with --clean true alone, only the cleanup runs.",
+    )
     args = parser.parse_args()
 
     is_cli_only = args.cli_only.lower() == "true"
+
+    if args.clean.lower() == "true":
+        clean_build_artifacts()
+        # --clean true with no other build options: only the cleanup runs.
+        build_requested = any(
+            (
+                args.target != "cpu",
+                is_cli_only,
+                args.gui_only.lower() == "true",
+                args.signtool is not None,
+                args.sign_cert_name is not None,
+                args.iscc is not None,
+                args.archive.lower() == "true",
+                args.windows_installer.lower() == "true",
+                args.release_type is not None,
+            )
+        )
+        if not build_requested:
+            print_header("Clean Complete")
+            print("No build requested; cleaned residuals and exiting.")
+            return
 
     # Prerequisite Checks
     if not is_cli_only:
