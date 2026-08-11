@@ -89,7 +89,9 @@ def render_static_table(version: str, repo: str, tag: str) -> str:
             else:
                 portable = link(base + ".7z", repo, tag)
             installer = (
-                link(base + "-setup-x64.exe", repo, tag) if os_name == "Windows" else "—"
+                link(base + "-setup-x64.exe", repo, tag)
+                if os_name == "Windows"
+                else "—"
             )
             lines.append(f"| **{os_name}** | {display} | {portable} | {installer} |")
     return "\n".join(lines)
@@ -142,12 +144,17 @@ def render_asset_table(assets: list[str], repo: str, tag: str) -> str:
         "| --- | --- | --- | --- |",
     ]
     for (os_name, build), names in sorted(rows.items(), key=sort_key):
-        parts = sorted(names, key=lambda n: (volume_number(n) is not None, volume_number(n) or 0, n))
+        parts = sorted(
+            names,
+            key=lambda n: (volume_number(n) is not None, volume_number(n) or 0, n),
+        )
         installers = [n for n in parts if n.endswith(".exe")]
         archives = [n for n in parts if not n.endswith(".exe")]
 
         portable = " + ".join(link(n, repo, tag) for n in archives)
-        installer = " · ".join(link(n, repo, tag) for n in installers) if installers else "—"
+        installer = (
+            " · ".join(link(n, repo, tag) for n in installers) if installers else "—"
+        )
         lines.append(f"| **{os_name}** | {build} | {portable} | {installer} |")
     return "\n".join(lines)
 
@@ -172,8 +179,7 @@ def changelog(prev_tag: str | None, tag: str, repo: str) -> str:
 
     if not log:
         return (
-            header
-            + "\n\n_No commits listed. If this is the preview from the "
+            header + "\n\n_No commits listed. If this is the preview from the "
             "create-release step, it is regenerated from the real assets after "
             "the builds finish._"
         )
@@ -217,8 +223,6 @@ def main() -> None:
         table = render_static_table(version, args.repo, args.tag)
 
     notes = [
-        f"# VideOCR Recreated {args.tag}",
-        "",
         "## Downloads",
         "",
         f"Assets are attached to this release (tag `{args.tag}`). Choose the build for "
