@@ -11,8 +11,10 @@
 #             (gpu-directml intentionally omitted — DirectML is Windows-only
 #              and build.py rejects it on Linux)
 #
-# A draft release is created first; every build job attaches its archives
-# (.7z, split volumes, Windows installers) directly to that draft.
+# The build jobs upload their archives (.7z, split volumes, Windows
+# installers) as workflow artifacts. Once ALL builds finish, a final job
+# downloads them, generates the release notes from the actual uploaded
+# assets, and only then creates the draft release with the assets attached.
 # =============================================================================
 
 name: Build and Release
@@ -23,7 +25,8 @@ on:
       - "*" # run for any new tag (v1.6.0, 1.6.0, ...)
 
 permissions:
-  contents: write
+  contents: write # create the release
+  actions: write # upload/download workflow artifacts (release assets)
 
 concurrency:
   group: release-${{ github.ref }}
@@ -34,32 +37,10 @@ env:
 
 jobs:
   # ---------------------------------------------------------------------------
-  # 1. Create the empty draft release up-front so all build jobs can upload
-  #    assets into it without racing over creation.
-  # ---------------------------------------------------------------------------
-  create-release:
-    name: Create draft release
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Create draft release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ github.ref_name }}
-        run: |
-          gh release create "$TAG" \
-            --draft \
-            --title "VideOCR Recreated $TAG" \
-            --generate-notes \
-            || echo "Draft release for $TAG already exists — continuing."
-
-  # ---------------------------------------------------------------------------
-  # 2. Windows builds: CPU, CUDA 11.8, CUDA 12.9, DirectML
+  # 1. Windows builds: CPU, CUDA 11.8, CUDA 12.9, DirectML
   # ---------------------------------------------------------------------------
   build-windows:
     name: Windows / ${{ matrix.target }}
-    needs: create-release
     runs-on: windows-latest
     timeout-minutes: 300
     strategy:
@@ -201,22 +182,24 @@ jobs:
       - name: Show final release assets
         run: Get-ChildItem -Path Releases -File | Format-Table Name, @{n='SizeMB';e={[math]::Round($_.Length/1MB,1)}}
 
-      - name: Upload assets to draft release
-        uses: softprops/action-gh-release@v2
+      # Upload this build leg's release files as one workflow artifact. The
+      # final job downloads them all (merge-multiple) and attaches them to the
+      # draft release. Per-artifact cap is 10 GB — a single leg stays well under.
+      - name: Upload release assets as workflow artifacts
+        uses: actions/upload-artifact@v4
         with:
-          tag_name: ${{ github.ref_name }}
-          draft: true
-          files: |
+          name: assets-windows-${{ matrix.target }}
+          path: |
             Releases/*.7z
             Releases/*.7z.0*
             Releases/*.exe
+          if-no-files-found: error
 
   # ---------------------------------------------------------------------------
-  # 3. Linux builds: CPU, CUDA 11.8, CUDA 12.9  (NO DirectML — Windows-only)
+  # 2. Linux builds: CPU, CUDA 11.8, CUDA 12.9  (NO DirectML — Windows-only)
   # ---------------------------------------------------------------------------
   build-linux:
     name: Linux / ${{ matrix.target }}
-    needs: create-release
     runs-on: ubuntu-latest
     timeout-minutes: 300
     strategy:
@@ -306,11 +289,97 @@ jobs:
       - name: Show final release assets
         run: ls -lh Releases
 
-      - name: Upload assets to draft release
-        uses: softprops/action-gh-release@v2
+      - name: Upload release assets as workflow artifacts
+        uses: actions/upload-artifact@v4
         with:
-          tag_name: ${{ github.ref_name }}
-          draft: true
-          files: |
+          name: assets-linux-${{ matrix.target }}
+          path: |
             Releases/*.7z
             Releases/*.7z.0*
+          if-no-files-found: error
+
+  # ---------------------------------------------------------------------------
+  # 3. Create the draft release ONLY after all builds have finished.
+  #    Downloads every build artifact, generates the release notes from the
+  #    actual uploaded assets, then creates the draft with assets attached.
+  # ---------------------------------------------------------------------------
+  create-release:
+    name: Create draft release
+    needs: [build-windows, build-linux]
+    # Runs after ALL builds finish. Creates the draft even if only one build
+    # succeeded (matrix legs can fail independently); skips when every build
+    # failed or was cancelled/skipped, so no empty/partial release is created.
+    if: >-
+      always() &&
+      needs.build-windows.result != 'failure' &&
+      needs.build-linux.result != 'failure' &&
+      (needs.build-windows.result == 'success' ||
+       needs.build-linux.result == 'success')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history for the changelog
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: assets-*
+          path: releases
+          merge-multiple: true
+
+      - name: Show collected release assets
+        run: |
+          ls -lh releases
+          # Guard: never create a release from an empty asset set.
+          if ! ls -1 releases/* >/dev/null 2>&1; then
+            echo "ERROR: no release assets were downloaded; aborting." >&2
+            exit 1
+          fi
+
+      - name: Generate release notes from actual assets
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          ls -1 releases > "$RUNNER_TEMP/assets.txt"
+          echo "Collected $(wc -l < "$RUNNER_TEMP/assets.txt") assets."
+          # Best-effort previous tag for the changelog range.
+          PREV_TAG="$(git tag --sort=-version:refname | sed -n '2p' || true)"
+          ARGS=()
+          if [ -n "$PREV_TAG" ] && [ "$PREV_TAG" != "$TAG" ]; then
+            ARGS+=(--prev-tag "$PREV_TAG")
+          fi
+          python tools/generate_release_notes.py \
+            --tag "$TAG" \
+            --repo "${{ github.repository }}" \
+            --assets-file "$RUNNER_TEMP/assets.txt" \
+            --out "$RUNNER_TEMP/RELEASE_NOTES.md" \
+            "${ARGS[@]}"
+
+      - name: Create draft release with assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          if gh release create "$TAG" \
+            releases/* \
+            --draft \
+            --title "VideOCR Recreated $TAG" \
+            --notes-file "$RUNNER_TEMP/RELEASE_NOTES.md" 2>"$RUNNER_TEMP/gh_err.txt"; then
+            echo "Draft release created for $TAG with all assets."
+          elif grep -qi "already exists" "$RUNNER_TEMP/gh_err.txt"; then
+            # Re-runs of this workflow hit the draft from the first attempt.
+            echo "Draft release for $TAG already exists — re-attaching missing assets."
+            # Re-upload every local asset; --clobber makes this idempotent, so
+            # a partial first attempt self-heals on re-run.
+            gh release upload "$TAG" releases/* --clobber
+          else
+            echo "ERROR: gh release create failed for $TAG:" >&2
+            cat "$RUNNER_TEMP/gh_err.txt" >&2
+            exit 1
+          fi
