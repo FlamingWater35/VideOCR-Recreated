@@ -900,6 +900,22 @@ AMD DirectML build:
 python build.py --target gpu-directml
 ```
 
+#### Build script options
+
+| Option | Default | Description |
+| --- | --- | --- |
+| `--target` | `cpu` | Build target. One of: `cpu`, `gpu` (builds all GPU variants), `gpu-cuda11.8`, `gpu-cuda12.9`, `gpu-directml`, or `all` (CPU + all GPU variants). On Windows, `gpu` and `all` include the DirectML target. |
+| `--cli-only` | `false` | Set to `true` to skip building the GUI and only build the CLI. |
+| `--gui-only` | `false` | Set to `true` to skip building the standalone CLI release and only build the GUI. |
+| `--signtool` | — | (Windows only) Path to `signtool.exe` for code signing. |
+| `--sign-cert-name` | — | (Windows only) Subject name of the certificate to use for signing. |
+| `--iscc` | — | (Windows only) Path to the Inno Setup compiler (`iscc.exe`). |
+| `--archive` | `false` | Set to `true` to create a compressed archive of the final build folder. |
+| `--windows-installer` | `false` | (Windows only) Set to `true` to create an Inno Setup installer. |
+| `--release-type` | — | Release type (e.g. `Beta`, `RC1`) appended to the output artifact names. |
+
+> `--target gpu` packages `gpu-cuda11.8` and `gpu-cuda12.9` (plus `gpu-directml` on Windows); `--target all` additionally packages the `cpu` build. DirectML targets require `easyocr` and `torch-directml` installed (see the [AMD DirectML Development Setup](#windows-amd-directml-development-setup)).
+
 More information:
 
 ```bash
