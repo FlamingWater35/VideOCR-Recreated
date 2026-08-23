@@ -700,6 +700,7 @@ def main() -> None:
                 "-m",
                 "nuitka",
                 "--assume-yes-for-downloads",
+                "--windows-console-mode=disable",
                 "--include-module=av.utils",
                 # The GUI only spawns the CLI. It does not run OCR itself.
                 # Exclude heavy AI/ML libraries to prevent MSVC C1002 "out of heap space"
@@ -756,7 +757,6 @@ def main() -> None:
         "torch_directml",
         "easyocr",
         "torch",
-        "rapidocr",
     ]
     for mod in optional_c_modules:
         try:
@@ -765,19 +765,25 @@ def main() -> None:
         except ImportError:
             pass
 
+    # rapidocr needs --include-package (not --include-module) to bundle all
+    # submodules including rapidocr.main, rapidocr.config, etc.
+    try:
+        __import__("rapidocr")
+        cli_command.append("--include-package=rapidocr")
+    except ImportError:
+        pass
+
     # Bundle heavy pure-Python libraries (sympy, mpmath) as bytecode instead of
     # compiling them to C. This saves massive amounts of CI compile time while
     # ensuring they are present at runtime to prevent missing module errors.
-    try:
-        __import__("sympy")
-        cli_command.extend(["--nofollow-import-to=sympy", "--include-package=sympy"])
-    except ImportError:
-        pass
-    try:
-        __import__("mpmath")
-        cli_command.extend(["--nofollow-import-to=mpmath", "--include-package=mpmath"])
-    except ImportError:
-        pass
+    for lib in ("sympy", "mpmath"):
+        try:
+            __import__(lib)
+            cli_command.extend(
+                [f"--nofollow-import-to={lib}", f"--include-package={lib}"]
+            )
+        except ImportError:
+            pass
 
     run_command(cli_command, cwd=str(cli_folder))
     if not cli_dist_folder.is_dir():
