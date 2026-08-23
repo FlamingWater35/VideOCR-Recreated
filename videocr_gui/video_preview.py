@@ -61,15 +61,26 @@ class VideoHandler:
         return frame.to_ndarray(format=fmt)
 
     def _get_cached_properties(self) -> dict[str, int]:
-        return {"width": self.width, "height": self.height, "duration_ms": self.duration_ms}
+        return {
+            "width": self.width,
+            "height": self.height,
+            "duration_ms": self.duration_ms,
+        }
 
-    def _setup_filter_graph(self, template_frame: av.VideoFrame, display_size: tuple[int, int]) -> None:
+    def _setup_filter_graph(
+        self, template_frame: av.VideoFrame, display_size: tuple[int, int]
+    ) -> None:
         scale = min(display_size[0] / self.width, display_size[1] / self.height)
-        self.current_new_w, self.current_new_h = int(self.width * scale) & ~1, int(self.height * scale) & ~1
+        self.current_new_w, self.current_new_h = (
+            int(self.width * scale) & ~1,
+            int(self.height * scale) & ~1,
+        )
 
         self.graph = av.filter.Graph()
         self.buffer_node = self.graph.add_buffer(template=cast(Any, template_frame))
-        scale_node = self.graph.add("scale", f"{self.current_new_w}:{self.current_new_h}:flags=bicubic")
+        scale_node = self.graph.add(
+            "scale", f"{self.current_new_w}:{self.current_new_h}:flags=bicubic"
+        )
         self.sink_node = self.graph.add("buffersink")
         self.buffer_node.link_to(scale_node)
         scale_node.link_to(self.sink_node)
@@ -93,7 +104,9 @@ class VideoHandler:
             if self.container.duration is not None:
                 self.duration_ms = int(self.container.duration / 1000.0)
             elif self.stream.duration is not None and self.stream.time_base is not None:
-                self.duration_ms = int(self.stream.duration * float(self.stream.time_base) * 1000.0)
+                self.duration_ms = int(
+                    self.stream.duration * float(self.stream.time_base) * 1000.0
+                )
 
             return self._get_cached_properties()
         except Exception as e:
@@ -102,7 +115,9 @@ class VideoHandler:
             return {"width": 0, "height": 0, "duration_ms": 0}
 
     def get_frame(
-        self, timestamp_ms: float, display_size: tuple[int, int],
+        self,
+        timestamp_ms: float,
+        display_size: tuple[int, int],
         brightness_threshold: int | None = None,
     ) -> tuple[io.BytesIO | None, int, int, int, int]:
         """Seeks or decodes forward to provide a frame at the requested timestamp."""
@@ -114,7 +129,11 @@ class VideoHandler:
                 raise ValueError("Stream time_base is None")
 
             tb = float(self.stream.time_base)
-            container_start_ms = (self.container.start_time / 1000.0) if self.container.start_time is not None else 0.0
+            container_start_ms = (
+                (self.container.start_time / 1000.0)
+                if self.container.start_time is not None
+                else 0.0
+            )
             target_ms = timestamp_ms + container_start_ms
             target_pts = int(target_ms / 1000.0 / tb)
             seek_threshold = int(1.5 / tb)
@@ -165,9 +184,12 @@ class VideoHandler:
 
             if brightness_threshold is not None:
                 gray = (
-                    (img_np[..., 0].astype(np.uint16) * 77
-                     + img_np[..., 1].astype(np.uint16) * 150
-                     + img_np[..., 2].astype(np.uint16) * 29) >> 8
+                    (
+                        img_np[..., 0].astype(np.uint16) * 77
+                        + img_np[..., 1].astype(np.uint16) * 150
+                        + img_np[..., 2].astype(np.uint16) * 29
+                    )
+                    >> 8
                 ).astype(np.uint8)
                 mask = gray > brightness_threshold
                 img_np *= mask[..., None]
@@ -176,7 +198,13 @@ class VideoHandler:
             img_byte_arr = io.BytesIO()
             pil_img.save(img_byte_arr, format="PNG")
 
-            return io.BytesIO(img_byte_arr.getvalue()), self.current_new_w, self.current_new_h, off_x, off_y
+            return (
+                io.BytesIO(img_byte_arr.getvalue()),
+                self.current_new_w,
+                self.current_new_h,
+                off_x,
+                off_y,
+            )
         except Exception as e:
             log_error(f"VideoHandler Seek Error: {e}")
             return None, 0, 0, 0, 0
@@ -184,7 +212,9 @@ class VideoHandler:
     def close(self) -> None:
         if self.container:
             self.container.close()
-        self.container = self.stream = self.path = self.graph = self.buffer_node = self.sink_node = None
+        self.container = self.stream = self.path = self.graph = self.buffer_node = (
+            self.sink_node
+        ) = None
         self.width = self.height = 0
         self.duration_ms = 0
         self.last_pts = None
@@ -194,22 +224,17 @@ class VideoHandler:
 
 # --- Crop box overlay -----------------------------------------------------------
 class ResizableRect(QGraphicsRectItem):
-    """A crop rectangle with handles; calls ``on_change`` on geometry changes.
-
-    The item's ``rect`` is in LOCAL coordinates (0,0,w,h); the scene position is
-    stored in the item's ``pos()``. This makes Qt's built-in move (ItemIsMovable)
-    and our handle-based resize behave correctly.
-    """
+    """A crop rectangle with handles; calls ``on_change`` on geometry changes."""
 
     HANDLE = 10
     TOLERANCE = 8
 
     def __init__(self, rect: QRectF, movable: bool = True) -> None:
-        # rect is in scene coordinates; convert to local rect + scene pos
         top_left = rect.topLeft()
         super().__init__(QRectF(0.0, 0.0, rect.width(), rect.height()))
         self.setPos(top_left)
-        self.on_change = None  # optional callable, invoked on move/resize
+        self.on_change = None
+        self._bounds: QRectF | None = None
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, movable)
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, True)
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemSendsGeometryChanges, True)
@@ -221,6 +246,10 @@ class ResizableRect(QGraphicsRectItem):
         self._move_start_pos = QPointF()
         self._handles: list[QGraphicsRectItem] = []
         self._create_handles()
+
+    def set_bounds(self, bounds: QRectF | None) -> None:
+        """Constrain this crop box to the given scene-coordinate rect."""
+        self._bounds = bounds
 
     def _create_handles(self) -> None:
         self._handles = []
@@ -256,18 +285,19 @@ class ResizableRect(QGraphicsRectItem):
             handle.setPos(pos[0], pos[1])
 
     def _resize_from(self, mode: str, scene_pos: QPointF) -> None:
-        # Work in scene coordinates: compute the new rect there, then convert
-        # back to (local rect + pos). This keeps the local rect always in
-        # positive coordinates, so handle positions, dragging and the
-        # itemChange bounds clamp all stay consistent.
-        # Current rect in scene coordinates = pos + local rect (no pen math).
         cur = self.rect()
         scene_rect = QRectF(
-            self.pos().x() + cur.left(), self.pos().y() + cur.top(),
-            cur.width(), cur.height(),
+            self.pos().x() + cur.left(),
+            self.pos().y() + cur.top(),
+            cur.width(),
+            cur.height(),
         )
         r = QRectF(scene_rect)
         sx, sy = scene_pos.x(), scene_pos.y()
+        # Clamp the drag position to the video bounds
+        if self._bounds is not None:
+            sx = max(self._bounds.left(), min(sx, self._bounds.right()))
+            sy = max(self._bounds.top(), min(sy, self._bounds.bottom()))
         if "l" in mode:
             r.setLeft(min(sx, r.right() - 5))
         if "r" in mode:
@@ -277,28 +307,36 @@ class ResizableRect(QGraphicsRectItem):
         if "b" in mode:
             r.setBottom(max(sy, r.top() + 5))
         r = r.normalized()
-
-        # Convert scene rect -> local rect + pos (local is always >= 0).
+        # Clamp the resulting rect so it never leaves the video area
+        if self._bounds is not None:
+            r.setLeft(max(r.left(), self._bounds.left()))
+            r.setRight(min(r.right(), self._bounds.right()))
+            r.setTop(max(r.top(), self._bounds.top()))
+            r.setBottom(min(r.bottom(), self._bounds.bottom()))
         self.setRect(QRectF(0.0, 0.0, r.width(), r.height()))
         self.setPos(r.topLeft())
         self._place_handles()
         if self.on_change:
             self.on_change()
 
-    def itemChange(self, change, value):  # noqa: N802 - Qt API name
-        if change == QGraphicsItem.GraphicsItemChange.ItemPositionChange and self.scene():
-            # keep within scene bounds
-            scene_rect = self.scene().sceneRect()
+    def itemChange(self, change, value):  # noqa: N802
+        if (
+            change == QGraphicsItem.GraphicsItemChange.ItemPositionChange
+            and self.scene()
+        ):
+            bounds = (
+                self._bounds if self._bounds is not None else self.scene().sceneRect()
+            )
             new_pos = value
             r = self.rect()
-            if new_pos.x() < scene_rect.left():
-                new_pos.setX(scene_rect.left())
-            if new_pos.y() < scene_rect.top():
-                new_pos.setY(scene_rect.top())
-            if new_pos.x() + r.width() > scene_rect.right():
-                new_pos.setX(scene_rect.right() - r.width())
-            if new_pos.y() + r.height() > scene_rect.bottom():
-                new_pos.setY(scene_rect.bottom() - r.height())
+            if new_pos.x() < bounds.left():
+                new_pos.setX(bounds.left())
+            if new_pos.y() < bounds.top():
+                new_pos.setY(bounds.top())
+            if new_pos.x() + r.width() > bounds.right():
+                new_pos.setX(bounds.right() - r.width())
+            if new_pos.y() + r.height() > bounds.bottom():
+                new_pos.setY(bounds.bottom() - r.height())
             value = new_pos
         result = super().itemChange(change, value)
         if change == QGraphicsItem.GraphicsItemChange.ItemPositionHasChanged:
@@ -392,7 +430,11 @@ class PreviewView(QGraphicsView):
         """Returns the crop box item at scene_pos, including its handle ring."""
         pad = ResizableRect.HANDLE
         for rr in self._controller.crop_rect_items():
-            if rr.sceneBoundingRect().adjusted(-pad, -pad, pad, pad).contains(scene_pos):
+            if (
+                rr.sceneBoundingRect()
+                .adjusted(-pad, -pad, pad, pad)
+                .contains(scene_pos)
+            ):
                 return rr
         return None
 
@@ -403,7 +445,10 @@ class PreviewView(QGraphicsView):
             event.accept()
             return
         # Forward to the item we pressed on (handle resize or interior move).
-        if self._pressed_item is not None and event.buttons() & Qt.MouseButton.LeftButton:
+        if (
+            self._pressed_item is not None
+            and event.buttons() & Qt.MouseButton.LeftButton
+        ):
             scene_pos = self.mapToScene(event.position().toPoint())
             scene_ev = self._forward_to_item(self._pressed_item, event, scene_pos)
             self._pressed_item.mouseMoveEvent(scene_ev)
@@ -412,12 +457,18 @@ class PreviewView(QGraphicsView):
         super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event) -> None:  # noqa: N802 - Qt API name
-        if self._controller.is_drawing() and event.button() == Qt.MouseButton.LeftButton:
+        if (
+            self._controller.is_drawing()
+            and event.button() == Qt.MouseButton.LeftButton
+        ):
             scene_pos = self.mapToScene(event.position().toPoint())
             self._controller.end_draw(scene_pos)
             event.accept()
             return
-        if self._pressed_item is not None and event.button() == Qt.MouseButton.LeftButton:
+        if (
+            self._pressed_item is not None
+            and event.button() == Qt.MouseButton.LeftButton
+        ):
             scene_pos = self.mapToScene(event.position().toPoint())
             scene_ev = self._forward_to_item(self._pressed_item, event, scene_pos)
             self._pressed_item.mouseReleaseEvent(scene_ev)
@@ -462,7 +513,9 @@ class VideoPreview(QWidget):
 
         self._scene = QGraphicsScene(self)
         self._view = PreviewView(self, self._scene)
-        self._view.setRenderHints(QPainter.RenderHint.SmoothPixmapTransform | QPainter.RenderHint.Antialiasing)
+        self._view.setRenderHints(
+            QPainter.RenderHint.SmoothPixmapTransform | QPainter.RenderHint.Antialiasing
+        )
         self._view.setBackgroundBrush(QBrush(QColor(PALETTE["bg_deep"])))
         self._view.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self._view.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
@@ -563,22 +616,23 @@ class VideoPreview(QWidget):
         return QPointF(x, y)
 
     def _redraw_boxes(self) -> None:
-        # remove old rect items (keep pixmap)
         for item in list(self._scene.items()):
             if isinstance(item, ResizableRect) or item.data(0) == "draw-preview":
                 self._scene.removeItem(item)
-
+        video_bounds = self._video_bounds()
         for box in self._crop_boxes:
             (x1, y1), (x2, y2) = box["img_points"]
             rect = QRectF(
-                min(x1, x2) + self._offset_x, min(y1, y2) + self._offset_y,
-                abs(x2 - x1), abs(y2 - y1),
+                min(x1, x2) + self._offset_x,
+                min(y1, y2) + self._offset_y,
+                abs(x2 - x1),
+                abs(y2 - y1),
             )
             rr = ResizableRect(rect)
+            rr.set_bounds(video_bounds)
             rr.on_change = lambda r=rr: self._sync_box_from_item(r)
             box["_item"] = rr
             self._scene.addItem(rr)
-
         if self._drawing is not None:
             p1, p2 = self._drawing
             rect = QRectF(p1, p2).normalized()
@@ -604,8 +658,14 @@ class VideoPreview(QWidget):
         from .crop import compute_crop_coords
 
         box["coords"] = compute_crop_coords(
-            min(x1, x2), min(y1, y2), max(x1, x2), max(y1, y2),
-            self._orig_w, self._orig_h, self._resized_w, self._resized_h,
+            min(x1, x2),
+            min(y1, y2),
+            max(x1, x2),
+            max(y1, y2),
+            self._orig_w,
+            self._orig_h,
+            self._resized_w,
+            self._resized_h,
         )
         self.crop_changed.emit(list(self._crop_boxes))
 
@@ -637,7 +697,8 @@ class VideoPreview(QWidget):
 
     def update_draw(self, scene_pos: QPointF) -> None:
         if self._drawing is not None:
-            self._drawing = (self._drawing[0], scene_pos)
+            clamped = self._clamp_scene_point(scene_pos)
+            self._drawing = (self._drawing[0], clamped)
             self._redraw_boxes()
 
     def end_draw(self, scene_pos: QPointF) -> None:
@@ -645,26 +706,35 @@ class VideoPreview(QWidget):
             return
         p1, p2 = self._drawing
         self._drawing = None
-        img1 = self._img_point(p1)
-        img2 = self._img_point(scene_pos)
-        if img1 is None or img2 is None:
-            self._redraw_boxes()
-            return
+        # Clamp both points to the video area so the box is never silently
+        # discarded just because the mouse was released slightly outside.
+        img1 = self._img_point_clamped(p1)
+        img2 = self._img_point_clamped(scene_pos)
         rect = QRectF(img1, img2).normalized()
         if rect.width() < 7 or rect.height() < 7:
             self._redraw_boxes()
             return
-        # compute absolute video coords for the CLI / label
         from .crop import compute_crop_coords
 
         coords = compute_crop_coords(
-            rect.left(), rect.top(), rect.right(), rect.bottom(),
-            self._orig_w, self._orig_h, self._resized_w, self._resized_h,
+            rect.left(),
+            rect.top(),
+            rect.right(),
+            rect.bottom(),
+            self._orig_w,
+            self._orig_h,
+            self._resized_w,
+            self._resized_h,
         )
-        self._crop_boxes.append({
-            "coords": coords,
-            "img_points": ((rect.left(), rect.top()), (rect.right(), rect.bottom())),
-        })
+        self._crop_boxes.append(
+            {
+                "coords": coords,
+                "img_points": (
+                    (rect.left(), rect.top()),
+                    (rect.right(), rect.bottom()),
+                ),
+            }
+        )
         self._redraw_boxes()
         self.crop_changed.emit(list(self._crop_boxes))
 
@@ -704,7 +774,9 @@ class VideoPreview(QWidget):
         zone_text = i18n.tr("crop_zone_text", "Zone")
         for i, box in enumerate(self._crop_boxes):
             c = box["coords"]
-            parts.append(f"{zone_text} {i + 1}: ({c['crop_x']}, {c['crop_y']}, {c['crop_width']}, {c['crop_height']})")
+            parts.append(
+                f"{zone_text} {i + 1}: ({c['crop_x']}, {c['crop_y']}, {c['crop_width']}, {c['crop_height']})"
+            )
         return "  |  ".join(parts)
 
     def current_position_ms(self) -> float:
@@ -712,3 +784,25 @@ class VideoPreview(QWidget):
 
     def seek_to(self, ms: float) -> None:
         self.show_frame(ms)
+
+    def _video_bounds(self) -> QRectF:
+        """The video pixmap area in scene coordinates."""
+        return QRectF(self._offset_x, self._offset_y, self._resized_w, self._resized_h)
+
+    def _clamp_scene_point(self, scene_pos: QPointF) -> QPointF:
+        """Clamp a scene point into the video area."""
+        bounds = self._video_bounds()
+        x = max(bounds.left(), min(scene_pos.x(), bounds.right()))
+        y = max(bounds.top(), min(scene_pos.y(), bounds.bottom()))
+        return QPointF(x, y)
+
+    def _img_point_clamped(self, scene_pos: QPointF) -> QPointF:
+        """Scene point → image coordinates, clamped to the video area.
+        Unlike _img_point this never returns None, so a box is never
+        silently discarded just because the mouse ended slightly outside.
+        """
+        x = scene_pos.x() - self._offset_x
+        y = scene_pos.y() - self._offset_y
+        x = max(0.0, min(x, float(self._resized_w)))
+        y = max(0.0, min(y, float(self._resized_h)))
+        return QPointF(x, y)

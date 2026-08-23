@@ -106,12 +106,18 @@ class MainWindow(QMainWindow):
         self.preview.video_error.connect(self._on_video_error)
         self.preview.crop_changed.connect(self._on_crop_changed)
 
-        self.tabs.addTab(self._build_process_tab(), i18n.tr("tab_video", "Process Video"))
+        self.tabs.addTab(
+            self._build_process_tab(), i18n.tr("tab_video", "Process Video")
+        )
         self.queue_tab = QueueTab()
         self.tabs.addTab(self.queue_tab, i18n.tr("tab_batch", "Queue"))
         self.settings_tab = SettingsTab()
-        self.tabs.addTab(self.settings_tab, i18n.tr("tab_advanced", "Advanced Settings"))
-        self.about_tab = AboutTab(config.__version__ if hasattr(config, "__version__") else "1.6.0")
+        self.tabs.addTab(
+            self.settings_tab, i18n.tr("tab_advanced", "Advanced Settings")
+        )
+        self.about_tab = AboutTab(
+            config.__version__ if hasattr(config, "__version__") else "1.6.0"
+        )
         self.tabs.addTab(self.about_tab, i18n.tr("tab_about", "About"))
 
         # wire queue signals
@@ -237,7 +243,9 @@ class MainWindow(QMainWindow):
         self.pause_btn.clicked.connect(self._on_pause)
         self.cancel_btn.clicked.connect(self._on_cancel)
         self.add_btn = QPushButton(i18n.tr("btn_add_to_queue", "Add to Queue"))
-        self.add_all_btn = QPushButton(i18n.tr("btn_add_all_to_queue", "Add All to Queue"))
+        self.add_all_btn = QPushButton(
+            i18n.tr("btn_add_all_to_queue", "Add All to Queue")
+        )
         self.add_btn.clicked.connect(self._on_add_to_queue)
         self.add_all_btn.clicked.connect(self._on_add_all)
         run_row.addWidget(self.run_btn)
@@ -317,7 +325,9 @@ class MainWindow(QMainWindow):
             config.log_error(f"Taskbar init failed: {e}")
             self._taskbar = None
 
-    def _update_taskbar(self, state: str | None = None, progress: int | None = None) -> None:
+    def _update_taskbar(
+        self, state: str | None = None, progress: int | None = None
+    ) -> None:
         if self._taskbar is None:
             return
         try:
@@ -352,13 +362,18 @@ class MainWindow(QMainWindow):
     # --- settings <-> UI ------------------------------------------------------
     def _apply_settings_to_ui(self) -> None:
         i18n.load_language(str(self._settings.get("--language", "en")))
-        self.settings_tab.populate(self._settings, sorted(i18n.get_available_languages().keys()))
+        self.settings_tab.populate(
+            self._settings, sorted(i18n.get_available_languages().keys())
+        )
         self._populate_engine_lang_pos()
         self._retranslate_all()
         self.source_combo.clear()
         self.output_edit.setText("")
-        self.post_action_combo.setCurrentIndex(int(self._settings.get("post_action", 0)))
+        self.post_action_combo.setCurrentIndex(
+            int(self._settings.get("post_action", 0))
+        )
         self._refresh_directml_combo()
+        self.preview.set_dual_zone(bool(self._settings.get("--use_dual_zone", False)))
 
     def _populate_engine_lang_pos(self) -> None:
         """Populates the OCR Engine / Subtitle Language / Position combos from settings."""
@@ -380,12 +395,19 @@ class MainWindow(QMainWindow):
             # language list depends on engine
             self._update_lang_list(engine, keep_selection=True)
 
-            pos_internal = self._settings.get("subtitle_position", C.DEFAULT_INTERNAL_SUBTITLE_POSITION)
-            display_to_internal = {i18n.tr(key, key): internal for key, internal in C.SUBTITLE_POSITIONS_LIST}
+            pos_internal = self._settings.get(
+                "subtitle_position", C.DEFAULT_INTERNAL_SUBTITLE_POSITION
+            )
+            display_to_internal = {
+                i18n.tr(key, key): internal
+                for key, internal in C.SUBTITLE_POSITIONS_LIST
+            }
             internal_to_display = {v: k for k, v in display_to_internal.items()}
             self.pos_combo.clear()
             self.pos_combo.addItems(list(display_to_internal.keys()))
-            display = internal_to_display.get(str(pos_internal), list(display_to_internal.keys())[0])
+            display = internal_to_display.get(
+                str(pos_internal), list(display_to_internal.keys())[0]
+            )
             idx = self.pos_combo.findText(display)
             if idx >= 0:
                 self.pos_combo.setCurrentIndex(idx)
@@ -413,10 +435,18 @@ class MainWindow(QMainWindow):
             elif current in names:
                 self.lang_combo.setCurrentText(current)
             else:
-                default_idx = names.index(C.DEFAULT_SUBTITLE_LANGUAGE) if C.DEFAULT_SUBTITLE_LANGUAGE in names else 0
+                default_idx = (
+                    names.index(C.DEFAULT_SUBTITLE_LANGUAGE)
+                    if C.DEFAULT_SUBTITLE_LANGUAGE in names
+                    else 0
+                )
                 self.lang_combo.setCurrentIndex(default_idx)
         else:
-            default_idx = names.index(C.DEFAULT_SUBTITLE_LANGUAGE) if C.DEFAULT_SUBTITLE_LANGUAGE in names else 0
+            default_idx = (
+                names.index(C.DEFAULT_SUBTITLE_LANGUAGE)
+                if C.DEFAULT_SUBTITLE_LANGUAGE in names
+                else 0
+            )
             self.lang_combo.setCurrentIndex(default_idx)
 
     def _on_engine_changed(self) -> None:
@@ -448,8 +478,12 @@ class MainWindow(QMainWindow):
     def _on_pos_changed(self) -> None:
         if self.pos_combo.signalsBlocked():
             return
-        display_to_internal = {i18n.tr(key, key): internal for key, internal in C.SUBTITLE_POSITIONS_LIST}
-        internal = display_to_internal.get(self.pos_combo.currentText(), C.DEFAULT_INTERNAL_SUBTITLE_POSITION)
+        display_to_internal = {
+            i18n.tr(key, key): internal for key, internal in C.SUBTITLE_POSITIONS_LIST
+        }
+        internal = display_to_internal.get(
+            self.pos_combo.currentText(), C.DEFAULT_INTERNAL_SUBTITLE_POSITION
+        )
         self._settings["subtitle_position"] = internal
         config.save_settings(self._settings)
 
@@ -507,7 +541,9 @@ class MainWindow(QMainWindow):
     def _open_file(self) -> None:
         filetypes = i18n.tr("video_file_types", "Video Files")
         filename, _ = QFileDialog.getOpenFileName(
-            self, "Open Video", "",
+            self,
+            "Open Video",
+            "",
             f"{filetypes} (*.mp4 *.avi *.mkv *.mov *.webm *.flv *.wmv *.ts *.m2ts);;"
             f"{i18n.tr('all_file_types', 'All Files')} (*.*)",
         )
@@ -585,9 +621,13 @@ class MainWindow(QMainWindow):
         w, h = self.preview.original_size
         if w <= 0 or h <= 0:
             return
+        # Ensure the preview knows the current zone limit before restoring.
+        self.preview.set_dual_zone(bool(self._settings.get("--use_dual_zone", False)))
         from .crop import absolute_from_relative
 
-        saved = config.parse_saved_crop_boxes(str(self._settings.get("--saved_crop_boxes", "[]")))
+        saved = config.parse_saved_crop_boxes(
+            str(self._settings.get("--saved_crop_boxes", "[]"))
+        )
         boxes = []
         limit = 2 if self._settings.get("--use_dual_zone", False) else 1
         for rel in saved[:limit]:
@@ -600,15 +640,23 @@ class MainWindow(QMainWindow):
             self.crop_label.setText(self.preview.crop_coords_text())
 
     def _on_video_error(self, path: str) -> None:
-        info(self, i18n.tr("error_invalid_video_title", "Invalid or Empty Video File"),
-             i18n.tr("error_invalid_video_msg", "Could not load video, video has no frames, or FPS is zero:\n{}").format(path))
+        info(
+            self,
+            i18n.tr("error_invalid_video_title", "Invalid or Empty Video File"),
+            i18n.tr(
+                "error_invalid_video_msg",
+                "Could not load video, video has no frames, or FPS is zero:\n{}",
+            ).format(path),
+        )
         self._video_path = None
 
     def _update_output_path(self) -> None:
         if not self._video_path:
             return
         try:
-            out = argsmod.generate_output_path(self._video_path, self._current_settings())
+            out = argsmod.generate_output_path(
+                self._video_path, self._current_settings()
+            )
             self.output_edit.setText(str(out))
             self._settings["--output"] = str(out)
         except Exception as e:
@@ -619,13 +667,15 @@ class MainWindow(QMainWindow):
         current = self.output_edit.text()
         if self._current_settings().get("enable_label_detection"):
             path, _ = QFileDialog.getSaveFileName(
-                self, i18n.tr("save_as_title", "Save As"),
+                self,
+                i18n.tr("save_as_title", "Save As"),
                 current,
                 f"{i18n.tr('save_as_ass_filter_name', 'Advanced SubStation Alpha Subtitle')} (*.ass);;{i18n.tr('all_file_types', 'All Files')} (*.*)",
             )
         else:
             path, _ = QFileDialog.getSaveFileName(
-                self, i18n.tr("save_as_title", "Save As"),
+                self,
+                i18n.tr("save_as_title", "Save As"),
                 current,
                 f"{i18n.tr('save_as_filter_name', 'SubRip Subtitle')} (*.srt);;{i18n.tr('all_file_types', 'All Files')} (*.*)",
             )
@@ -643,7 +693,9 @@ class MainWindow(QMainWindow):
         if not self._video_path or self._duration_ms <= 0:
             return
         try:
-            step = float(self.settings_tab.read_settings().get("--keyboard_seek_step", 1))
+            step = float(
+                self.settings_tab.read_settings().get("--keyboard_seek_step", 1)
+            )
         except (ValueError, TypeError):
             step = 1
         new_time = self._current_ms + direction * step * 1000.0
@@ -657,7 +709,13 @@ class MainWindow(QMainWindow):
     def _update_time_display(self) -> None:
         if self._duration_ms > 0:
             fmt = i18n.tr("time_text_format", "Time: {}")
-            self.time_label.setText(fmt.format(self._fmt_time(self._current_ms / 1000.0) + " / " + self._fmt_time(self._duration_ms / 1000.0)))
+            self.time_label.setText(
+                fmt.format(
+                    self._fmt_time(self._current_ms / 1000.0)
+                    + " / "
+                    + self._fmt_time(self._duration_ms / 1000.0)
+                )
+            )
         else:
             self.time_label.setText(i18n.tr("time_text_empty", "Time: -/-"))
 
@@ -717,7 +775,9 @@ class MainWindow(QMainWindow):
         # the boot default).
         tab_settings = self.settings_tab.read_settings()
         for key in (
-            "ocr_engine", "subtitle_language", "subtitle_position",
+            "ocr_engine",
+            "subtitle_language",
+            "subtitle_position",
         ):
             tab_settings.pop(key, None)
         self._settings.update(tab_settings)
@@ -726,6 +786,11 @@ class MainWindow(QMainWindow):
             # or label detection setting changes.
             if key in ("--save_in_video_dir", "enable_label_detection"):
                 self._update_output_path()
+        # Propagate dual-zone toggle to the preview so the user can draw 2 boxes.
+        if "--use_dual_zone" in keys:
+            self.preview.set_dual_zone(
+                bool(self._settings.get("--use_dual_zone", False))
+            )
         config.save_settings(self._settings)
 
     def _on_directml_gpu(self, index: str) -> None:
@@ -747,14 +812,22 @@ class MainWindow(QMainWindow):
         self._settings["--language"] = code
         i18n.load_language(code)
         self._retranslate_all()
-        self.settings_tab.populate(self._settings, sorted(i18n.get_available_languages().keys()))
+        self.settings_tab.populate(
+            self._settings, sorted(i18n.get_available_languages().keys())
+        )
         config.save_settings(self._settings)
 
     def _on_scaling_changed(self, value: str) -> None:
         self._settings["gui_scaling"] = value
         config.save_settings(self._settings)
-        if ask_yes_no(self, i18n.tr("title_restart", "Restart Required"),
-                      i18n.tr("msg_restart_scaling", "The scaling factor has been updated.\nWould you like to restart the application now to apply this change?")):
+        if ask_yes_no(
+            self,
+            i18n.tr("title_restart", "Restart Required"),
+            i18n.tr(
+                "msg_restart_scaling",
+                "The scaling factor has been updated.\nWould you like to restart the application now to apply this change?",
+            ),
+        ):
             self._restart()
 
     def _restart(self) -> None:
@@ -787,12 +860,24 @@ class MainWindow(QMainWindow):
 
     # --- info/help -------------------------------------------------------------
     def _show_engine_info(self) -> None:
-        info(self, i18n.tr("engine_info", "OCR Engine Information"),
-             i18n.tr("engine_message", "PaddleOCR (Det. + Rec.):\n• 100% local processing.\n• Both text detection and recognition are done locally.\n\nPaddleOCR (Det.) + Google Lens (Rec.):\n• Hybrid processing.\n• PaddleOCR handles text detection locally.\n• Google Lens (online) handles text recognition.\n• Requires an active internet connection.\n\nONNX Runtime DirectML (AMD GPU Experimental):\n• Experimental local ONNX Runtime DirectML backend for Windows AMD GPUs.\n• Uses RapidOCR with the DirectML execution provider.\n• Falls back to EasyOCR DirectML Hybrid when the ONNX/DirectML stack is unavailable."))
+        info(
+            self,
+            i18n.tr("engine_info", "OCR Engine Information"),
+            i18n.tr(
+                "engine_message",
+                "PaddleOCR (Det. + Rec.):\n• 100% local processing.\n• Both text detection and recognition are done locally.\n\nPaddleOCR (Det.) + Google Lens (Rec.):\n• Hybrid processing.\n• PaddleOCR handles text detection locally.\n• Google Lens (online) handles text recognition.\n• Requires an active internet connection.\n\nONNX Runtime DirectML (AMD GPU Experimental):\n• Experimental local ONNX Runtime DirectML backend for Windows AMD GPUs.\n• Uses RapidOCR with the DirectML execution provider.\n• Falls back to EasyOCR DirectML Hybrid when the ONNX/DirectML stack is unavailable.",
+            ),
+        )
 
     def _show_help(self) -> None:
-        info(self, i18n.tr("help_title", "Cropping Info"),
-             i18n.tr("help_message", "Draw a crop box over the subtitle region in the video.\nUse click+drag to select.\nIn 'Dual Zone' mode, you can draw two crop boxes.\nIf no crop box is selected, the bottom third of the video\nwill be used for OCR by default."))
+        info(
+            self,
+            i18n.tr("help_title", "Cropping Info"),
+            i18n.tr(
+                "help_message",
+                "Draw a crop box over the subtitle region in the video.\nUse click+drag to select.\nIn 'Dual Zone' mode, you can draw two crop boxes.\nIf no crop box is selected, the bottom third of the video\nwill be used for OCR by default.",
+            ),
+        )
 
     # --- queue ----------------------------------------------------------------
     def _jobs(self) -> list[dict[str, Any]]:
@@ -808,7 +893,13 @@ class MainWindow(QMainWindow):
         self._update_queue_tab_title()
 
     def _update_queue_tab_title(self) -> None:
-        active = len([j for j in self._batch_queue if j["status"] in ("Pending", "Processing", "Cancelled", "Paused")])
+        active = len(
+            [
+                j
+                for j in self._batch_queue
+                if j["status"] in ("Pending", "Processing", "Cancelled", "Paused")
+            ]
+        )
         base = i18n.tr("tab_batch", "Queue")
         self.tabs.setTabText(1, f"{base} ({active})" if active else base)
 
@@ -817,35 +908,63 @@ class MainWindow(QMainWindow):
             return
         settings = self._current_settings()
         settings["_video_duration_ms"] = self._duration_ms
-        args, errors = argsmod.build_args(self._video_path, settings, self.preview.crop_boxes, self.output_edit.text() or None)
+        args, errors = argsmod.build_args(
+            self._video_path,
+            settings,
+            self.preview.crop_boxes,
+            self.output_edit.text() or None,
+        )
         if errors or args is None:
             info(self, "Validation Error", "\n".join(errors))
             return
         target = args["output"]
-        existing = next((i for i, j in enumerate(self._batch_queue) if j["args"]["output"] == target), None)
+        existing = next(
+            (
+                i
+                for i, j in enumerate(self._batch_queue)
+                if j["args"]["output"] == target
+            ),
+            None,
+        )
         if existing is not None:
             status = self._batch_queue[existing]["status"]
             if status in ("Processing", "Paused"):
-                info(self, i18n.tr("title_duplicate", "Duplicate"),
-                     i18n.tr("msg_duplicate_queue_running", "A job for '{}' is currently active (Status: {}).\n\nPlease change the output path or wait for it to finish.").format(os.path.basename(target), status))
+                info(
+                    self,
+                    i18n.tr("title_duplicate", "Duplicate"),
+                    i18n.tr(
+                        "msg_duplicate_queue_running",
+                        "A job for '{}' is currently active (Status: {}).\n\nPlease change the output path or wait for it to finish.",
+                    ).format(os.path.basename(target), status),
+                )
                 return
-            if ask_yes_no(self, i18n.tr("title_duplicate_job", "Duplicate Job"),
-                          i18n.tr("popup_duplicate_msg", "A job for this output file already exists (Status: {}).\n\nDo you want to update/restart it with current settings?").format(status)):
+            if ask_yes_no(
+                self,
+                i18n.tr("title_duplicate_job", "Duplicate Job"),
+                i18n.tr(
+                    "popup_duplicate_msg",
+                    "A job for this output file already exists (Status: {}).\n\nDo you want to update/restart it with current settings?",
+                ).format(status),
+            ):
                 self._batch_queue[existing]["args"] = args
                 self._batch_queue[existing]["status"] = "Pending"
             else:
                 return
         else:
-            self._batch_queue.append({
-                "filename": os.path.basename(args["video_path"]),
-                "output": os.path.basename(target),
-                "status": "Pending",
-                "args": args,
-            })
+            self._batch_queue.append(
+                {
+                    "filename": os.path.basename(args["video_path"]),
+                    "output": os.path.basename(target),
+                    "status": "Pending",
+                    "args": args,
+                }
+            )
         self._refresh_queue_ui()
 
     def _on_add_all(self) -> None:
-        videos = [self.source_combo.itemText(i) for i in range(self.source_combo.count())]
+        videos = [
+            self.source_combo.itemText(i) for i in range(self.source_combo.count())
+        ]
         if not videos:
             return
         added = 0
@@ -854,19 +973,25 @@ class MainWindow(QMainWindow):
         for v in videos:
             out = str(argsmod.generate_output_path(v, self._current_settings()))
             if out in existing_outputs:
-                skipped.append(f"{os.path.basename(v)} ({i18n.tr('reason_dup_path', 'Duplicate Output path')})")
+                skipped.append(
+                    f"{os.path.basename(v)} ({i18n.tr('reason_dup_path', 'Duplicate Output path')})"
+                )
                 continue
-            self._batch_queue.append({
-                "filename": os.path.basename(v),
-                "output": os.path.basename(out),
-                "status": "Pending",
-                "args": {"video_path": v, "output": out},
-            })
+            self._batch_queue.append(
+                {
+                    "filename": os.path.basename(v),
+                    "output": os.path.basename(out),
+                    "status": "Pending",
+                    "args": {"video_path": v, "output": out},
+                }
+            )
             existing_outputs.add(out)
             added += 1
         self._refresh_queue_ui()
         if skipped:
-            msg = i18n.tr("msg_batch_report_summary", "Added {} videos.\n\nSkipped {} video(s):\n").format(added, len(skipped))
+            msg = i18n.tr(
+                "msg_batch_report_summary", "Added {} videos.\n\nSkipped {} video(s):\n"
+            ).format(added, len(skipped))
             msg += "\n".join(skipped[:10])
             if len(skipped) > 10:
                 msg += "\n" + i18n.tr("msg_and_others", "...and others.")
@@ -882,11 +1007,18 @@ class MainWindow(QMainWindow):
         if not self._video_path:
             return
         if self._worker is not None and self._worker.isRunning():
-            self._append_log(i18n.tr("error_already_running", "Process is already running.\n"))
+            self._append_log(
+                i18n.tr("error_already_running", "Process is already running.\n")
+            )
             return
         settings = self._current_settings()
         settings["_video_duration_ms"] = self._duration_ms
-        args, errors = argsmod.build_args(self._video_path, settings, self.preview.crop_boxes, self.output_edit.text() or None)
+        args, errors = argsmod.build_args(
+            self._video_path,
+            settings,
+            self.preview.crop_boxes,
+            self.output_edit.text() or None,
+        )
         if errors or args is None:
             self._append_log(i18n.tr("val_err_header", "Validation Errors:\n"))
             for err in errors:
@@ -894,19 +1026,38 @@ class MainWindow(QMainWindow):
             return
         # add to queue then start
         target = args["output"]
-        existing = next((i for i, j in enumerate(self._batch_queue) if j["args"]["output"] == target), None)
-        if existing is not None and self._batch_queue[existing]["status"] in ("Cancelled", "Error", "Completed"):
-            if ask_yes_no(self, i18n.tr("title_duplicate_job", "Duplicate Job"),
-                          i18n.tr("popup_duplicate_msg", "A job for this output file already exists (Status: {}).\n\nDo you want to restart it with current settings?").format(self._batch_queue[existing]["status"])):
+        existing = next(
+            (
+                i
+                for i, j in enumerate(self._batch_queue)
+                if j["args"]["output"] == target
+            ),
+            None,
+        )
+        if existing is not None and self._batch_queue[existing]["status"] in (
+            "Cancelled",
+            "Error",
+            "Completed",
+        ):
+            if ask_yes_no(
+                self,
+                i18n.tr("title_duplicate_job", "Duplicate Job"),
+                i18n.tr(
+                    "popup_duplicate_msg",
+                    "A job for this output file already exists (Status: {}).\n\nDo you want to restart it with current settings?",
+                ).format(self._batch_queue[existing]["status"]),
+            ):
                 self._batch_queue[existing]["args"] = args
                 self._batch_queue[existing]["status"] = "Pending"
         elif existing is None:
-            self._batch_queue.append({
-                "filename": os.path.basename(args["video_path"]),
-                "output": os.path.basename(args["output"]),
-                "status": "Pending",
-                "args": args,
-            })
+            self._batch_queue.append(
+                {
+                    "filename": os.path.basename(args["video_path"]),
+                    "output": os.path.basename(args["output"]),
+                    "status": "Pending",
+                    "args": args,
+                }
+            )
         self._refresh_queue_ui()
         self._start_processing()
 
@@ -939,7 +1090,14 @@ class MainWindow(QMainWindow):
 
     def _start_worker(self, args: dict[str, Any]) -> None:
         if not VIDEOCR_PATH:
-            self._append_log("\n" + i18n.tr("error_cli_not_found", "Error: videocr-cli not found. Please check the path.\n") + "\n")
+            self._append_log(
+                "\n"
+                + i18n.tr(
+                    "error_cli_not_found",
+                    "Error: videocr-cli not found. Please check the path.\n",
+                )
+                + "\n"
+            )
             self._finish_processing()
             return
         self._worker = CLIWorker(args)
@@ -951,7 +1109,9 @@ class MainWindow(QMainWindow):
         self._worker.signals.fatal.connect(self._on_fatal)
         self._worker.signals.warning.connect(self._on_warning)
         self.progress_bar.setValue(0)
-        self.status_label.setText(i18n.tr("status_starting", "Starting subtitle extraction..."))
+        self.status_label.setText(
+            i18n.tr("status_starting", "Starting subtitle extraction...")
+        )
         self._worker.start()
 
     def _on_process_started(self, pid: int) -> None:
@@ -988,7 +1148,12 @@ class MainWindow(QMainWindow):
         elif job is not None:
             if success:
                 job["status"] = "Completed"
-                self._append_log("\n" + i18n.tr("status_success", "Successfully generated subtitle file!\n"))
+                self._append_log(
+                    "\n"
+                    + i18n.tr(
+                        "status_success", "Successfully generated subtitle file!\n"
+                    )
+                )
             else:
                 job["status"] = "Error"
         self._refresh_queue_ui()
@@ -1011,8 +1176,11 @@ class MainWindow(QMainWindow):
         self.cancel_btn.setEnabled(False)
         self.pause_btn.setEnabled(False)
         self.pause_btn.setText(i18n.tr("btn_pause", "Pause"))
-        msg = (i18n.tr("status_queue_cancelled", "Queue Cancelled") if self._cancelled_by_user
-               else i18n.tr("status_queue_finished", "Queue Finished"))
+        msg = (
+            i18n.tr("status_queue_cancelled", "Queue Cancelled")
+            if self._cancelled_by_user
+            else i18n.tr("status_queue_finished", "Queue Finished")
+        )
         self._append_log("\n" + msg + "\n")
         self._update_taskbar(state="normal", progress=0)
         self._refresh_queue_ui()
@@ -1030,17 +1198,29 @@ class MainWindow(QMainWindow):
         if len(completed) == 1:
             message = os.path.basename(completed[0]["args"]["output"])
         else:
-            message = i18n.tr("batch_finished_count", "Batch finished: {} files processed.").format(len(completed))
+            message = i18n.tr(
+                "batch_finished_count", "Batch finished: {} files processed."
+            ).format(len(completed))
         self._send_notification(title, message)
 
     def _send_notification(self, title: str, message: str) -> None:
         try:
             if sys.platform == "win32" and Notification is not None:
-                toast = Notification(app_id="VideOCR Recreated", title=title, msg=message, icon=resources.notification_icon_path())
+                toast = Notification(
+                    app_id="VideOCR Recreated",
+                    title=title,
+                    msg=message,
+                    icon=resources.notification_icon_path(),
+                )
                 toast.set_audio(audio.Default, loop=False)
                 toast.show()
             elif notification is not None:
-                notification.notify(title=title, message=message, app_name="VideOCR Recreated", app_icon=resources.notification_icon_path())
+                notification.notify(
+                    title=title,
+                    message=message,
+                    app_name="VideOCR Recreated",
+                    app_icon=resources.notification_icon_path(),
+                )
         except Exception as e:
             config.log_error(f"Failed to send notification: {e}")
 
@@ -1052,11 +1232,25 @@ class MainWindow(QMainWindow):
         display = i18n.tr(action_key, C.DEFAULT_ACTION_TEXTS[action_key])
         proceed = CountdownDialog.run(self, display)
         if not proceed:
-            self._append_log("\n" + i18n.tr("log_action_cancelled", "Post-completion action cancelled by user.") + "\n")
+            self._append_log(
+                "\n"
+                + i18n.tr(
+                    "log_action_cancelled", "Post-completion action cancelled by user."
+                )
+                + "\n"
+            )
             return
-        self._append_log("\n" + i18n.tr("log_post_action", "Executing post-completion action: {}").format(display) + "\n")
+        self._append_log(
+            "\n"
+            + i18n.tr("log_post_action", "Executing post-completion action: {}").format(
+                display
+            )
+            + "\n"
+        )
         if action_key == "action_shutdown":
-            os.system("shutdown /s /t 0" if sys.platform == "win32" else "systemctl poweroff")
+            os.system(
+                "shutdown /s /t 0" if sys.platform == "win32" else "systemctl poweroff"
+            )
         elif action_key == "action_sleep":
             if sys.platform == "win32":
                 import ctypes
@@ -1082,7 +1276,9 @@ class MainWindow(QMainWindow):
                 self._paused = False
                 self.pause_btn.setText(i18n.tr("btn_pause", "Pause"))
                 self.queue_tab.set_pause_text(False)
-                self._append_log("\n" + i18n.tr("status_resuming", "Resuming process...\n"))
+                self._append_log(
+                    "\n" + i18n.tr("status_resuming", "Resuming process...\n")
+                )
                 self._update_taskbar(state="normal")
                 for j in self._batch_queue:
                     if j["status"] == "Paused":
@@ -1096,7 +1292,9 @@ class MainWindow(QMainWindow):
                 self._paused = True
                 self.pause_btn.setText(i18n.tr("btn_resume", "Resume"))
                 self.queue_tab.set_pause_text(True)
-                self._append_log("\n" + i18n.tr("status_pausing", "Pausing process...\n"))
+                self._append_log(
+                    "\n" + i18n.tr("status_pausing", "Pausing process...\n")
+                )
                 self._update_taskbar(state="paused")
                 for j in self._batch_queue:
                     if j["status"] == "Processing":
@@ -1109,7 +1307,13 @@ class MainWindow(QMainWindow):
 
     def _on_cancel(self) -> None:
         if self._worker is None or not self._worker.isRunning():
-            self._append_log("\n" + i18n.tr("error_no_process_to_cancel", "No process is currently running to cancel.\n"))
+            self._append_log(
+                "\n"
+                + i18n.tr(
+                    "error_no_process_to_cancel",
+                    "No process is currently running to cancel.\n",
+                )
+            )
             return
         self._cancelled_by_user = True
         self._append_log("\n" + i18n.tr("status_cancelling", "Cancelling process...\n"))
@@ -1120,7 +1324,10 @@ class MainWindow(QMainWindow):
         rows = self.queue_tab.selected_rows()
         if rows and rows[0] > 0:
             for idx in sorted(rows):
-                self._batch_queue[idx], self._batch_queue[idx - 1] = self._batch_queue[idx - 1], self._batch_queue[idx]
+                self._batch_queue[idx], self._batch_queue[idx - 1] = (
+                    self._batch_queue[idx - 1],
+                    self._batch_queue[idx],
+                )
             self._refresh_queue_ui()
             self.queue_tab.select_rows([r - 1 for r in rows])
 
@@ -1128,7 +1335,10 @@ class MainWindow(QMainWindow):
         rows = self.queue_tab.selected_rows()
         if rows and rows[-1] < len(self._batch_queue) - 1:
             for idx in sorted(rows, reverse=True):
-                self._batch_queue[idx], self._batch_queue[idx + 1] = self._batch_queue[idx + 1], self._batch_queue[idx]
+                self._batch_queue[idx], self._batch_queue[idx + 1] = (
+                    self._batch_queue[idx + 1],
+                    self._batch_queue[idx],
+                )
             self._refresh_queue_ui()
             self.queue_tab.select_rows([r + 1 for r in rows])
 
@@ -1146,16 +1356,26 @@ class MainWindow(QMainWindow):
         rows = self.queue_tab.selected_rows()
         if not rows:
             return
-        if any(self._batch_queue[i]["status"] in ("Processing", "Paused") for i in rows):
-            info(self, i18n.tr("title_error", "Error"),
-                 i18n.tr("popup_cannot_remove_running", "The currently running or paused job cannot be removed.\nPlease stop or cancel the process first."))
+        if any(
+            self._batch_queue[i]["status"] in ("Processing", "Paused") for i in rows
+        ):
+            info(
+                self,
+                i18n.tr("title_error", "Error"),
+                i18n.tr(
+                    "popup_cannot_remove_running",
+                    "The currently running or paused job cannot be removed.\nPlease stop or cancel the process first.",
+                ),
+            )
             return
         for i in sorted(rows, reverse=True):
             del self._batch_queue[i]
         self._refresh_queue_ui()
 
     def _on_clear(self) -> None:
-        active = [j for j in self._batch_queue if j["status"] in ("Processing", "Paused")]
+        active = [
+            j for j in self._batch_queue if j["status"] in ("Processing", "Paused")
+        ]
         if active:
             self._batch_queue[:] = active
         else:
@@ -1169,13 +1389,24 @@ class MainWindow(QMainWindow):
         idx = rows[0]
         job = self._batch_queue[idx]
         if job["status"] in ("Processing", "Paused"):
-            info(self, i18n.tr("title_error", "Error"),
-                 i18n.tr("popup_cannot_edit_running", "A job that is currently {} cannot be edited.\nPlease stop or cancel the process first.").format(job["status"]))
+            info(
+                self,
+                i18n.tr("title_error", "Error"),
+                i18n.tr(
+                    "popup_cannot_edit_running",
+                    "A job that is currently {} cannot be edited.\nPlease stop or cancel the process first.",
+                ).format(job["status"]),
+            )
             return
         v_path = job["args"]["video_path"]
         if not os.path.exists(v_path):
-            info(self, i18n.tr("title_error", "Error"),
-                 i18n.tr("error_video_not_found", "Video file not found:\n{}").format(v_path))
+            info(
+                self,
+                i18n.tr("title_error", "Error"),
+                i18n.tr("error_video_not_found", "Video file not found:\n{}").format(
+                    v_path
+                ),
+            )
             return
         self.tabs.setCurrentIndex(0)
         self.source_combo.blockSignals(True)
@@ -1197,44 +1428,81 @@ class MainWindow(QMainWindow):
         raw_engine = C.LEGACY_OCR_ENGINE_MAP.get(
             args.get("ocr_engine", "paddleocr"), args.get("ocr_engine", "paddleocr")
         )
-        engine_map = {"google_lens": C.OCR_ENGINES[1], "easyocr_directml": C.OCR_ENGINES[2],
-                      "onnx_directml": C.OCR_ENGINES[2], "paddleocr": C.OCR_ENGINES[0]}
+        engine_map = {
+            "google_lens": C.OCR_ENGINES[1],
+            "easyocr_directml": C.OCR_ENGINES[2],
+            "onnx_directml": C.OCR_ENGINES[2],
+            "paddleocr": C.OCR_ENGINES[0],
+        }
         engine = engine_map.get(raw_engine)
         if engine is None and raw_engine in C.OCR_ENGINES:
             # raw_engine is already a display name (from the legacy map).
             engine = raw_engine
         settings["ocr_engine"] = engine or C.OCR_ENGINES[0]
-        lang_lookup = {"google_lens": C.lens_abbr_lookup, "easyocr_directml": C.easyocr_abbr_lookup,
-                       "onnx_directml": C.easyocr_abbr_lookup, "paddleocr": C.paddle_abbr_lookup}
+        lang_lookup = {
+            "google_lens": C.lens_abbr_lookup,
+            "easyocr_directml": C.easyocr_abbr_lookup,
+            "onnx_directml": C.easyocr_abbr_lookup,
+            "paddleocr": C.paddle_abbr_lookup,
+        }
         # Use the mapped engine key (raw_engine) so a legacy display-name arg
         # resolves to the same language list as its mapped engine.
         lookup = lang_lookup.get(raw_engine, C.paddle_abbr_lookup)
-        disp = next((k for k, v in lookup.items() if v == args.get("lang", "en")), C.DEFAULT_SUBTITLE_LANGUAGE)
+        disp = next(
+            (k for k, v in lookup.items() if v == args.get("lang", "en")),
+            C.DEFAULT_SUBTITLE_LANGUAGE,
+        )
         settings["subtitle_language"] = disp
         for arg_key, arg_val in args.items():
-            if arg_key in ("ocr_engine", "lang", "video_path", "output", "send_notification", "allow_system_sleep", "subtitle_position"):
+            if arg_key in (
+                "ocr_engine",
+                "lang",
+                "video_path",
+                "output",
+                "send_notification",
+                "allow_system_sleep",
+                "subtitle_position",
+            ):
                 continue
             # Crop coordinates are restored separately via restore_box below;
             # writing them into settings would pollute the config file.
-            if arg_key in ("crop_x", "crop_y", "crop_width", "crop_height",
-                           "crop_x2", "crop_y2", "crop_width2", "crop_height2"):
+            if arg_key in (
+                "crop_x",
+                "crop_y",
+                "crop_width",
+                "crop_height",
+                "crop_x2",
+                "crop_y2",
+                "crop_width2",
+                "crop_height2",
+            ):
                 continue
             gui_key = f"--{arg_key}"
             if arg_key == "enable_label_detection":
                 settings["enable_label_detection"] = bool(arg_val)
             elif gui_key == "--directml_performance_preset":
-                settings[gui_key] = C.DIRECTML_PERFORMANCE_FROM_CLI.get(str(arg_val), "Balanced (recommended)")
+                settings[gui_key] = C.DIRECTML_PERFORMANCE_FROM_CLI.get(
+                    str(arg_val), "Balanced (recommended)"
+                )
             elif gui_key == "--directml_recognition_mode":
-                settings[gui_key] = C.DIRECTML_RECOGNITION_FROM_CLI.get(str(arg_val), "Stable Hybrid (recommended)")
+                settings[gui_key] = C.DIRECTML_RECOGNITION_FROM_CLI.get(
+                    str(arg_val), "Stable Hybrid (recommended)"
+                )
             elif gui_key == "--directml_frame_scan_mode":
-                settings[gui_key] = C.DIRECTML_FRAME_SCAN_FROM_CLI.get(str(arg_val), "CPU SSIM (compatible)")
+                settings[gui_key] = C.DIRECTML_FRAME_SCAN_FROM_CLI.get(
+                    str(arg_val), "CPU SSIM (compatible)"
+                )
             elif gui_key == "--onnx_directml_tuning":
-                settings[gui_key] = C.ONNX_DIRECTML_TUNING_FROM_CLI.get(str(arg_val), "Balanced ONNX (recommended)")
+                settings[gui_key] = C.ONNX_DIRECTML_TUNING_FROM_CLI.get(
+                    str(arg_val), "Balanced ONNX (recommended)"
+                )
             else:
                 settings[gui_key] = arg_val
         if args.get("output"):
             self.output_edit.setText(args["output"])
-        self.settings_tab.populate(settings, sorted(i18n.get_available_languages().keys()))
+        self.settings_tab.populate(
+            settings, sorted(i18n.get_available_languages().keys())
+        )
         self._settings.update(settings)
         # refresh the process-tab engine/language/position combos from the restored settings
         self._populate_engine_lang_pos()
@@ -1246,9 +1514,31 @@ class MainWindow(QMainWindow):
         w, h = self.preview.original_size
         rw, rh = w, h
         if "crop_x" in args:
-            boxes.append(restore_box(args["crop_x"], args["crop_y"], args["crop_width"], args["crop_height"], w, h, rw, rh))
+            boxes.append(
+                restore_box(
+                    args["crop_x"],
+                    args["crop_y"],
+                    args["crop_width"],
+                    args["crop_height"],
+                    w,
+                    h,
+                    rw,
+                    rh,
+                )
+            )
         if args.get("use_dual_zone") and "crop_x2" in args:
-            boxes.append(restore_box(args["crop_x2"], args["crop_y2"], args["crop_width2"], args["crop_height2"], w, h, rw, rh))
+            boxes.append(
+                restore_box(
+                    args["crop_x2"],
+                    args["crop_y2"],
+                    args["crop_width2"],
+                    args["crop_height2"],
+                    w,
+                    h,
+                    rw,
+                    rh,
+                )
+            )
         if boxes:
             self.preview.restore_crop_boxes(boxes)
             self.crop_label.setText(self.preview.crop_coords_text())
