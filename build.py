@@ -736,6 +736,9 @@ def main() -> None:
         "--include-data-files=../tools/ass_qafix/ass_qafix.py=tools/ass_qafix/ass_qafix.py",
         # Ignore PyTorch's JIT C++ builder and setuptools to save compile time
         "--nofollow-import-to=setuptools,pkg_resources,distutils,torch.utils.cpp_extension",
+        # Allow bytecode-included packages (sympy, mpmath) to be imported
+        "--no-deployment-flag=excluded-module-usage",
+        "--include-package-data=rapidocr_onnxruntime",
         "--jobs=4",
         cli_script,
     ]
