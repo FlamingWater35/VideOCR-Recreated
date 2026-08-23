@@ -474,6 +474,7 @@ Supported languages depend on the selected OCR engine.
 - For `paddleocr`: see the PaddleOCR documentation.
 - For `google_lens`: see the Google Lens / Vision language documentation.
 - For `easyocr_directml`: use EasyOCR-supported language codes, such as `en`.
+- For `onnx_directml`: the language is forwarded to RapidOCR's unified PP-OCRv6 model, which supports 50 languages including Chinese, English, Japanese, and 46 Latin-script languages.
 
 ### `subtitle_position`
 
