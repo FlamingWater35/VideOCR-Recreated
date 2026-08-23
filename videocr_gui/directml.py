@@ -15,17 +15,29 @@ def _powershell_video_controller_names() -> list[str]:
     """Return Windows video controller names for the DirectML GPU dropdown."""
     if sys.platform != "win32":
         return []
-
+    # Prevent the child console process (powershell/wmic) from flashing a
+    # console window when launched from the GUI-subsystem executable.
+    creationflags = subprocess.CREATE_NO_WINDOW
     commands = [
         [
-            "powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command",
+            "powershell",
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-Command",
             "Get-CimInstance Win32_VideoController | ForEach-Object { $_.Name }",
         ],
         ["wmic", "path", "win32_VideoController", "get", "name"],
     ]
     for cmd in commands:
         try:
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=5)
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=5,
+                creationflags=creationflags,
+            )
         except Exception:
             continue
         lines = []
