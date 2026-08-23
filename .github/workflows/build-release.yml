@@ -16,7 +16,6 @@
 # downloads them, generates the release notes from the actual uploaded
 # assets, and only then creates the draft release with the assets attached.
 # =============================================================================
-
 name: Build and Release
 
 on:
@@ -68,24 +67,20 @@ jobs:
         run: |
           $langDir = "C:\Program Files (x86)\Inno Setup 6\Languages"
           if (-not (Test-Path $langDir)) {
-            $langDir = "C:\Program Files\Inno Setup 6\Languages"
+              $langDir = "C:\Program Files\Inno Setup 6\Languages"
           }
-
           Write-Host "Cloning Inno Setup source repository to get all language files..."
           # Use --depth 1 for a fast shallow clone
           git clone --depth 1 https://github.com/jrsoftware/issrc.git C:\temp\issrc
-
-          # Copy both Official and Unofficial language files to ensure none are missing
+          # Copy both official and Unofficial language files to ensure none are missing
           $officialDir = "C:\temp\issrc\Files\Languages"
           $unofficialDir = "C:\temp\issrc\Files\Languages\Unofficial"
-
           if (Test-Path $officialDir) {
-            Copy-Item "$officialDir\*.isl" $langDir -Force -ErrorAction SilentlyContinue
+              Copy-Item "$officialDir\*.isl" $langDir -Force -ErrorAction SilentlyContinue
           }
           if (Test-Path $unofficialDir) {
-            Copy-Item "$unofficialDir\*.isl" $langDir -Force -ErrorAction SilentlyContinue
+              Copy-Item "$unofficialDir\*.isl" $langDir -Force -ErrorAction SilentlyContinue
           }
-
           Write-Host "Successfully populated Inno Setup languages folder."
         shell: pwsh
 
@@ -100,7 +95,7 @@ jobs:
           # Build tooling used by build.py (Nuitka compiler, downloads).
           python -m pip install nuitka requests
           # Ensure the DirectML build of ONNX Runtime wins over plain
-          # onnxruntime pulled in by rapidocr-onnxruntime.
+          # onnxruntime pulled in by the unified rapidocr package.
           python -m pip uninstall -y onnxruntime onnxruntime-directml
           python -m pip install --no-cache-dir onnxruntime-directml
           # SymPy/mpMath pins from the README (torch-directml compatibility).
@@ -139,6 +134,7 @@ jobs:
             --windows-installer true `
             --gui-only true `
             --iscc $iscc
+
           if ($LASTEXITCODE -ne 0) { throw "build.py failed with exit code $LASTEXITCODE" }
 
       - name: Split archives larger than the 2 GB release-asset limit
@@ -230,7 +226,7 @@ jobs:
           sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
             libgl1 libegl1 libopengl0 libxkbcommon0 libdbus-1-3 libfontconfig1 libglib2.0-0 \
             || sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
-            libgl1 libegl1 libopengl0 libxkbcommon0 libdbus-1-3 libfontconfig1 libglib2.0-0t64
+               libgl1 libegl1 libopengl0 libxkbcommon0 libdbus-1-3 libfontconfig1 libglib2.0-0t64
 
       - name: Install Python dependencies
         run: |
@@ -367,10 +363,10 @@ jobs:
           TAG: ${{ github.ref_name }}
         run: |
           if gh release create "$TAG" \
-            releases/* \
-            --draft \
-            --title "VideOCR Recreated $TAG" \
-            --notes-file "$RUNNER_TEMP/RELEASE_NOTES.md" 2>"$RUNNER_TEMP/gh_err.txt"; then
+               releases/* \
+               --draft \
+               --title "VideOCR Recreated $TAG" \
+               --notes-file "$RUNNER_TEMP/RELEASE_NOTES.md" 2>"$RUNNER_TEMP/gh_err.txt"; then
             echo "Draft release created for $TAG with all assets."
           elif grep -qi "already exists" "$RUNNER_TEMP/gh_err.txt"; then
             # Re-runs of this workflow hit the draft from the first attempt.

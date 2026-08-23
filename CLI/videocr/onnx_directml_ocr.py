@@ -38,34 +38,42 @@ def _make_session_options(tuning: str) -> tuple[Any | None, str]:
 
     tuning = (tuning or "balanced").strip().lower()
     so = ort.SessionOptions()
-
     try:
         if tuning in ("low_vram", "balanced"):
             so.enable_mem_pattern = False
             so.enable_cpu_mem_arena = False
-        if tuning == "low_vram":
-            so.intra_op_num_threads = 1
-            so.inter_op_num_threads = 1
-        elif tuning == "balanced":
-            so.intra_op_num_threads = 2
-        elif tuning == "max":
-            so.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
-        else:
-            so.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_EXTENDED
+            if tuning == "low_vram":
+                so.intra_op_num_threads = 1
+                so.inter_op_num_threads = 1
+            elif tuning == "balanced":
+                so.intra_op_num_threads = 2
+            elif tuning == "max":
+                so.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
+            else:
+                so.graph_optimization_level = (
+                    ort.GraphOptimizationLevel.ORT_ENABLE_EXTENDED
+                )
     except Exception:
         pass
-
     return so, f"session_options={tuning}"
 
 
 def _load_rapidocr_engine() -> tuple[Any | None, str]:
-    """Create a RapidOCR ONNXRuntime engine when available.
+    """Create a RapidOCR engine on ONNX Runtime DirectML when available.
 
-    v14 adds tuning-aware startup, more provider reporting, and safer fallback
-    attempts for RapidOCR versions with different constructor signatures.
+    The project uses the unified ``rapidocr`` package (the maintained successor
+    of the deprecated ``rapidocr-onnxruntime``). Its session-injection signature
+    varies between releases, so this loader attempts the most common constructor
+    shapes in order and falls back to package defaults. Because
+    ``onnxruntime-directml`` is the installed ONNX Runtime build, even the
+    default construction exposes ``DmlExecutionProvider``.
     """
-    tuning = os.environ.get("VIDEOCR_ONNX_DIRECTML_TUNING", "balanced").strip().lower() or "balanced"
+    tuning = (
+        os.environ.get("VIDEOCR_ONNX_DIRECTML_TUNING", "balanced").strip().lower()
+        or "balanced"
+    )
 
+    # 1. Verify ONNX Runtime is present and exposes the DirectML provider.
     try:
         import onnxruntime as ort  # type: ignore
     except Exception as e:
@@ -76,39 +84,68 @@ def _load_rapidocr_engine() -> tuple[Any | None, str]:
         providers = list(ort.get_available_providers())
     except Exception:
         providers = []
-
     if "DmlExecutionProvider" not in providers:
-        return None, f"ONNX Runtime is installed, but DmlExecutionProvider is not available. Providers: {providers}"
+        return (
+            None,
+            f"ONNX Runtime is installed, but DmlExecutionProvider is not available. Providers: {providers}",
+        )
 
     requested_index = os.environ.get("VIDEOCR_DIRECTML_DEVICE_INDEX", "").strip()
     provider_options: list[dict[str, Any]] = []
     if requested_index:
         # ORT DirectML uses this environment variable on many builds.
         os.environ["ORT_DML_DEVICE_ID"] = requested_index
-        provider_options = [{"device_id": int(requested_index)}, {}] if requested_index.isdigit() else []
+        provider_options = (
+            [{"device_id": int(requested_index)}, {}]
+            if requested_index.isdigit()
+            else []
+        )
 
     # Keep OpenMP from spinning hard on the CPU while DirectML is the target.
     if tuning in ("low_vram", "balanced"):
         os.environ.setdefault("OMP_NUM_THREADS", "1")
         os.environ.setdefault("OMP_WAIT_POLICY", "PASSIVE")
 
+    # 2. Import the unified rapidocr package.
     try:
-        from rapidocr_onnxruntime import RapidOCR  # type: ignore
+        from rapidocr import RapidOCR  # type: ignore
     except Exception as e:
-        return None, f"rapidocr-onnxruntime is not importable: {e}"
+        return None, f"rapidocr is not importable: {e}"
 
     session_options, session_note = _make_session_options(tuning)
     provider_list = ["DmlExecutionProvider", "CPUExecutionProvider"]
 
+    # 3. Attempt several constructor shapes. Different unified-rapidocr releases
+    #    accept the ONNX Runtime session configuration under different keyword
+    #    names (or only via a params/config dict). Each failed shape raises
+    #    TypeError/Exception and we try the next one. The final `{}` fallback
+    #    constructs the engine with package defaults, which still sees
+    #    DmlExecutionProvider because onnxruntime-directml is installed.
     attempts: list[dict[str, Any]] = []
     if session_options is not None and provider_options:
-        attempts.append({"providers": provider_list, "provider_options": provider_options, "sess_options": session_options})
-        attempts.append({"providers": provider_list, "provider_options": provider_options, "session_options": session_options})
+        attempts.append(
+            {
+                "providers": provider_list,
+                "provider_options": provider_options,
+                "sess_options": session_options,
+            }
+        )
+        attempts.append(
+            {
+                "providers": provider_list,
+                "provider_options": provider_options,
+                "session_options": session_options,
+            }
+        )
     if session_options is not None:
         attempts.append({"providers": provider_list, "sess_options": session_options})
-        attempts.append({"providers": provider_list, "session_options": session_options})
+        attempts.append(
+            {"providers": provider_list, "session_options": session_options}
+        )
     if provider_options:
-        attempts.append({"providers": provider_list, "provider_options": provider_options})
+        attempts.append(
+            {"providers": provider_list, "provider_options": provider_options}
+        )
     attempts.append({"providers": provider_list})
     attempts.append({})
 
@@ -131,17 +168,24 @@ def _load_rapidocr_engine() -> tuple[Any | None, str]:
             last_kwargs = kwargs
             continue
 
-    reason = _format_exception(last_error) if last_error else "unknown RapidOCR initialization error"
-    return None, f"RapidOCR ONNXRuntime could not initialize with tuning={tuning}, last kwargs={last_kwargs}: {reason}"
+    reason = (
+        _format_exception(last_error)
+        if last_error
+        else "unknown RapidOCR initialization error"
+    )
+    return (
+        None,
+        f"RapidOCR (unified) could not initialize with tuning={tuning}, last kwargs={last_kwargs}: {reason}",
+    )
 
 
-def _run_rapidocr_on_grid(engine: Any, image_path: str) -> list[tuple[list[list[float]], str, float]]:
+def _run_rapidocr_on_grid(
+    engine: Any, image_path: str
+) -> list[tuple[list[list[float]], str, float]]:
     raw = engine(image_path)
 
-    # Common RapidOCR return shapes:
-    #   (result, elapse) where result is list[[box, text, score], ...]
-    #   result directly as list[[box, text, score], ...]
-    if isinstance(raw, tuple):
+    # Unwrap the legacy (result, elapse) tuple shape.
+    if isinstance(raw, tuple) and raw:
         result = raw[0]
     else:
         result = raw
@@ -149,8 +193,22 @@ def _run_rapidocr_on_grid(engine: Any, image_path: str) -> list[tuple[list[list[
     if result is None:
         return []
 
+    # Newer unified `rapidocr` releases may return an OcrResult-like object
+    # exposing parallel boxes/txts/scores collections instead of a flat
+    # [[box, text, score], ...] list. Normalize both shapes.
+    boxes = getattr(result, "boxes", None)
+    txts = getattr(result, "txts", None)
+    scores = getattr(result, "scores", None)
+    if boxes is not None and txts is not None and scores is not None:
+        items = list(zip(boxes, txts, scores))
+    else:
+        try:
+            items = list(result)
+        except TypeError:
+            return []
+
     normalized: list[tuple[list[list[float]], str, float]] = []
-    for item in result:
+    for item in items:
         if not item or len(item) < 3:
             continue
         try:
@@ -165,20 +223,26 @@ def _run_rapidocr_on_grid(engine: Any, image_path: str) -> list[tuple[list[list[
 
 
 def run_onnx_directml_on_stitched_images(
-        input_dir: str,
-        stitch_map: dict[str, list[dict[str, Any]]],
-        lang: str,
-        use_gpu: bool,
-        directml_recognition_mode: str = "stable") -> dict[tuple[int, int], list[Any]]:
+    input_dir: str,
+    stitch_map: dict[str, list[dict[str, Any]]],
+    lang: str,
+    use_gpu: bool,
+    directml_recognition_mode: str = "stable",
+) -> dict[tuple[int, int], list[Any]]:
     """Experimental ONNXRuntime DirectML OCR pass.
 
     When RapidOCR + ONNXRuntime DirectML are available, this reads the already
     stitched VideOCR Recreated grids with ONNXRuntime. If the optional ONNX stack is not
     available or cannot initialize on DirectML, it falls back to the proven
     EasyOCR DirectML Hybrid backend so the run still finishes.
+
+    NOTE: `lang` is accepted for interface parity with the other backends but is
+    not forwarded to RapidOCR here (the unified package's language-parameter
+    format varies by release). RapidOCR runs with its default model set.
     """
     filenames = sorted(
-        f for f in os.listdir(input_dir)
+        f
+        for f in os.listdir(input_dir)
         if f.lower().endswith((".jpg", ".jpeg", ".png", ".webp", ".bmp"))
     )
     outputs: dict[tuple[int, int], list[Any]] = {}
@@ -187,9 +251,15 @@ def run_onnx_directml_on_stitched_images(
         return outputs
 
     if not use_gpu:
-        print("ONNX Runtime DirectML OCR was selected, but GPU usage is disabled. Falling back to EasyOCR CPU/Hybrid path.", flush=True)
+        print(
+            "ONNX Runtime DirectML OCR was selected, but GPU usage is disabled. Falling back to EasyOCR CPU/Hybrid path.",
+            flush=True,
+        )
         from .easyocr_directml import run_easyocr_on_stitched_images
-        return run_easyocr_on_stitched_images(input_dir, stitch_map, lang, use_gpu, directml_recognition_mode)
+
+        return run_easyocr_on_stitched_images(
+            input_dir, stitch_map, lang, use_gpu, directml_recognition_mode
+        )
 
     print("Starting ONNX Runtime DirectML OCR (experimental)...", flush=True)
     engine, reason = _load_rapidocr_engine()
@@ -201,7 +271,10 @@ def run_onnx_directml_on_stitched_images(
             flush=True,
         )
         from .easyocr_directml import run_easyocr_on_stitched_images
-        return run_easyocr_on_stitched_images(input_dir, stitch_map, lang, use_gpu, directml_recognition_mode)
+
+        return run_easyocr_on_stitched_images(
+            input_dir, stitch_map, lang, use_gpu, directml_recognition_mode
+        )
 
     try:
         image_times: list[float] = []
@@ -223,10 +296,17 @@ def run_onnx_directml_on_stitched_images(
             for box, text, confidence in raw_lines:
                 for adjusted_poly, meta in utils.unstitch_polygon(box, mapping):
                     key = (int(meta["frame_idx"]), int(meta["zone_idx"]))
-                    outputs.setdefault(key, []).append([adjusted_poly, (text, confidence)])
+                    outputs.setdefault(key, []).append(
+                        [adjusted_poly, (text, confidence)]
+                    )
 
-            print(f"\rStep 2/3: Performing ONNX DirectML OCR on image {index} of {total}", end="", flush=True)
+            print(
+                f"\rStep 2/3: Performing ONNX DirectML OCR on image {index} of {total}",
+                end="",
+                flush=True,
+            )
         print()
+
         if image_times:
             avg_t = sum(image_times) / len(image_times)
             print(
@@ -242,4 +322,7 @@ def run_onnx_directml_on_stitched_images(
             flush=True,
         )
         from .easyocr_directml import run_easyocr_on_stitched_images
-        return run_easyocr_on_stitched_images(input_dir, stitch_map, lang, use_gpu, directml_recognition_mode)
+
+        return run_easyocr_on_stitched_images(
+            input_dir, stitch_map, lang, use_gpu, directml_recognition_mode
+        )

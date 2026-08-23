@@ -174,10 +174,10 @@ def clean_pyside6_qml_artifacts() -> None:
         import PySide6  # noqa: F401
     except ImportError:
         return
+
     pyside6_init = getattr(PySide6, "__file__", None)
     if not pyside6_init:
         return
-
     pyside6_dir = Path(pyside6_init).resolve().parent
     removed = 0
     for directory in pyside6_dir.rglob("objects-*"):
@@ -185,7 +185,6 @@ def clean_pyside6_qml_artifacts() -> None:
             print(f"Removing PySide6 build artifact: {directory}")
             shutil.rmtree(directory, ignore_errors=True)
             removed += 1
-
     if removed:
         print(f"Removed {removed} PySide6 'objects-*' artifact folder(s).")
     else:
@@ -265,6 +264,7 @@ def sign_file(
     """Signs a file using signtool.exe on Windows."""
     if not signtool_path or sys.platform != "win32":
         return
+
     print(f"Signing {file_to_sign.name}...")
     if not Path(signtool_path).is_file():
         print(f"ERROR: Sign tool not found at '{signtool_path}'")
@@ -285,6 +285,7 @@ def sign_file(
     else:
         command.append("/a")
     command.append(str(file_to_sign))
+
     run_command(command)
     print(f"Successfully signed {file_to_sign.name}")
 
@@ -304,6 +305,7 @@ def create_final_archive(folder_path: Path, build_target: str) -> None:
         is_linux_cuda12_split = (
             sys.platform == "linux" and build_target == "gpu-cuda12.9"
         )
+
         command = [
             seven_zip_exe,
             "a",
@@ -335,7 +337,6 @@ def create_windows_installer(final_app_path: Path, args: argparse.Namespace) -> 
     # 2. Check the default Inno Setup installation path
     # 3. Fallback to system PATH
     default_iscc = r"C:\Program Files\Inno Setup 7\ISCC.exe"
-
     iscc_exe = (
         args.iscc
         or (default_iscc if Path(default_iscc).is_file() else None)
@@ -539,7 +540,6 @@ def package_target(
         final_app_path = releases_dir / final_app_folder_name
         print(f"Moving final application to '{final_app_path}'")
         shutil.move(str(temp_gui_dist), final_app_path)
-
         shutil.rmtree(work_dir)
 
         if (
@@ -693,6 +693,7 @@ def main() -> None:
         gui_dist_folder = Path("VideOCR_qt.dist")
         if gui_dist_folder.exists():
             shutil.rmtree(gui_dist_folder)
+
         run_command(
             [
                 sys.executable,
@@ -703,7 +704,7 @@ def main() -> None:
                 # The GUI only spawns the CLI. It does not run OCR itself.
                 # Exclude heavy AI/ML libraries to prevent MSVC C1002 "out of heap space"
                 # errors and to slash GUI compile times.
-                "--nofollow-import-to=torch,torchvision,sympy,mpmath,easyocr,onnxruntime,rapidocr_onnxruntime,scipy,scikit-image",
+                "--nofollow-import-to=torch,torchvision,sympy,mpmath,easyocr,onnxruntime,rapidocr,scipy,scikit-image",
                 "--jobs=4",
                 gui_script,
             ]
@@ -713,6 +714,7 @@ def main() -> None:
                 f"ERROR: Nuitka failed to create the GUI dist folder: {gui_dist_folder}"
             )
             sys.exit(1)
+
         gui_exe = gui_dist_folder / "VideOCR.exe"
         if gui_exe.exists():
             sign_file(args.signtool, args.sign_cert_name, gui_exe)
@@ -738,7 +740,7 @@ def main() -> None:
         "--nofollow-import-to=setuptools,pkg_resources,distutils,torch.utils.cpp_extension",
         # Allow bytecode-included packages (sympy, mpmath) to be imported
         "--no-deployment-flag=excluded-module-usage",
-        "--include-package-data=rapidocr_onnxruntime",
+        "--include-package-data=rapidocr",
         "--jobs=4",
         cli_script,
     ]
@@ -754,7 +756,7 @@ def main() -> None:
         "torch_directml",
         "easyocr",
         "torch",
-        "rapidocr_onnxruntime",
+        "rapidocr",
     ]
     for mod in optional_c_modules:
         try:
@@ -771,7 +773,6 @@ def main() -> None:
         cli_command.extend(["--nofollow-import-to=sympy", "--include-package=sympy"])
     except ImportError:
         pass
-
     try:
         __import__("mpmath")
         cli_command.extend(["--nofollow-import-to=mpmath", "--include-package=mpmath"])
@@ -779,10 +780,10 @@ def main() -> None:
         pass
 
     run_command(cli_command, cwd=str(cli_folder))
-
     if not cli_dist_folder.is_dir():
         print(f"ERROR: Nuitka failed to create the CLI dist folder: {cli_dist_folder}")
         sys.exit(1)
+
     cli_exe = cli_dist_folder / "videocr-cli.exe"
     if cli_exe.exists():
         sign_file(args.signtool, args.sign_cert_name, cli_exe)
@@ -832,6 +833,7 @@ def main() -> None:
     if gui_dist_folder:
         shutil.rmtree(gui_dist_folder)
     shutil.rmtree(cli_dist_folder)
+
     print_header("All Builds Complete!")
     print(f"All outputs are located in the '{releases_dir}' folder.")
 
