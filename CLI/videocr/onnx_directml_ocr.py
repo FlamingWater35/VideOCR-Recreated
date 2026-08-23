@@ -15,13 +15,11 @@ def _format_exception(e: BaseException) -> str:
 # ---------------------------------------------------------------------------
 # Language forwarding
 # ---------------------------------------------------------------------------
-# The unified `rapidocr` package runs PP-OCRv6, a single model family that
-# covers 50 languages (Chinese, English, Japanese and 46 Latin-script
-# languages). The requested subtitle language is forwarded to the engine so
-# the ONNX DirectML backend behaves like the PaddleOCR / EasyOCR backends.
-#
-# Project language codes are normalized to RapidOCR-compatible codes below.
-# Unknown two-letter codes are passed through; anything else falls back to "en".
+# PP-OCRv6 is a *unified* model family covering ~50 languages in a single
+# network, so there are no per-language rec models to select (unlike PP-OCRv5).
+# The requested language is normalized and logged for verification, but it is
+# not passed as a model-selection parameter — RapidOCR rejects a `lang` key in
+# its params for the unified PP-OCRv6 models.
 RAPIDOCR_LANG_MAP: dict[str, str] = {
     # PaddleOCR-style codes used across VideOCR
     "en": "en",
@@ -34,7 +32,7 @@ RAPIDOCR_LANG_MAP: dict[str, str] = {
     "te": "te",
     "ta": "ta",
     "ka": "ka",
-    # Latin-script and other common codes
+    # Common Latin-script / other codes
     "fr": "fr",
     "french": "fr",
     "de": "de",
@@ -100,6 +98,7 @@ def normalize_rapidocr_lang(lang: str) -> str:
     key = (lang or "en").strip()
     if key in RAPIDOCR_LANG_MAP:
         return RAPIDOCR_LANG_MAP[key]
+    # Many language IDs are already two-letter ISO codes.
     if len(key) == 2:
         return key
     return "en"
@@ -116,59 +115,23 @@ def _normalize_box(box: Any) -> list[list[float]]:
     return points
 
 
-def _make_session_options(tuning: str) -> tuple[Any | None, str]:
-    """Build conservative ONNX Runtime session options when possible.
-
-    DirectML can reserve a lot of VRAM with very large OCR grids. These options
-    do not force true batching, but they reduce extra memory patterns/arenas and
-    make the selected tuning visible in the logs. RapidOCR versions vary, so the
-    loader tries these options first and then gracefully falls back.
-    """
-    try:
-        import onnxruntime as ort  # type: ignore
-    except Exception:
-        return None, "session options unavailable"
-
-    tuning = (tuning or "balanced").strip().lower()
-    so = ort.SessionOptions()
-    try:
-        if tuning in ("low_vram", "balanced"):
-            so.enable_mem_pattern = False
-            so.enable_cpu_mem_arena = False
-            if tuning == "low_vram":
-                so.intra_op_num_threads = 1
-                so.inter_op_num_threads = 1
-            elif tuning == "balanced":
-                so.intra_op_num_threads = 2
-        elif tuning == "max":
-            so.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
-        else:
-            so.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_EXTENDED
-    except Exception:
-        pass
-    return so, f"session_options={tuning}"
-
-
-# PP-OCRv6 medium model identifiers (PaddleOCR naming convention). The unified
-# `rapidocr` package bundles the PP-OCRv6 *small* tier by default; we request
-# the medium tier for higher accuracy and fall back to the bundled defaults
-# when the medium models cannot be resolved.
-PP_OCRV6_MEDIUM_MODELS: dict[str, str] = {
-    "Det.model_path": "PP-OCRv6_medium_det",
-    "Rec.model_path": "PP-OCRv6_medium_rec",
-}
+# PP-OCRv6 medium model identifiers (PaddleOCR naming convention).
+# Detection: PP-OCRv6_medium_det (~59 MB), Recognition: PP-OCRv6_medium_rec (~73 MB).
+# The unified `rapidocr` package bundles the PP-OCRv6 *small* tier by default;
+# requesting the medium tier via `params` gives higher accuracy.
+PP_OCRV6_MEDIUM_DET = "PP-OCRv6_medium_det"
+PP_OCRV6_MEDIUM_REC = "PP-OCRv6_medium_rec"
 
 
 def _load_rapidocr_engine(lang: str = "en") -> tuple[Any | None, str]:
-    """Create a RapidOCR engine on ONNX Runtime DirectML with PP-OCRv6 models.
+    """Create a RapidOCR engine on ONNX Runtime DirectML with PP-OCRv6 medium models.
 
-    The unified ``rapidocr`` package is used. This loader:
-      * verifies ONNX Runtime exposes ``DmlExecutionProvider``,
-      * attempts to select the PP-OCRv6 *medium* det/rec models for the best
-        accuracy, falling back to the bundled defaults (PP-OCRv6 small tier)
-        when the medium models cannot be resolved, and
-      * forwards the requested language so recognition matches the other
-        engines.
+    The unified ``rapidocr`` package is used. Its constructor accepts EITHER a
+    ``params`` dict (model/config overrides) OR top-level provider/session
+    kwargs — not both at once. Since PP-OCRv6 medium model selection requires
+    ``params``, the engine relies on ONNX Runtime's default provider ordering
+    (which includes ``DmlExecutionProvider`` because ``onnxruntime-directml``
+    is installed) rather than explicit provider kwargs.
     """
     tuning = (
         os.environ.get("VIDEOCR_ONNX_DIRECTML_TUNING", "balanced").strip().lower()
@@ -192,107 +155,64 @@ def _load_rapidocr_engine(lang: str = "en") -> tuple[Any | None, str]:
             f"ONNX Runtime is installed, but DmlExecutionProvider is not available. Providers: {providers}",
         )
 
+    # 2. Device selection + CPU thread tuning via environment variables.
+    #    These apply regardless of how the ONNX Runtime session is created.
     requested_index = os.environ.get("VIDEOCR_DIRECTML_DEVICE_INDEX", "").strip()
-    provider_options: list[dict[str, Any]] = []
     if requested_index:
+        # ORT DirectML honors this environment variable on many builds.
         os.environ["ORT_DML_DEVICE_ID"] = requested_index
-        provider_options = (
-            [{"device_id": int(requested_index)}, {}]
-            if requested_index.isdigit()
-            else []
-        )
-
+    # Keep OpenMP from spinning hard on the CPU while DirectML is the target.
     if tuning in ("low_vram", "balanced"):
         os.environ.setdefault("OMP_NUM_THREADS", "1")
         os.environ.setdefault("OMP_WAIT_POLICY", "PASSIVE")
 
-    # 2. Import the unified rapidocr package.
+    # 3. Import the unified rapidocr package.
     try:
         from rapidocr import RapidOCR  # type: ignore
     except Exception as e:
         return None, f"rapidocr is not importable: {e}"
 
-    session_options, session_note = _make_session_options(tuning)
-    provider_list = ["DmlExecutionProvider", "CPUExecutionProvider"]
+    # 4. Language forwarding: normalize + log. PP-OCRv6 is a unified model, so
+    #    the language is verified here but not passed to the engine.
     rapidocr_lang = normalize_rapidocr_lang(lang)
-
-    # 3. ONNX Runtime session/provider kwargs. The exact keyword names accepted
-    #    by the unified rapidocr constructor vary between releases, so several
-    #    shapes are attempted.
-    ort_variants: list[dict[str, Any]] = []
-    if session_options is not None and provider_options:
-        ort_variants.append(
-            {
-                "providers": provider_list,
-                "provider_options": provider_options,
-                "sess_options": session_options,
-            }
-        )
-        ort_variants.append(
-            {
-                "providers": provider_list,
-                "provider_options": provider_options,
-                "session_options": session_options,
-            }
-        )
-    if session_options is not None:
-        ort_variants.append(
-            {"providers": provider_list, "sess_options": session_options}
-        )
-        ort_variants.append(
-            {"providers": provider_list, "session_options": session_options}
-        )
-    if provider_options:
-        ort_variants.append(
-            {"providers": provider_list, "provider_options": provider_options}
-        )
-    ort_variants.append({"providers": provider_list})
-    ort_variants.append({})
-
-    # 4. Model/language configuration variants, most preferred first. The
-    #    `params` dict uses dot-notation config keys understood by the unified
-    #    rapidocr package. If a variant is rejected (unknown keys, missing
-    #    models, etc.) the loader falls through to the next one, ultimately
-    #    landing on the bundled PP-OCRv6 small defaults.
-    model_variants: list[tuple[dict[str, Any], str]] = [
-        (
-            {"params": {**PP_OCRV6_MEDIUM_MODELS, "lang": rapidocr_lang}},
-            f"PP-OCRv6 medium + lang={rapidocr_lang}",
-        ),
-        ({"params": dict(PP_OCRV6_MEDIUM_MODELS)}, "PP-OCRv6 medium"),
-        (
-            {"params": {"lang": rapidocr_lang}},
-            f"bundled defaults + lang={rapidocr_lang}",
-        ),
-        ({}, "bundled defaults (PP-OCRv6 small)"),
-    ]
-
-    last_error: BaseException | None = None
-    last_desc = "no attempt made"
-    for model_kwargs, model_desc in model_variants:
-        for ort_kwargs in ort_variants:
-            kwargs = {**model_kwargs, **ort_kwargs}
-            try:
-                engine = RapidOCR(**kwargs)
-                return engine, (
-                    f"ONNX Runtime providers: {providers}; provider order: {provider_list}; "
-                    f"tuning: {tuning}; {session_note}; models: {model_desc}"
-                )
-            except TypeError as e:
-                last_error = e
-                last_desc = model_desc
-                continue
-            except Exception as e:
-                last_error = e
-                last_desc = model_desc
-                continue
-
-    reason = (
-        _format_exception(last_error)
-        if last_error
-        else "unknown RapidOCR initialization error"
+    print(
+        f"[ONNX] Language forwarding: input='{lang}' -> rapidocr='{rapidocr_lang}' "
+        f"(mapped={lang in RAPIDOCR_LANG_MAP})",
+        flush=True,
     )
-    return None, f"RapidOCR (unified) could not initialize ({last_desc}): {reason}"
+
+    provider_list = ["DmlExecutionProvider", "CPUExecutionProvider"]
+
+    # 5. Create the engine with PP-OCRv6 medium models. This is the known-good
+    #    configuration: `params` with `model_name` keys and no provider kwargs.
+    try:
+        engine = RapidOCR(
+            params={
+                "Det.model_name": PP_OCRV6_MEDIUM_DET,
+                "Rec.model_name": PP_OCRV6_MEDIUM_REC,
+            }
+        )
+        return engine, (
+            f"ONNX Runtime providers: {providers}; provider order: {provider_list}; "
+            f"tuning: {tuning}; models: PP-OCRv6 medium (model_name); lang: {rapidocr_lang}"
+        )
+    except Exception as medium_err:
+        # Fall back to the bundled defaults (PP-OCRv6 small) if the medium
+        # model config is rejected for any reason.
+        print(
+            f"[ONNX] PP-OCRv6 medium config rejected ({type(medium_err).__name__}); "
+            f"falling back to bundled defaults.",
+            flush=True,
+        )
+        try:
+            engine = RapidOCR()
+            return engine, (
+                f"ONNX Runtime providers: {providers}; provider order: {provider_list}; "
+                f"tuning: {tuning}; models: bundled defaults (PP-OCRv6 small); lang: {rapidocr_lang}"
+            )
+        except Exception as default_err:
+            reason = _format_exception(default_err)
+            return None, f"RapidOCR (unified) could not initialize: {reason}"
 
 
 def _run_rapidocr_on_grid(
@@ -348,12 +268,11 @@ def run_onnx_directml_on_stitched_images(
     """Experimental ONNXRuntime DirectML OCR pass.
 
     When RapidOCR + ONNXRuntime DirectML are available, this reads the already
-    stitched VideOCR Recreated grids with ONNXRuntime. The selected subtitle
-    language is forwarded to RapidOCR so it uses the matching PP-OCRv6
-    recognition configuration, mirroring the PaddleOCR / EasyOCR backends. If
-    the optional ONNX stack is not available or cannot initialize on DirectML,
-    it falls back to the proven EasyOCR DirectML Hybrid backend so the run
-    still finishes.
+    stitched VideOCR Recreated grids with ONNXRuntime using PP-OCRv6 medium
+    models. The selected subtitle language is normalized and logged. If the
+    optional ONNX stack is not available or cannot initialize on DirectML, it
+    falls back to the proven EasyOCR DirectML Hybrid backend so the run still
+    finishes.
     """
     filenames = sorted(
         f

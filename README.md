@@ -37,7 +37,7 @@ Supported OCR engines:
 
 - Local OCR with **[PaddleOCR](https://github.com/PaddlePaddle/PaddleOCR)**
 - Hybrid cloud recognition with **Google Lens**
-- **ONNX Runtime DirectML (AMD GPU Experimental)** — experimental; falls back to the EasyOCR DirectML Hybrid backend when the ONNX/DirectML stack is unavailable
+- **ONNX Runtime DirectML (AMD GPU Experimental)** — experimental; uses the unified RapidOCR package with PP-OCRv6 models; falls back to the EasyOCR DirectML Hybrid backend when the ONNX/DirectML stack is unavailable
 
 ### What changed in this fork
 
@@ -463,7 +463,7 @@ onnx_directml
 
 `easyocr_directml` uses the AMD DirectML fork backend. In the current stable hybrid mode, EasyOCR text detection runs on DirectML / AMD GPU and recognition falls back to CPU.
 
-`onnx_directml` is an experimental ONNX Runtime DirectML backend. If the ONNX stack is unavailable it falls back to the EasyOCR DirectML Hybrid path for that run.
+`onnx_directml` is an experimental ONNX Runtime DirectML backend that uses the unified RapidOCR package with PP-OCRv6 medium models for higher accuracy. The selected subtitle language is forwarded to RapidOCR. If the ONNX stack is unavailable it falls back to the EasyOCR DirectML Hybrid path for that run.
 
 ### `lang`
 
@@ -474,7 +474,7 @@ Supported languages depend on the selected OCR engine.
 - For `paddleocr`: see the PaddleOCR documentation.
 - For `google_lens`: see the Google Lens / Vision language documentation.
 - For `easyocr_directml`: use EasyOCR-supported language codes, such as `en`.
-- For `onnx_directml`: the language is forwarded to RapidOCR's unified PP-OCRv6 model, which supports 50 languages including Chinese, English, Japanese, and 46 Latin-script languages.
+- For `onnx_directml`: the language is forwarded to RapidOCR's unified PP-OCRv6 model, which covers 50 languages including Chinese, English, Japanese, and Latin-script languages.
 
 ### `subtitle_position`
 
