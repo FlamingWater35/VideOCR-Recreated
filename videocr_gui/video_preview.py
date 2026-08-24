@@ -29,8 +29,9 @@ from . import i18n
 from .config import log_error
 from .style import PALETTE
 
-
 # --- VideoHandler port (PyAV) -------------------------------------------------
+
+
 class VideoHandler:
     def __init__(self) -> None:
         self.container: av.container.InputContainer | None = None
@@ -223,6 +224,8 @@ class VideoHandler:
 
 
 # --- Crop box overlay -----------------------------------------------------------
+
+
 class ResizableRect(QGraphicsRectItem):
     """A crop rectangle with handles; calls ``on_change`` on geometry changes."""
 
@@ -294,10 +297,12 @@ class ResizableRect(QGraphicsRectItem):
         )
         r = QRectF(scene_rect)
         sx, sy = scene_pos.x(), scene_pos.y()
+
         # Clamp the drag position to the video bounds
         if self._bounds is not None:
             sx = max(self._bounds.left(), min(sx, self._bounds.right()))
             sy = max(self._bounds.top(), min(sy, self._bounds.bottom()))
+
         if "l" in mode:
             r.setLeft(min(sx, r.right() - 5))
         if "r" in mode:
@@ -306,13 +311,16 @@ class ResizableRect(QGraphicsRectItem):
             r.setTop(min(sy, r.bottom() - 5))
         if "b" in mode:
             r.setBottom(max(sy, r.top() + 5))
+
         r = r.normalized()
+
         # Clamp the resulting rect so it never leaves the video area
         if self._bounds is not None:
             r.setLeft(max(r.left(), self._bounds.left()))
             r.setRight(min(r.right(), self._bounds.right()))
             r.setTop(max(r.top(), self._bounds.top()))
             r.setBottom(min(r.bottom(), self._bounds.bottom()))
+
         self.setRect(QRectF(0.0, 0.0, r.width(), r.height()))
         self.setPos(r.topLeft())
         self._place_handles()
@@ -338,7 +346,9 @@ class ResizableRect(QGraphicsRectItem):
             if new_pos.y() + r.height() > bounds.bottom():
                 new_pos.setY(bounds.bottom() - r.height())
             value = new_pos
+
         result = super().itemChange(change, value)
+
         if change == QGraphicsItem.GraphicsItemChange.ItemPositionHasChanged:
             self._place_handles()
             if self.on_change:
@@ -482,8 +492,8 @@ class VideoPreview(QWidget):
     """Video frame display with crop-box drawing.
 
     Emits:
-      crop_changed(list[dict])  - crop boxes in image-space coords
-      frame_loaded(str, int)    - video path, duration_ms
+        crop_changed(list[dict])  - crop boxes in image-space coords
+        frame_loaded(str, int)    - video path, duration_ms
     """
 
     crop_changed = Signal(list)
@@ -529,6 +539,7 @@ class VideoPreview(QWidget):
         self.setMinimumHeight(300)
 
     # --- public API ----------------------------------------------------------
+
     @property
     def duration_ms(self) -> int:
         return self._duration_ms
@@ -559,7 +570,6 @@ class VideoPreview(QWidget):
         if props["width"] == 0 or props["height"] == 0 or props["duration_ms"] <= 0:
             self.video_error.emit(path)
             return False
-
         self._orig_w = props["width"]
         self._orig_h = props["height"]
         self._duration_ms = props["duration_ms"]
@@ -608,6 +618,7 @@ class VideoPreview(QWidget):
         self._current_ms = 0.0
 
     # --- crop boxes ----------------------------------------------------------
+
     def _img_point(self, scene_pos: QPointF) -> QPointF | None:
         x = scene_pos.x() - self._offset_x
         y = scene_pos.y() - self._offset_y
@@ -619,7 +630,9 @@ class VideoPreview(QWidget):
         for item in list(self._scene.items()):
             if isinstance(item, ResizableRect) or item.data(0) == "draw-preview":
                 self._scene.removeItem(item)
+
         video_bounds = self._video_bounds()
+
         for box in self._crop_boxes:
             (x1, y1), (x2, y2) = box["img_points"]
             rect = QRectF(
@@ -633,6 +646,7 @@ class VideoPreview(QWidget):
             rr.on_change = lambda r=rr: self._sync_box_from_item(r)
             box["_item"] = rr
             self._scene.addItem(rr)
+
         if self._drawing is not None:
             p1, p2 = self._drawing
             rect = QRectF(p1, p2).normalized()
@@ -645,15 +659,21 @@ class VideoPreview(QWidget):
             self._scene.addItem(tmp)
 
     def _sync_box_from_item(self, item: ResizableRect) -> None:
-        scene_rect = item.sceneBoundingRect()
+        # Use the item's geometric rect mapped to scene coordinates instead of
+        # sceneBoundingRect(), which includes the pen width (2px → 1px extra
+        # per side). Using sceneBoundingRect() caused the crop box to grow
+        # slightly on every seek/redraw cycle, drifting the bottom edge down.
+        scene_rect = item.mapRectToScene(item.rect())
         x1 = scene_rect.left() - self._offset_x
         y1 = scene_rect.top() - self._offset_y
         x2 = scene_rect.right() - self._offset_x
         y2 = scene_rect.bottom() - self._offset_y
+
         box = next((b for b in self._crop_boxes if b.get("_item") is item), None)
         if box is None:
             return
         box["img_points"] = ((x1, y1), (x2, y2))
+
         # keep absolute video coords in sync after move/resize
         from .crop import compute_crop_coords
 
@@ -706,6 +726,7 @@ class VideoPreview(QWidget):
             return
         p1, p2 = self._drawing
         self._drawing = None
+
         # Clamp both points to the video area so the box is never silently
         # discarded just because the mouse was released slightly outside.
         img1 = self._img_point_clamped(p1)
@@ -714,6 +735,7 @@ class VideoPreview(QWidget):
         if rect.width() < 7 or rect.height() < 7:
             self._redraw_boxes()
             return
+
         from .crop import compute_crop_coords
 
         coords = compute_crop_coords(
@@ -798,6 +820,7 @@ class VideoPreview(QWidget):
 
     def _img_point_clamped(self, scene_pos: QPointF) -> QPointF:
         """Scene point → image coordinates, clamped to the video area.
+
         Unlike _img_point this never returns None, so a box is never
         silently discarded just because the mouse ended slightly outside.
         """
