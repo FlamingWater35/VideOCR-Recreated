@@ -36,7 +36,28 @@ VideOCR Recreated extracts hardcoded/burned-in subtitles from videos and exports
 
 ---
 
-## ⚙️ Quick Setup
+## ⚙️ Settings Reference
+
+A quick guide to the most important GUI and CLI parameters to help you balance speed and accuracy.
+
+| Setting | Description | Tuning Tip |
+| :--- | :--- | :--- |
+| **Frames to Skip** | Number of frames to skip before sampling for OCR. | **Higher** = faster processing. **Lower** (or `0`) = more accurate timestamps. |
+| **OCR Image Max Width** | Downscales the cropped image before passing it to OCR. | **Lower** (e.g., `720`) = faster. **Higher** (e.g., `960`) = better for small text. |
+| **SSIM Threshold** | Structural similarity threshold for frame deduplication. | **Lower** (e.g., `85`) = skips more similar frames (faster). **Higher** (e.g., `92`) = safer, processes more frames. |
+| **Confidence Threshold** | Minimum confidence score for word predictions. | **Lower** = catches more words (but more typos). **Higher** = stricter, fewer false positives. |
+| **Max Merge Gap** | Max time gap (in seconds) to merge similar subtitle lines. | Increase (e.g., `0.3`) if your output has fragmented or repeated lines. |
+| **Crop Area** | Bounding box (X, Y, Width, Height) for OCR. | Keep it **tight** around the subtitles. Avoid full-frame OCR unless absolutely necessary. |
+| **Full Frame** | Forces OCR on the entire video frame instead of the crop. | Generally **unchecked**. Slower and less accurate; only use if subtitles move wildly. |
+| **Enable Label Detection** | Detects text outside the crop (e.g., names) and exports as `.ass`. | Adds valuable context but requires extra processing. Auto-runs `ass-qafix` post-processing. |
+| **DirectML Perf. Preset** | Controls the stitched grid target size for AMD GPUs. | `Compatibility` (1600x1600), `Balanced` (2400x2400, recommended), `Max` (4096x4096). |
+| **DirectML Rec. Mode** | How text recognition is handled on AMD GPUs. | **`Stable`** (GPU detection + CPU recognition, safest). `Auto`/`Experimental` may crash on some models. |
+| **DirectML Frame Scan** | How frames are pre-processed before OCR. | `CPU SSIM` (compatible), `AMD DirectML SSIM` (experimental), `FFmpeg D3D11VA` (prototype, fastest). |
+| **DirectML Grid Max W/H** | Manual override for stitched OCR grid size. | Larger values reduce per-image overhead but use more VRAM. |
+
+---
+
+## 🚀 Quick Setup
 
 ### 📦 Pre-built Releases (Recommended)
 
@@ -87,17 +108,16 @@ python build.py --target gpu-directml --clean true
 
 ---
 
-## 🚀 Usage
+## 🎯 Usage Examples
 
-### GUI Usage
+### GUI Workflow
 
 1. Import a video and seek using the timeline or arrow keys.
-2. Draw a crop box over the subtitle area (click and drag). *A tight crop is faster and more accurate than full-frame OCR.*
-3. Click **Run** to start extraction.
+2. Draw a crop box over the subtitle area (click and drag).
+3. Adjust settings using the **Settings Reference** table above.
+4. Click **Run** to start extraction.
 
-> **Recommended 1080p Anime Settings:** `Frames to Skip: 2`, `OCR Max Width: 720`, `SSIM Threshold: 92`, `Confidence: 65–75`.
-
-### CLI Usage
+### CLI Workflow
 
 Run `videocr-cli.exe -h` (or `python CLI\videocr_cli.py -h`) for a full list of parameters.
 
@@ -119,7 +139,7 @@ python CLI\videocr_cli.py --video_path "video.mp4" --output "output.srt" --ocr_e
 ## ⚡ Performance & Tuning
 
 | Mode | Best For | Notes |
-| --- | --- | --- |
+| :--- | :--- | :--- |
 | `paddleocr` (CPU) | Compatibility | Fully local, but can be slow. |
 | `paddleocr` (CUDA) | NVIDIA GPUs | Fastest official local GPU path. |
 | `google_lens` | Accuracy | Requires internet; hybrid cloud recognition. |
@@ -128,9 +148,8 @@ python CLI\videocr_cli.py --video_path "video.mp4" --output "output.srt" --ocr_e
 ### AMD DirectML Tuning Tips
 
 - **Expected GPU Usage**: 10–40% is normal. The pipeline bursts: CPU filters/stitches frames → GPU detects text → CPU recognizes/merges.
-- **Grid Size**: Larger grids reduce per-image overhead. Try `DirectML Grid Max Width/Height: 2400` (Balanced) or `4096` (Max) for high-end GPUs.
-- **Recognition Mode**: Keep on `Stable` (DirectML Detection + CPU Recognition) to avoid EasyOCR LSTM crashes. Use `Auto` or `Experimental` only for testing.
 - **Discrete GPU Selection**: If workloads land on your iGPU, set the environment variable `VIDEOCR_DIRECTML_DEVICE_INDEX=1`, or select `GPU 1` in the GUI Advanced Settings (this preference is saved automatically).
+- **Windows Graphics Preference**: If needed, force Windows *Settings → System → Display → Graphics* to "High performance" for `.venv\Scripts\python.exe`.
 
 ---
 
@@ -138,7 +157,7 @@ python CLI\videocr_cli.py --video_path "video.mp4" --output "output.srt" --ocr_e
 
 - **`No module named av` / `PySide6`**: Ensure you ran `pip install -e ".[directml]"` inside your activated virtual environment.
 - **`No module named sympy.core`**: Run `pip install --force-reinstall --no-cache-dir "sympy==1.13.3" "mpmath==1.3.0"`.
-- **DirectML using Integrated GPU**: Force Windows *Graphics Settings* to "High performance" for `.venv\Scripts\python.exe`, or set the device index as noted above.
+- **DirectML using Integrated GPU**: Force Windows *Graphics Settings* to "High performance" for the Python executable, or set the device index as noted above.
 - **ONNX DirectML `DmlExecutionProvider` not found**: Uninstall `onnxruntime` and install `onnxruntime-directml` instead. They cannot coexist in the same environment.
 - **EasyOCR DirectML LSTM Crash**: This is a known operator compatibility issue. Ensure Recognition Mode is set to `Stable` to utilize the CPU fallback safely.
 
@@ -152,13 +171,3 @@ This project is a **fork of a fork**, building upon the excellent work of:
 2. **[VideOCR-AMD-DirectML](https://github.com/BaseCrunch/VideOCR-AMD-DirectML)** by `BaseCrunch` (Added the AMD DirectML backend, GPU selection, performance presets, and D3D11VA frame-scan).
 
 This recreation adds the PySide6 GUI, Label Detection, ONNX DirectML support, and further refinements for a modern user experience.
-
-```
-
-### Key Improvements Made:
-1. **Badges & Download Button**: Added a prominent, styled "Download Latest Release" button pointing to the releases page, alongside standard tech-stack badges.
-2. **Consolidated Lineage**: Merged the repeated "fork of a fork" explanations from the header, "About", and "Credits" into a single, clean acknowledgment.
-3. **Summarized CLI Parameters**: Replaced the massive, verbose list of every single CLI flag with a concise summary and a recommendation to use `-h`, keeping only the most critical examples.
-4. **Streamlined Setup**: Grouped setup instructions logically (Pre-built vs. Source) and removed redundant step-by-step explanations that are obvious to developers.
-5. **Condensed Troubleshooting**: Reduced the troubleshooting section to the most common, high-impact fixes, removing overly verbose error outputs.
-6. **Improved Readability**: Used clear headings, emojis for visual scanning, and compact tables for performance tuning.
