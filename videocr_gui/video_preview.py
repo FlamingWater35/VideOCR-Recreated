@@ -7,12 +7,13 @@ almost verbatim; the PySimpleGUI ``Graph`` is replaced by a QGraphicsView scene.
 from __future__ import annotations
 
 import io
+import time
 from typing import Any, cast
 
 import av
 import numpy as np
 from PIL import Image
-from PySide6.QtCore import QPointF, QRectF, Qt, Signal
+from PySide6.QtCore import QPointF, QRectF, Qt, QTimer, Signal
 from PySide6.QtGui import QBrush, QColor, QImage, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import (
     QGraphicsItem,
@@ -521,6 +522,17 @@ class VideoPreview(QWidget):
         self._dual_zone = False
         self._max_boxes = 1
 
+        # Interactive-seek throttling: coalesce rapid seeks (slider drags) so
+        # only the latest target is decoded, at most once per interval. Keeps
+        # seeking responsive on long videos instead of decoding every pixel.
+        self._seek_interval_s = 0.04
+        self._pending_seek_ms: float | None = None
+        self._last_seek_mono = 0.0
+        self._seek_timer = QTimer(self)
+        self._seek_timer.setSingleShot(True)
+        self._seek_timer.setInterval(int(self._seek_interval_s * 1000))
+        self._seek_timer.timeout.connect(self._flush_pending_seek)
+
         self._scene = QGraphicsScene(self)
         self._view = PreviewView(self, self._scene)
         self._view.setRenderHints(
@@ -804,7 +816,79 @@ class VideoPreview(QWidget):
     def current_position_ms(self) -> float:
         return self._current_ms
 
+    def _center_last_crop_box(self, horizontal: bool, vertical: bool) -> None:
+        """Shared implementation for the center-crop actions.
+
+        Keeps the box's current size and centers it on the chosen axis/axes.
+        Emits ``crop_changed`` so the coordinates label and config persistence
+        update.
+        """
+        if not self._crop_boxes:
+            return
+        if self._orig_w <= 0 or self._orig_h <= 0:
+            return
+        if self._resized_w <= 0 or self._resized_h <= 0:
+            return
+        box = self._crop_boxes[-1]
+        coords = box.get("coords", {})
+        if not coords:
+            return
+        w = int(coords.get("crop_width", 0))
+        h = int(coords.get("crop_height", 0))
+        if w <= 0 or h <= 0:
+            return
+        new_x = int(coords.get("crop_x", 0))
+        new_y = int(coords.get("crop_y", 0))
+        if horizontal:
+            new_x = max(0, (self._orig_w - w) // 2)
+        if vertical:
+            new_y = max(0, (self._orig_h - h) // 2)
+        new_coords = {
+            "crop_x": new_x,
+            "crop_y": new_y,
+            "crop_width": w,
+            "crop_height": h,
+        }
+        box["coords"] = new_coords
+        box["img_points"] = self._make_box(new_coords)["img_points"]
+        self._redraw_boxes()
+        self.crop_changed.emit(list(self._crop_boxes))
+
+    def center_last_crop_box(self) -> None:
+        """Centers the most recent crop box both horizontally and vertically."""
+        self._center_last_crop_box(horizontal=True, vertical=True)
+
+    def center_last_crop_box_horizontal(self) -> None:
+        """Centers the most recent crop box horizontally (X axis only)."""
+        self._center_last_crop_box(horizontal=True, vertical=False)
+
+    def center_last_crop_box_vertical(self) -> None:
+        """Centers the most recent crop box vertically (Y axis only)."""
+        self._center_last_crop_box(horizontal=False, vertical=True)
+
     def seek_to(self, ms: float) -> None:
+        """Seeks to a timestamp, throttled for responsiveness on long videos.
+
+        The first seek in a burst decodes immediately (snappy keyboard/click
+        navigation). Rapid subsequent seeks (slider drags) are coalesced: only
+        the latest target is decoded, at most once per ``_seek_interval_s``,
+        so intermediate positions are dropped instead of queued one-by-one.
+        """
+        self._current_ms = float(ms)
+        self._pending_seek_ms = float(ms)
+        now = time.monotonic()
+        if now - self._last_seek_mono >= self._seek_interval_s:
+            self._flush_pending_seek()
+        elif not self._seek_timer.isActive():
+            self._seek_timer.start()
+
+    def _flush_pending_seek(self) -> None:
+        self._seek_timer.stop()
+        if self._pending_seek_ms is None:
+            return
+        ms = self._pending_seek_ms
+        self._pending_seek_ms = None
+        self._last_seek_mono = time.monotonic()
         self.show_frame(ms)
 
     def _video_bounds(self) -> QRectF:

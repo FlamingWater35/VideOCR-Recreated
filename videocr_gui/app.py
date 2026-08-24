@@ -8,7 +8,7 @@ import subprocess
 import sys
 from typing import Any
 
-from PySide6.QtCore import Qt, QTimer
+from PySide6.QtCore import QSize, Qt, QTimer
 from PySide6.QtGui import QAction, QIcon, QKeySequence
 from PySide6.QtWidgets import (
     QFileDialog,
@@ -225,8 +225,32 @@ class MainWindow(QMainWindow):
         self.crop_label = QLabel(i18n.tr("crop_not_set", "Not Set"))
         self.crop_label.setStyleSheet("font-family: monospace;")
         crop_row.addWidget(self.crop_label, 1)
+        self.center_crop_btn = QPushButton()
+        self.center_crop_btn.setIcon(resources.center_crop_icon())
+        self.center_crop_btn.setIconSize(QSize(16, 16))
+        self.center_crop_btn.setFixedSize(30, 30)
+        self.center_crop_btn.setToolTip(i18n.tr("btn_center_crop", "Center Crop Box"))
+        self.center_crop_btn.setEnabled(False)
+        self.center_crop_btn.clicked.connect(self.preview.center_last_crop_box)
+        self.center_h_btn = QPushButton()
+        self.center_h_btn.setIcon(resources.center_horizontal_icon())
+        self.center_h_btn.setIconSize(QSize(16, 16))
+        self.center_h_btn.setFixedSize(30, 30)
+        self.center_h_btn.setToolTip(i18n.tr("btn_center_crop_h", "Center Horizontally"))
+        self.center_h_btn.setEnabled(False)
+        self.center_h_btn.clicked.connect(self.preview.center_last_crop_box_horizontal)
+        self.center_v_btn = QPushButton()
+        self.center_v_btn.setIcon(resources.center_vertical_icon())
+        self.center_v_btn.setIconSize(QSize(16, 16))
+        self.center_v_btn.setFixedSize(30, 30)
+        self.center_v_btn.setToolTip(i18n.tr("btn_center_crop_v", "Center Vertically"))
+        self.center_v_btn.setEnabled(False)
+        self.center_v_btn.clicked.connect(self.preview.center_last_crop_box_vertical)
         self.clear_crop_btn = QPushButton(i18n.tr("btn_clear_crop", "Clear Crop"))
         self.clear_crop_btn.clicked.connect(self.preview.clear_crop)
+        crop_row.addWidget(self.center_crop_btn)
+        crop_row.addWidget(self.center_h_btn)
+        crop_row.addWidget(self.center_v_btn)
         crop_row.addWidget(self.clear_crop_btn)
         layout.addLayout(crop_row)
 
@@ -515,6 +539,9 @@ class MainWindow(QMainWindow):
         self.save_as_btn.setText(i18n.tr("btn_save_as", "Save As..."))
         self.info_btn.setText(i18n.tr("btn_info", "Info"))
         self.help_btn.setText(i18n.tr("btn_how_to_use", "How to Use"))
+        self.center_crop_btn.setToolTip(i18n.tr("btn_center_crop", "Center Crop Box"))
+        self.center_h_btn.setToolTip(i18n.tr("btn_center_crop_h", "Center Horizontally"))
+        self.center_v_btn.setToolTip(i18n.tr("btn_center_crop_v", "Center Vertically"))
         self.clear_crop_btn.setText(i18n.tr("btn_clear_crop", "Clear Crop"))
         self.run_btn.setText(i18n.tr("btn_run", "Run"))
         self.pause_btn.setText(i18n.tr("btn_pause", "Pause"))
@@ -731,6 +758,9 @@ class MainWindow(QMainWindow):
         # persist the crop selection when "Save Crop Box Selection" is enabled.
         self.crop_label.setText(self.preview.crop_coords_text())
         self.clear_crop_btn.setEnabled(bool(boxes))
+        self.center_crop_btn.setEnabled(bool(boxes))
+        self.center_h_btn.setEnabled(bool(boxes))
+        self.center_v_btn.setEnabled(bool(boxes))
         if not self._settings.get("--save_crop_box", False):
             return
         self._save_crop_boxes()
