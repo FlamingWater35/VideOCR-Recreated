@@ -17,7 +17,6 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QMainWindow,
     QPlainTextEdit,
-    QProgressBar,
     QPushButton,
     QTabWidget,
     QVBoxLayout,
@@ -33,7 +32,7 @@ from .progress import ProgressUpdate
 from .queue_tab import QueueTab
 from .settings_tab import SettingsTab
 from .video_preview import VideoPreview
-from .widgets import ClickableSlider, WheelGuardComboBox
+from .widgets import ClickableSlider, OutlinedProgressBar, WheelGuardComboBox
 from .workers import VIDEOCR_PATH, CLIWorker
 
 try:  # pragma: no cover
@@ -64,6 +63,7 @@ class MainWindow(QMainWindow):
     def __init__(self, settings: dict[str, Any] | None = None) -> None:
         super().__init__()
         self.setWindowTitle("VideOCR Recreated")
+
         icon = resources.icon_path()
         if icon:
             self.setWindowIcon(QIcon(icon))
@@ -81,6 +81,7 @@ class MainWindow(QMainWindow):
         self._wake_lock: Any = None
         self._taskbar: Any = None
         self._graph_size = (720, 405)
+
         self._crop_save_timer = QTimer(self)
         self._crop_save_timer.setSingleShot(True)
         self._crop_save_timer.setInterval(300)
@@ -198,7 +199,6 @@ class MainWindow(QMainWindow):
         self.pos_combo.setMinimumWidth(120)
         row3.addWidget(self.pos_combo)
         layout.addLayout(row3)
-
         self.engine_combo.currentIndexChanged.connect(self._on_engine_changed)
         self.lang_combo.currentIndexChanged.connect(self._on_lang_changed)
         self.pos_combo.currentIndexChanged.connect(self._on_pos_changed)
@@ -261,7 +261,7 @@ class MainWindow(QMainWindow):
         self.status_label = QLabel("")
         self.eta_label = QLabel("")
         self.eta_label.setObjectName("etaLabel")
-        self.progress_bar = QProgressBar()
+        self.progress_bar = OutlinedProgressBar()
         self.progress_bar.setRange(0, 100)
         self.progress_bar.setValue(0)
         progress_row.addWidget(self.status_label, 1)
@@ -297,7 +297,6 @@ class MainWindow(QMainWindow):
         seek_action_right.setShortcut(QKeySequence(Qt.Key.Key_Right))
         seek_action_right.triggered.connect(lambda: self._seek_step(1))
         self.addAction(seek_action_right)
-
         return page
 
     def _refresh_post_action_combo(self) -> None:
@@ -511,7 +510,6 @@ class MainWindow(QMainWindow):
         self.when_ready_lbl.setText(i18n.tr("lbl_when_ready", "When ready:"))
         self.log_lbl.setText(i18n.tr("lbl_log", "Log:"))
         self.time_label.setText(i18n.tr("time_text_empty", "Time: -/-"))
-
         self.open_btn.setText(i18n.tr("btn_browse", "Open File..."))
         self.folder_btn.setText(i18n.tr("btn_browse_folder", "Open Folder..."))
         self.save_as_btn.setText(i18n.tr("btn_save_as", "Save As..."))
@@ -523,7 +521,6 @@ class MainWindow(QMainWindow):
         self.cancel_btn.setText(i18n.tr("btn_cancel", "Cancel"))
         self.add_btn.setText(i18n.tr("btn_add_to_queue", "Add to Queue"))
         self.add_all_btn.setText(i18n.tr("btn_add_all_to_queue", "Add All to Queue"))
-
         self._populate_engine_lang_pos()
 
     def _version(self) -> str:
@@ -865,7 +862,18 @@ class MainWindow(QMainWindow):
             i18n.tr("engine_info", "OCR Engine Information"),
             i18n.tr(
                 "engine_message",
-                "PaddleOCR (Det. + Rec.):\n• 100% local processing.\n• Both text detection and recognition are done locally.\n\nPaddleOCR (Det.) + Google Lens (Rec.):\n• Hybrid processing.\n• PaddleOCR handles text detection locally.\n• Google Lens (online) handles text recognition.\n• Requires an active internet connection.\n\nONNX Runtime DirectML (AMD GPU Experimental):\n• Experimental local ONNX Runtime DirectML backend for Windows AMD GPUs.\n• Uses RapidOCR with the DirectML execution provider.\n• Falls back to EasyOCR DirectML Hybrid when the ONNX/DirectML stack is unavailable.",
+                "PaddleOCR (Det. + Rec.):\n"
+                "• 100% local processing.\n"
+                "• Both text detection and recognition are done locally.\n\n"
+                "PaddleOCR (Det.) + Google Lens (Rec.):\n"
+                "• Hybrid processing.\n"
+                "• PaddleOCR handles text detection locally.\n"
+                "• Google Lens (online) handles text recognition.\n"
+                "• Requires an active internet connection.\n\n"
+                "ONNX Runtime DirectML (AMD GPU Experimental):\n"
+                "• Experimental local ONNX Runtime DirectML backend for Windows AMD GPUs.\n"
+                "• Uses RapidOCR with the DirectML execution provider.\n"
+                "• Falls back to EasyOCR DirectML Hybrid when the ONNX/DirectML stack is unavailable.",
             ),
         )
 
@@ -875,7 +883,11 @@ class MainWindow(QMainWindow):
             i18n.tr("help_title", "Cropping Info"),
             i18n.tr(
                 "help_message",
-                "Draw a crop box over the subtitle region in the video.\nUse click+drag to select.\nIn 'Dual Zone' mode, you can draw two crop boxes.\nIf no crop box is selected, the bottom third of the video\nwill be used for OCR by default.",
+                "Draw a crop box over the subtitle region in the video.\n"
+                "Use click+drag to select.\n"
+                "In 'Dual Zone' mode, you can draw two crop boxes.\n"
+                "If no crop box is selected, the bottom third of the video\n"
+                "will be used for OCR by default.",
             ),
         )
 
@@ -934,7 +946,7 @@ class MainWindow(QMainWindow):
                     i18n.tr("title_duplicate", "Duplicate"),
                     i18n.tr(
                         "msg_duplicate_queue_running",
-                        "A job for '{}' is currently active (Status: {}).\n\nPlease change the output path or wait for it to finish.",
+                        "A job for '{}' is currently active (Status: {}).\nPlease change the output path or wait for it to finish.",
                     ).format(os.path.basename(target), status),
                 )
                 return
@@ -943,7 +955,7 @@ class MainWindow(QMainWindow):
                 i18n.tr("title_duplicate_job", "Duplicate Job"),
                 i18n.tr(
                     "popup_duplicate_msg",
-                    "A job for this output file already exists (Status: {}).\n\nDo you want to update/restart it with current settings?",
+                    "A job for this output file already exists (Status: {}).\nDo you want to update/restart it with current settings?",
                 ).format(status),
             ):
                 self._batch_queue[existing]["args"] = args
@@ -990,7 +1002,7 @@ class MainWindow(QMainWindow):
         self._refresh_queue_ui()
         if skipped:
             msg = i18n.tr(
-                "msg_batch_report_summary", "Added {} videos.\n\nSkipped {} video(s):\n"
+                "msg_batch_report_summary", "Added {} videos.\nSkipped {} video(s):\n"
             ).format(added, len(skipped))
             msg += "\n".join(skipped[:10])
             if len(skipped) > 10:
@@ -1044,7 +1056,7 @@ class MainWindow(QMainWindow):
                 i18n.tr("title_duplicate_job", "Duplicate Job"),
                 i18n.tr(
                     "popup_duplicate_msg",
-                    "A job for this output file already exists (Status: {}).\n\nDo you want to restart it with current settings?",
+                    "A job for this output file already exists (Status: {}).\nDo you want to restart it with current settings?",
                 ).format(self._batch_queue[existing]["status"]),
             ):
                 self._batch_queue[existing]["args"] = args
@@ -1134,7 +1146,7 @@ class MainWindow(QMainWindow):
     def _on_fatal(self, message: str) -> None:
         self._append_log(
             f"\n--- FATAL ERROR ---\n"
-            f"{i18n.tr('fatal_error_reason_1', 'Your system does not meet the hardware requirements.')}\n\n"
+            f"{i18n.tr('fatal_error_reason_1', 'Your system does not meet the hardware requirements.')}\n"
             f"{i18n.tr('fatal_error_reason_2', 'Reason:')} {message}\n"
         )
 
@@ -1287,7 +1299,6 @@ class MainWindow(QMainWindow):
                 if self._settings.get("prevent_system_sleep", True):
                     self._set_system_awake(True)
         else:
-            self._set_system_awake(False)
             if self._worker.pause():
                 self._paused = True
                 self.pause_btn.setText(i18n.tr("btn_resume", "Resume"))
@@ -1300,6 +1311,7 @@ class MainWindow(QMainWindow):
                     if j["status"] == "Processing":
                         j["status"] = "Paused"
                         break
+                self._set_system_awake(False)
         self._refresh_queue_ui()
 
     def _on_resume(self) -> None:
@@ -1439,6 +1451,7 @@ class MainWindow(QMainWindow):
             # raw_engine is already a display name (from the legacy map).
             engine = raw_engine
         settings["ocr_engine"] = engine or C.OCR_ENGINES[0]
+
         lang_lookup = {
             "google_lens": C.lens_abbr_lookup,
             "easyocr_directml": C.easyocr_abbr_lookup,
@@ -1453,6 +1466,7 @@ class MainWindow(QMainWindow):
             C.DEFAULT_SUBTITLE_LANGUAGE,
         )
         settings["subtitle_language"] = disp
+
         for arg_key, arg_val in args.items():
             if arg_key in (
                 "ocr_engine",
@@ -1507,6 +1521,7 @@ class MainWindow(QMainWindow):
         # refresh the process-tab engine/language/position combos from the restored settings
         self._populate_engine_lang_pos()
         config.save_settings(self._settings)
+
         # restore crop boxes
         boxes = []
         from .crop import restore_box
