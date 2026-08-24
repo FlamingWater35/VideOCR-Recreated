@@ -3,7 +3,6 @@
   "tab_batch": "File d'attente",
   "tab_advanced": "Paramètres avancés",
   "tab_about": "À propos",
-
   "lbl_source": "Source :",
   "lbl_output_srt": "Fichier SRT de sortie :",
   "lbl_ocr_engine": "Moteur OCR :",
@@ -34,7 +33,6 @@
   "lbl_log": "Journal:",
   "video_file_types": "Fichiers vidéo",
   "all_file_types": "Tous les fichiers",
-
   "lbl_ocr_settings": "Paramètres OCR :",
   "lbl_time_start": "Heure de début (ex. : 0:00 ou 1:23:45) :",
   "tip_time_start": "Indiquez l'heure de début du traitement.",
@@ -107,7 +105,6 @@
   "tip_prevent_sleep": "Si coché, l’ordinateur ne passera pas en veille pendant le traitement.",
   "chk_check_updates": "Vérifier les mises à jour au démarrage",
   "tip_check_updates": "Vérifie automatiquement les nouvelles versions de VideOCR Recreated au démarrage.",
-
   "btn_browse": "Ouvrir fichier...",
   "btn_browse_folder": "Ouvrir dossier...",
   "btn_save_as": "Enregistrer sous...",
@@ -118,7 +115,6 @@
   "btn_add_all_to_queue": "Tout ajouter à la file",
   "btn_pause": "Pause",
   "btn_resume": "Reprendre",
-
   "lbl_queue_title": "File d'attente",
   "col_video_file": "Fichier vidéo",
   "col_output_file": "Fichier de sortie",
@@ -129,20 +125,17 @@
   "btn_edit": "Éditer",
   "btn_remove": "Supprimer",
   "btn_clear_queue": "Vider la file",
-
   "tip_batch_up": "Déplacer la tâche sélectionnée vers le haut",
   "tip_batch_down": "Déplacer la tâche sélectionnée vers le bas",
   "tip_batch_reset": "Réinitialiser une tâche annulée",
   "tip_batch_edit": "Renvoyer la tâche vers la fenêtre principale pour modification",
   "tip_batch_remove": "Supprimer la tâche sélectionnée de la file",
   "tip_batch_clear": "Vider la file d'attente actuelle",
-
   "lbl_about_version": "Version : {version}",
   "lbl_about_fork": "Ce projet est un fork du VideOCR original de timminator.",
   "lbl_about_fork_repo": "Dépôt du fork :",
   "lbl_get_newest": "Obtenez la dernière version ici :",
   "lbl_bug_report": "Vous avez trouvé un bug ou une suggestion ? Ouvrez un ticket ici :",
-
   "update_title": "Mise à jour disponible",
   "update_available_1": "Une nouvelle version de VideOCR Recreated ({}) est disponible !",
   "update_available_2": "Vous utilisez actuellement la version {}.",
@@ -151,14 +144,11 @@
   "update_msg_uptodate": "Vous utilisez la dernière version de VideOCR Recreated.",
   "update_title_error": "Erreur",
   "update_msg_error": "Échec de la vérification des mises à jour.\nVeuillez vérifier votre connexion Internet.",
-
   "btn_yes": "Oui",
   "btn_no": "Non",
-
   "save_as_title": "Enregistrer sous",
   "save_as_filter_name": "Sous-titre SubRip",
   "save_as_all_files": "Tous les fichiers",
-
   "status_starting": "Démarrage de l'extraction des sous-titres...\n",
   "status_success": "Fichier de sous-titres généré avec succès !\n",
   "status_cancelling": "\nAnnulation du processus...\n",
@@ -170,12 +160,10 @@
   "batch_finished_count": "Lot terminé : {} fichiers traités.",
   "status_queue_cancelled": "File d'attente annulée",
   "status_queue_finished": "File d'attente terminée",
-
   "lbl_step": "Étape",
   "progress_step1_action": "Traitement de la vidéo...",
   "progress_step2_action": "Détection de texte sur l'image {current} sur {total} ({percent}%)",
   "progress_step3_action": "OCR effectué sur l'image {current} sur {total} ({percent}%)",
-
   "cli_info_pass": "Exécution de la passe de détection de texte seule sur {} image(s) filtrée(s) assemblée(s) en {} grille(s) d'images...",
   "cli_filtered": "Filtrage de {} image(s) redondante(s) via la détection de texte et l'analyse SSIM de boîte ajustée.",
   "cli_analyzing": "Analyse de l'image {} sur {}",
@@ -185,9 +173,7 @@
   "cli_generating_subs": "Génération des sous-titres...",
   "log_reached_end": "Heure de fin atteinte. Arrêt.",
   "unknown": "inconnu",
-
   "eta_step": "ETA Étape",
-
   "fatal_error_header": "--- ERREUR FATALE ---",
   "fatal_error_reason_1": "Votre système ne répond pas aux exigences matérielles.",
   "fatal_error_reason_2": "Raison :",
@@ -206,7 +192,6 @@
   "error_no_process_to_cancel": "\nAucun processus en cours à annuler.\n",
   "title_error": "Erreur",
   "error_video_not_found": "Fichier vidéo introuvable :\n{}",
-
   "val_err_header": "Erreurs de validation :\n",
   "val_err_start_time": "Format de l'heure de début invalide. Utilisez MM:SS ou HH:MM:SS.",
   "val_err_end_time": "Format de l'heure de fin invalide. Utilisez MM:SS ou HH:MM:SS.",
@@ -219,7 +204,6 @@
   "err_crop_y_out": "{} Y ({}) est en dehors de la hauteur de la vidéo ({}).",
   "err_crop_w_out": "{} dépasse les limites (X+L > Largeur).",
   "err_crop_h_out": "{} dépasse les limites (Y+H > Hauteur).",
-
   "title_duplicate": "Doublon",
   "msg_duplicate_queue": "Une tâche pour '{}' est déjà dans la file.\n\nVeuillez changer le chemin de sortie ou supprimer la tâche de la file.",
   "msg_duplicate_queue_running": "Une tâche pour '{}' est actuellement active (État : {}).\n\nVeuillez modifier le chemin de sortie ou attendre qu'elle se termine.",
@@ -227,7 +211,6 @@
   "popup_duplicate_msg": "Une tâche pour ce fichier de sortie existe déjà (État : {}).\n\nVoulez-vous la mettre à jour/redémarrer avec les paramètres actuels ?",
   "popup_cannot_edit_running": "Une tâche actuellement {} ne peut pas être modifiée.\nVeuillez d'abord arrêter ou annuler le processus.",
   "popup_cannot_remove_running": "La tâche en cours ou en pause ne peut pas être supprimée.\nVeuillez d'abord arrêter ou annuler le processus.",
-
   "title_progress": "Progression",
   "msg_scanning_init": "Initialisation de l'analyse...",
   "msg_scanning_progress": "Analyse du fichier {} sur {}...",
@@ -236,7 +219,6 @@
   "title_batch_report": "Rapport de lot",
   "msg_batch_report_summary": "{} vidéos ajoutées.\n\n{} vidéo(s) ignorée(s) :\n",
   "msg_and_others": "...et d'autres.",
-
   "lbl_when_ready": "Une fois terminé :",
   "action_none": "Ne rien faire",
   "action_sleep": "Veille",
@@ -249,7 +231,6 @@
   "lbl_action_countdown": "Le système exécutera '{}' dans {} secondes.",
   "btn_proceed": "Procéder maintenant",
   "log_action_cancelled": "Action de fin annulée par l'utilisateur.",
-
   "status_pending": "En attente",
   "status_processing": "En cours",
   "status_completed": "Terminé",
@@ -304,6 +285,8 @@
   "tip_label_reappear_gap": "Les réapparitions de la même étiquette dans cet écart sont fusionnées en un seul événement.",
   "chk_label_filter_single": "Filtrer le bruit des étiquettes à un seul caractère",
   "tip_label_filter_single": "Supprime les étiquettes d'un seul caractère/chiffre ASCII (p. ex. « M », « 3 ») qui sont généralement du bruit OCR. Les caractères chinois isolés sont conservés.",
+  "chk_label_ssim_dedup": "Activer la dédup SSIM des labels (Étape 2)",
+  "tip_label_ssim_dedup": "Déduplique les détections de labels visuellement identiques à l'étape 2 via SSIM à boîte serrée. Réduit les appels de reconnaissance redondants tout en préservant les comptages de confirmation.",
   "lbl_label_conf_threshold": "Seuil de confiance des labels (0-100) :",
   "tip_label_conf_threshold": "Seuil de confiance pour la reconnaissance de texte des labels. Les valeurs plus basses conservent les textes de noms plus petits ou plus difficiles ; les valeurs plus élevées suppriment les détections incertaines.",
   "lbl_label_text_similarity": "Similitude de texte des labels (0-100) :",

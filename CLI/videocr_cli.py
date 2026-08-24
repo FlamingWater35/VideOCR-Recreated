@@ -434,6 +434,12 @@ def main() -> None:
         help="Minimum length ratio between two close detections for the close-position merge shortcut (default: 0.5)",
     )
     parser.add_argument(
+        "--label_ssim_dedup",
+        type=lambda x: x.lower() == "true",
+        default=True,
+        help="Enable tight-box SSIM deduplication for labels in Step 2 (reduces redundant recognition calls, default: true)",
+    )
+    parser.add_argument(
         "--allow_system_sleep",
         type=lambda x: x.lower() == "true",
         default=False,
@@ -589,6 +595,7 @@ def main() -> None:
                 label_close_pos_distance=args.label_close_pos_distance,
                 label_close_pos_length_ratio=args.label_close_pos_length_ratio,
                 label_conf_threshold=args.label_conf_threshold,
+                label_ssim_dedup=args.label_ssim_dedup,
             )
     except ValueError as e:
         print(f"Error: {e}")

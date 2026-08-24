@@ -3,7 +3,6 @@
   "tab_batch": "キュー",
   "tab_advanced": "詳細設定",
   "tab_about": "について",
-
   "lbl_source": "ソース:",
   "lbl_output_srt": "SRT出力:",
   "lbl_ocr_engine": "OCRエンジン:",
@@ -34,7 +33,6 @@
   "lbl_log": "ログ:",
   "video_file_types": "ビデオファイル",
   "all_file_types": "すべてのファイル",
-
   "lbl_ocr_settings": "OCR設定:",
   "lbl_time_start": "開始時間 (例: 0:00 または 1:23:45):",
   "tip_time_start": "処理を開始する開始時間を指定します。",
@@ -107,7 +105,6 @@
   "tip_prevent_sleep": "チェックすると、処理中にコンピューターがスリープしないようにします。",
   "chk_check_updates": "起動時に更新をチェック",
   "tip_check_updates": "アプリケーション起動時にVideOCR Recreatedの新しいバージョンを自動的にチェックします。",
-
   "btn_browse": "ファイルを開く...",
   "btn_browse_folder": "フォルダを開く...",
   "btn_save_as": "名前を付けて保存...",
@@ -118,7 +115,6 @@
   "btn_add_all_to_queue": "すべてキューに追加",
   "btn_pause": "一時停止",
   "btn_resume": "再開",
-
   "lbl_queue_title": "キュー",
   "col_video_file": "ビデオファイル",
   "col_output_file": "出力ファイル",
@@ -129,20 +125,17 @@
   "btn_edit": "編集",
   "btn_remove": "削除",
   "btn_clear_queue": "キューをクリア",
-
   "tip_batch_up": "選択したジョブを上に移動",
   "tip_batch_down": "選択したジョブを下に移動",
   "tip_batch_reset": "キャンセルされたジョブをリセット",
   "tip_batch_edit": "編集のためにメインウィンドウに戻す",
   "tip_batch_remove": "選択したジョブをキューから削除",
   "tip_batch_clear": "現在のキューをクリア",
-
   "lbl_about_version": "バージョン: {version}",
   "lbl_about_fork": "このプロジェクトは timminator によるオリジナルの VideOCR のフォークです。",
   "lbl_about_fork_repo": "フォークリポジトリ:",
   "lbl_get_newest": "最新バージョンはこちらから入手:",
   "lbl_bug_report": "バグを見つけたり提案がありますか？こちらでイシューを開いてください:",
-
   "update_title": "アップデート利用可能",
   "update_available_1": "VideOCR Recreatedの新しいバージョン ({}) が利用可能です！",
   "update_available_2": "現在バージョン {} を使用しています。",
@@ -151,14 +144,11 @@
   "update_msg_uptodate": "VideOCR Recreatedの最新バージョンを実行しています。",
   "update_title_error": "エラー",
   "update_msg_error": "更新の確認に失敗しました。\nインターネット接続を確認してください。",
-
   "btn_yes": "はい",
   "btn_no": "いいえ",
-
   "save_as_title": "名前を付けて保存",
   "save_as_filter_name": "SubRip字幕",
   "save_as_all_files": "すべてのファイル",
-
   "status_starting": "字幕抽出を開始しています...\n",
   "status_success": "字幕ファイルの生成に成功しました！\n",
   "status_cancelling": "\nプロセスをキャンセルしています...\n",
@@ -170,12 +160,10 @@
   "batch_finished_count": "バッチ完了: {} ファイルを処理しました。",
   "status_queue_cancelled": "キューがキャンセルされました",
   "status_queue_finished": "キューが完了しました",
-
   "lbl_step": "ステップ",
   "progress_step1_action": "ビデオを処理しています...",
   "progress_step2_action": "画像 {current} / {total} でテキスト検出を実行しています ({percent}%)",
   "progress_step3_action": "画像 {current} / {total} でOCRを実行しています ({percent}%)",
-
   "cli_info_pass": "{} 個の画像グリッドに結合された {} 個のフィルタリング済みフレームに対してテキスト検出のみのパスを実行しています...",
   "cli_filtered": "テキスト検出とタイトボックスSSIM分析により、{} 個の冗長なフレームをフィルタリングしました。",
   "cli_analyzing": "フレーム {} / {} を分析しています",
@@ -185,9 +173,7 @@
   "cli_generating_subs": "字幕を生成しています...",
   "log_reached_end": "終了時間に達しました。停止します。",
   "unknown": "不明",
-
   "eta_step": "ETA ステップ",
-
   "fatal_error_header": "--- 致命的エラー ---",
   "fatal_error_reason_1": "お使いのシステムはハードウェア要件を満たしていません。",
   "fatal_error_reason_2": "理由:",
@@ -206,7 +192,6 @@
   "error_no_process_to_cancel": "\nキャンセルする実行中のプロセスがありません。\n",
   "title_error": "エラー",
   "error_video_not_found": "ビデオファイルが見つかりません：\n{}",
-
   "val_err_header": "検証エラー:\n",
   "val_err_start_time": "無効な開始時間形式。MM:SSまたはHH:MM:SSを使用してください。",
   "val_err_end_time": "無効な終了時間形式。MM:SSまたはHH:MM:SSを使用してください。",
@@ -219,7 +204,6 @@
   "err_crop_y_out": "{} Y ({}) はビデオ高さ ({}) の外側です。",
   "err_crop_w_out": "{} が範囲外です (X+W > 幅)。",
   "err_crop_h_out": "{} が範囲外です (Y+H > 高さ)。",
-
   "title_duplicate": "重複",
   "msg_duplicate_queue": "'{}' のジョブは既にキューにあります。\n\n出力パスを変更するか、キューからジョブを削除してください。",
   "msg_duplicate_queue_running": "'{}' のジョブは現在アクティブです (ステータス: {})。\n\n出力パスを変更するか、完了するまでお待ちください。",
@@ -227,7 +211,6 @@
   "popup_duplicate_msg": "この出力ファイルのジョブは既に存在します (ステータス: {})。\n\n現在の設定で更新/再開しますか？",
   "popup_cannot_edit_running": "現在 {} のジョブは編集できません。\n先にプロセスを停止またはキャンセルしてください。",
   "popup_cannot_remove_running": "実行中または一時停止中のジョブは削除できません。\n先にプロセスを停止またはキャンセルしてください。",
-
   "title_progress": "進行状況",
   "msg_scanning_init": "スキャンを初期化中...",
   "msg_scanning_progress": "ファイル {} / {} をスキャン中...",
@@ -236,7 +219,6 @@
   "title_batch_report": "バッチレポート",
   "msg_batch_report_summary": "{} 個のビデオを追加しました。\n\n{} 個のビデオをスキップしました:\n",
   "msg_and_others": "...他",
-
   "lbl_when_ready": "完了時:",
   "action_none": "何もしない",
   "action_sleep": "スリープ",
@@ -249,7 +231,6 @@
   "lbl_action_countdown": "システムは {} 秒後に '{}' を実行します。",
   "btn_proceed": "今すぐ続行",
   "log_action_cancelled": "完了後のアクションはユーザーによってキャンセルされました。",
-
   "status_pending": "保留中",
   "status_processing": "処理中",
   "status_completed": "完了",
@@ -304,6 +285,8 @@
   "tip_label_reappear_gap": "この間隔内での同じラベルの再出現は単一のイベントにマージされます。",
   "chk_label_filter_single": "単一文字ラベルのノイズを除去",
   "tip_label_filter_single": "通常 OCR ノイズである単一の ASCII 文字/数字ラベル（例: 「M」、「3」）を除外します。単一の漢字は保持されます。",
+  "chk_label_ssim_dedup": "ラベル SSIM 重複除去を有効にする（ステップ 2）",
+  "tip_label_ssim_dedup": "ステップ 2 でタイトボックス SSIM を使用して視覚的に同一のラベル検出を重複除去します。確認カウントを維持しながら冗長な認識呼び出しを削減します。",
   "lbl_label_conf_threshold": "ラベル信頼度しきい値（0-100）：",
   "tip_label_conf_threshold": "ラベルテキスト認識の信頼度しきい値。値を小さくするとより小さく難しい名前テキストを保持し、値を大きくすると不確実な検出を削除します。",
   "lbl_label_text_similarity": "ラベルテキスト類似度（0-100）：",

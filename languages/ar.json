@@ -3,7 +3,6 @@
   "tab_batch": "قائمة الانتظار",
   "tab_advanced": "الإعدادات المتقدمة",
   "tab_about": "حول",
-
   "lbl_source": "المصدر:",
   "lbl_output_srt": "إخراج SRT:",
   "lbl_ocr_engine": "محرك OCR:",
@@ -34,7 +33,6 @@
   "lbl_log": "السجل:",
   "video_file_types": "ملفات الفيديو",
   "all_file_types": "جميع الملفات",
-
   "lbl_ocr_settings": "إعدادات OCR:",
   "lbl_time_start": "وقت البداية (مثال: 0:00 أو 1:23:45):",
   "tip_time_start": "حدد وقت البداية لبدء المعالجة.",
@@ -107,7 +105,6 @@
   "tip_prevent_sleep": "عند التحديد، سيتم منع الكمبيوتر من الدخول في وضع السكون أثناء المعالجة.",
   "chk_check_updates": "فحص التحديثات عند البدء",
   "tip_check_updates": "فحص تلقائي لإصدارات جديدة من VideOCR Recreated عند بدء التطبيق.",
-
   "btn_browse": "فتح ملف...",
   "btn_browse_folder": "فتح مجلد...",
   "btn_save_as": "حفظ باسم...",
@@ -118,7 +115,6 @@
   "btn_add_all_to_queue": "إضافة الكل للقائمة",
   "btn_pause": "إيقاف مؤقت",
   "btn_resume": "استئناف",
-
   "lbl_queue_title": "قائمة الانتظار",
   "col_video_file": "ملف الفيديو",
   "col_output_file": "ملف الإخراج",
@@ -129,20 +125,17 @@
   "btn_edit": "تعديل",
   "btn_remove": "إزالة",
   "btn_clear_queue": "مسح القائمة",
-
   "tip_batch_up": "تحريك المهمة المحددة للأعلى",
   "tip_batch_down": "تحريك المهمة المحددة للأسفل",
   "tip_batch_reset": "إعادة ضبط مهمة ملغاة",
   "tip_batch_edit": "إرسال المهمة للنافذة الرئيسية للتعديل",
   "tip_batch_remove": "إزالة المهمة المحددة من القائمة",
   "tip_batch_clear": "مسح القائمة الحالية",
-
   "lbl_about_version": "الإصدار: {version}",
   "lbl_about_fork": "هذا المشروع هو fork من VideOCR الأصلي بواسطة timminator.",
   "lbl_about_fork_repo": "مستودع الفورك:",
   "lbl_get_newest": "احصل على أحدث إصدار هنا:",
   "lbl_bug_report": "وجدت خطأ أو لديك اقتراح؟ افتح مشكلة هنا:",
-
   "update_title": "تحديث متاح",
   "update_available_1": "إصدار جديد من VideOCR Recreated ({}) متاح!",
   "update_available_2": "أنت تستخدم حالياً الإصدار {}.",
@@ -151,14 +144,11 @@
   "update_msg_uptodate": "أنت تشغل أحدث إصدار من VideOCR Recreated.",
   "update_title_error": "خطأ",
   "update_msg_error": "فشل في فحص التحديثات.\nيرجى فحص اتصال الإنترنت.",
-
   "btn_yes": "نعم",
   "btn_no": "لا",
-
   "save_as_title": "حفظ باسم",
   "save_as_filter_name": "ترجمة SubRip",
   "save_as_all_files": "جميع الملفات",
-
   "status_starting": "بدء استخراج الترجمة...\n",
   "status_success": "تم إنشاء ملف الترجمة بنجاح!\n",
   "status_cancelling": "\nإلغاء العملية...\n",
@@ -170,12 +160,10 @@
   "batch_finished_count": "اكتملت الدفعة: تمت معالجة {} ملفات.",
   "status_queue_cancelled": "تم إلغاء الانتظار",
   "status_queue_finished": "انتهت قائمة الانتظار",
-
   "lbl_step": "خطوة",
   "progress_step1_action": "جاري معالجة الفيديو...",
   "progress_step2_action": "جاري تنفيذ اكتشاف النص على الصورة {current} من {total} ({percent}%)",
   "progress_step3_action": "جاري تنفيذ OCR على الصورة {current} من {total} ({percent}%)",
-
   "cli_info_pass": "جاري تشغيل تمريرة اكتشاف النص فقط على {} إطار(إطارات) تمت تصفيتها ومدمجة في {} شبكة(شبكات) صور...",
   "cli_filtered": "تمت تصفية {} إطار(إطارات) زائدة عبر اكتشاف النص وتحليل SSIM للصندوق الضيق.",
   "cli_analyzing": "جاري تحليل الإطار {} من {}",
@@ -185,9 +173,7 @@
   "cli_generating_subs": "إنشاء الترجمات...",
   "log_reached_end": "تم الوصول إلى وقت النهاية. جاري الإيقاف.",
   "unknown": "غير معروف",
-
   "eta_step": "ETA الخطوة",
-
   "fatal_error_header": "--- خطأ فادح ---",
   "fatal_error_reason_1": "نظامك لا يلبي متطلبات الأجهزة.",
   "fatal_error_reason_2": "السبب:",
@@ -206,7 +192,6 @@
   "error_no_process_to_cancel": "\nلا توجد عملية قيد التشغيل للإلغاء.\n",
   "title_error": "خطأ",
   "error_video_not_found": "ملف الفيديو غير موجود:\n{}",
-
   "val_err_header": "أخطاء التحقق:\n",
   "val_err_start_time": "تنسيق وقت البداية غير صالح. استخدم MM:SS أو HH:MM:SS.",
   "val_err_end_time": "تنسيق وقت النهاية غير صالح. استخدم MM:SS أو HH:MM:SS.",
@@ -219,7 +204,6 @@
   "err_crop_y_out": "{} Y ({}) خارج ارتفاع الفيديو ({}).",
   "err_crop_w_out": "{} يمتد خارج الحدود (X+W > العرض).",
   "err_crop_h_out": "{} يمتد خارج الحدود (Y+H > الارتفاع).",
-
   "title_duplicate": "تكرار",
   "msg_duplicate_queue": "توجد مهمة لـ '{}' بالفعل في القائمة.\n\nيرجى تغيير مسار الإخراج أو حذف المهمة من القائمة.",
   "msg_duplicate_queue_running": "توجد مهمة لـ '{}' نشطة حالياً (الحالة: {}).\n\nيرجى تغيير مسار الإخراج أو الانتظار حتى تنتهي.",
@@ -227,7 +211,6 @@
   "popup_duplicate_msg": "توجد مهمة لملف الإخراج هذا بالفعل (الحالة: {}).\n\nهل تريد تحديثها/إعادة تشغيلها بالإعدادات الحالية؟",
   "popup_cannot_edit_running": "لا يمكن تعديل مهمة حالتها {}.\nيرجى إيقاف أو إلغاء العملية أولاً.",
   "popup_cannot_remove_running": "لا يمكن إزالة المهمة الجاري تشغيلها أو المتوقفة مؤقتاً حالياً.\nيرجى إيقاف أو إلغاء العملية أولاً.",
-
   "title_progress": "تقدم",
   "msg_scanning_init": "جاري بدء المسح...",
   "msg_scanning_progress": "جاري مسح الملف {} من {}...",
@@ -236,7 +219,6 @@
   "title_batch_report": "تقرير الدفعة",
   "msg_batch_report_summary": "تمت إضافة {} فيديو.\n\nتم تخطي {} فيديو:\n",
   "msg_and_others": "...وغيرها.",
-
   "lbl_when_ready": "عند الانتهاء:",
   "action_none": "لا تفعل شيئاً",
   "action_sleep": "سكون",
@@ -249,7 +231,6 @@
   "lbl_action_countdown": "سيقوم النظام بتنفيذ '{}' خلال {} ثانية.",
   "btn_proceed": "تابع الآن",
   "log_action_cancelled": "تم إلغاء إجراء ما بعد الانتهاء من قبل المستخدم.",
-
   "status_pending": "قيد الانتظار",
   "status_processing": "جارٍ المعالجة",
   "status_completed": "مكتمل",
@@ -304,6 +285,8 @@
   "tip_label_reappear_gap": "يتم دمج إعادة ظهور التسمية نفسها ضمن هذه الفجوة في حدث واحد.",
   "chk_label_filter_single": "تصفية ضوضاء التسميات ذات الحرف الواحد",
   "tip_label_filter_single": "يتجاهل التسميات المكونة من حرف/رقم ASCII واحد (مثل \"M\"، \"3\") والتي عادة ما تكون ضوضاء OCR. تُحفظ الأحرف الصينية المفردة.",
+  "chk_label_ssim_dedup": "تفعيل إزالة التكرار SSIM للتسميات (الخطوة 2)",
+  "tip_label_ssim_dedup": "يزيل التكرارات البصرية المتطابقة للتسميات في الخطوة 2 باستخدام SSIM الصندوق الضيق. يقلل من استدعاءات التعرف غير الضرورية مع الحفاظ على عدادات التأكيد.",
   "lbl_label_conf_threshold": "عتقة ثقة التسمية (0-100):",
   "tip_label_conf_threshold": "عتقة الثقة للتعرف على نص التسمية. القيم الأخفض تحتفظ بنصوص الأسماء الأصغر أو الأكثر صعوبة؛ القيم الأعلى تزيل الاكتشافات غير المؤكدة.",
   "lbl_label_text_similarity": "تشابه نص التسمية (0-100):",

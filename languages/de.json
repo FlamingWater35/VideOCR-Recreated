@@ -285,6 +285,8 @@
   "tip_label_reappear_gap": "Wiedererscheinungen desselben Labels innerhalb dieser Lücke werden zu einem einzelnen Event zusammengeführt.",
   "chk_label_filter_single": "Einzelzeichen-Label-Rauschen filtern",
   "tip_label_filter_single": "Verwirft einzelne ASCII-Zeichen-/Ziffern-Labels (z. B. \"M\", \"3\"), die normalerweise OCR-Rauschen sind. Einzelne chinesische Zeichen bleiben erhalten.",
+  "chk_label_ssim_dedup": "Label-SSIM-Dedup aktivieren (Schritt 2)",
+  "tip_label_ssim_dedup": "Entfernt visuell identische Label-Erkennungen in Schritt 2 mit Tight-Box-SSIM. Redundante Erkennungsaufrufe werden reduziert, während Bestätigungszahlen erhalten bleiben.",
   "lbl_label_conf_threshold": "Label-Vertrauensschwelle (0-100):",
   "tip_label_conf_threshold": "Vertrauensschwelle für die Label-Texterkennung. Niedrigere Werte behalten kleinere oder schwierigere Namens-Texte bei; höhere Werte verwerfen unsichere Erkennungen.",
   "lbl_label_text_similarity": "Label-Textähnlichkeit (0-100):",

@@ -3,7 +3,6 @@
   "tab_batch": "Antrean",
   "tab_advanced": "Pengaturan Lanjutan",
   "tab_about": "Tentang",
-
   "lbl_source": "Sumber:",
   "lbl_output_srt": "Output SRT:",
   "lbl_ocr_engine": "Mesin OCR:",
@@ -34,7 +33,6 @@
   "lbl_log": "Log:",
   "video_file_types": "File Video",
   "all_file_types": "Semua File",
-
   "lbl_ocr_settings": "Pengaturan OCR:",
   "lbl_time_start": "Waktu Mulai (contoh: 0:00 atau 1:23:45):",
   "tip_time_start": "Tentukan waktu mulai untuk memulai pemrosesan.",
@@ -107,7 +105,6 @@
   "tip_prevent_sleep": "Jika dicentang, komputer akan dicegah masuk ke mode tidur selama pemrosesan.",
   "chk_check_updates": "Periksa Pembaruan Saat Startup",
   "tip_check_updates": "Otomatis memeriksa versi baru VideOCR Recreated saat aplikasi dimulai.",
-
   "btn_browse": "Buka File...",
   "btn_browse_folder": "Buka Folder...",
   "btn_save_as": "Simpan Sebagai...",
@@ -118,7 +115,6 @@
   "btn_add_all_to_queue": "Tambahkan Semua ke Antrean",
   "btn_pause": "Jeda",
   "btn_resume": "Lanjutkan",
-
   "lbl_queue_title": "Antrean",
   "col_video_file": "File Video",
   "col_output_file": "File Output",
@@ -129,20 +125,17 @@
   "btn_edit": "Edit",
   "btn_remove": "Hapus",
   "btn_clear_queue": "Bersihkan Antrean",
-
   "tip_batch_up": "Pindahkan tugas yang dipilih ke atas dalam antrean saat ini",
   "tip_batch_down": "Pindahkan tugas yang dipilih ke bawah dalam antrean saat ini",
   "tip_batch_reset": "Reset tugas yang dibatalkan",
   "tip_batch_edit": "Kirim tugas kembali ke jendela utama untuk diedit",
   "tip_batch_remove": "Hapus tugas yang dipilih dari antrean",
   "tip_batch_clear": "Bersihkan antrean saat ini",
-
   "lbl_about_version": "Versi: {version}",
   "lbl_about_fork": "Proyek ini adalah fork dari VideOCR asli oleh timminator.",
   "lbl_about_fork_repo": "Repositori fork:",
   "lbl_get_newest": "Dapatkan versi terbaru di sini:",
   "lbl_bug_report": "Menemukan bug atau punya saran? Silakan buka issue di:",
-
   "update_title": "Pembaruan Tersedia",
   "update_available_1": "Versi baru VideOCR Recreated ({}) tersedia!",
   "update_available_2": "Anda saat ini menggunakan versi {}.",
@@ -151,14 +144,11 @@
   "update_msg_uptodate": "Anda menjalankan versi terbaru VideOCR Recreated.",
   "update_title_error": "Error",
   "update_msg_error": "Gagal memeriksa pembaruan.\nSilakan periksa koneksi internet Anda.",
-
   "btn_yes": "Ya",
   "btn_no": "Tidak",
-
   "save_as_title": "Simpan Sebagai",
   "save_as_filter_name": "Subtitle SubRip",
   "save_as_all_files": "Semua File",
-
   "status_starting": "Memulai ekstraksi subtitle...\n",
   "status_success": "Berhasil membuat file subtitle!\n",
   "status_cancelling": "\nMembatalkan proses...\n",
@@ -170,12 +160,10 @@
   "batch_finished_count": "Batch selesai: {} file diproses.",
   "status_queue_cancelled": "Antrean Dibatalkan",
   "status_queue_finished": "Antrean Selesai",
-
   "lbl_step": "Langkah",
   "progress_step1_action": "Memproses video...",
   "progress_step2_action": "Melakukan Deteksi Teks pada gambar {current} dari {total} ({percent}%)",
   "progress_step3_action": "Melakukan OCR pada gambar {current} dari {total} ({percent}%)",
-
   "cli_info_pass": "Menjalankan tahapan Hanya-Deteksi-Teks pada {} frame terfilter yang disatukan menjadi {} kisi gambar...",
   "cli_filtered": "Memfilter {} frame redundan melalui Deteksi-Teks dan analisis SSIM kotak-ketat.",
   "cli_analyzing": "Menganalisis frame {} dari {}",
@@ -185,9 +173,7 @@
   "cli_generating_subs": "Membuat subtitle...",
   "log_reached_end": "Mencapai waktu akhir. Berhenti.",
   "unknown": "tidak diketahui",
-
   "eta_step": "ETA Langkah",
-
   "fatal_error_header": "--- ERROR FATAL ---",
   "fatal_error_reason_1": "Sistem Anda tidak memenuhi persyaratan perangkat keras.",
   "fatal_error_reason_2": "Alasan:",
@@ -206,7 +192,6 @@
   "error_no_process_to_cancel": "\nTidak ada proses yang berjalan untuk dibatalkan.\n",
   "title_error": "Error",
   "error_video_not_found": "File video tidak ditemukan:\n{}",
-
   "val_err_header": "Error Validasi:\n",
   "val_err_start_time": "Format Waktu Mulai tidak valid. Gunakan MM:SS atau HH:MM:SS.",
   "val_err_end_time": "Format Waktu Selesai tidak valid. Gunakan MM:SS atau HH:MM:SS.",
@@ -219,7 +204,6 @@
   "err_crop_y_out": "{} Y ({}) berada di luar tinggi video ({}).",
   "err_crop_w_out": "{} meluas keluar batas (X+L > Lebar).",
   "err_crop_h_out": "{} meluas keluar batas (Y+T > Tinggi).",
-
   "title_duplicate": "Duplikat",
   "msg_duplicate_queue": "Tugas untuk '{}' sudah ada dalam antrean.\n\nSilakan ubah path output atau hapus tugas dari Antrean.",
   "msg_duplicate_queue_running": "Tugas untuk '{}' saat ini aktif (Status: {}).\n\nSilakan ubah path output atau tunggu hingga selesai.",
@@ -227,7 +211,6 @@
   "popup_duplicate_msg": "Tugas untuk file output ini sudah ada (Status: {}).\n\nApakah Anda ingin memperbarui/memulainya ulang dengan pengaturan saat ini?",
   "popup_cannot_edit_running": "Tugas yang saat ini {} tidak dapat diedit.\nSilakan hentikan atau batalkan proses terlebih dahulu.",
   "popup_cannot_remove_running": "Tugas yang sedang berjalan atau dijeda tidak dapat dihapus.\nSilakan hentikan atau batalkan proses terlebih dahulu.",
-
   "title_progress": "Kemajuan",
   "msg_scanning_init": "Menginisialisasi pemindaian...",
   "msg_scanning_progress": "Memindai file {} dari {}...",
@@ -236,7 +219,6 @@
   "title_batch_report": "Laporan Batch",
   "msg_batch_report_summary": "Ditambahkan {} video.\n\nDilewati {} video:\n",
   "msg_and_others": "...dan lain-lain.",
-
   "lbl_when_ready": "Setelah selesai:",
   "action_none": "Tidak melakukan apa-apa",
   "action_sleep": "Tidur",
@@ -249,7 +231,6 @@
   "lbl_action_countdown": "Sistem akan menjalankan '{}' dalam {} detik.",
   "btn_proceed": "Lanjutkan Sekarang",
   "log_action_cancelled": "Tindakan pasca-penyelesaian dibatalkan oleh pengguna.",
-
   "status_pending": "Menunggu",
   "status_processing": "Memproses",
   "status_completed": "Selesai",
@@ -304,6 +285,8 @@
   "tip_label_reappear_gap": "Kemunculan ulang label yang sama dalam jeda ini digabungkan menjadi satu event.",
   "chk_label_filter_single": "Saring Noise Label Karakter Tunggal",
   "tip_label_filter_single": "Buang label karakter/angka ASCII tunggal (mis. \"M\", \"3\") yang biasanya noise OCR. Karakter Cina tunggal dipertahankan.",
+  "chk_label_ssim_dedup": "Aktifkan Dedup SSIM Label (Langkah 2)",
+  "tip_label_ssim_dedup": "Menghapus duplikasi deteksi label yang secara visual identik di Langkah 2 menggunakan SSIM kotak ketat. Mengurangi panggilan pengenalan yang berlebihan sambil mempertahankan jumlah konfirmasi.",
   "lbl_label_conf_threshold": "Ambang Kepercayaan Label (0-100):",
   "tip_label_conf_threshold": "Ambang kepercayaan untuk pengenalan teks label. Nilai lebih rendah mempertahankan teks nama yang lebih kecil atau lebih sulit; nilai lebih tinggi membuang deteksi yang tidak pasti.",
   "lbl_label_text_similarity": "Kemiripan Teks Label (0-100):",

@@ -3,7 +3,6 @@
   "tab_batch": "대기열",
   "tab_advanced": "고급 설정",
   "tab_about": "정보",
-
   "lbl_source": "소스:",
   "lbl_output_srt": "SRT 출력:",
   "lbl_ocr_engine": "OCR 엔진:",
@@ -34,7 +33,6 @@
   "lbl_log": "로그:",
   "video_file_types": "비디오 파일",
   "all_file_types": "모든 파일",
-
   "lbl_ocr_settings": "OCR 설정:",
   "lbl_time_start": "시작 시간 (예: 0:00 또는 1:23:45):",
   "tip_time_start": "처리를 시작할 시작 시간을 지정합니다.",
@@ -107,7 +105,6 @@
   "tip_prevent_sleep": "체크하면 처리 중 컴퓨터가 절전 모드로 들어가지 않습니다.",
   "chk_check_updates": "시작 시 업데이트 확인",
   "tip_check_updates": "애플리케이션 시작 시 VideOCR Recreated의 새 버전을 자동으로 확인합니다.",
-
   "btn_browse": "파일 열기...",
   "btn_browse_folder": "폴더 열기...",
   "btn_save_as": "다른 이름으로 저장...",
@@ -118,7 +115,6 @@
   "btn_add_all_to_queue": "대기열에 모두 추가",
   "btn_pause": "일시 정지",
   "btn_resume": "재개",
-
   "lbl_queue_title": "대기열",
   "col_video_file": "비디오 파일",
   "col_output_file": "출력 파일",
@@ -129,20 +125,17 @@
   "btn_edit": "편집",
   "btn_remove": "삭제",
   "btn_clear_queue": "대기열 비우기",
-
   "tip_batch_up": "선택한 작업을 대기열 위로 이동",
   "tip_batch_down": "선택한 작업을 대기열 아래로 이동",
   "tip_batch_reset": "취소된 작업 초기화",
   "tip_batch_edit": "편집을 위해 작업을 메인 창으로 보냄",
   "tip_batch_remove": "대기열에서 선택한 작업 삭제",
   "tip_batch_clear": "현재 대기열 비우기",
-
   "lbl_about_version": "버전: {version}",
   "lbl_about_fork": "이 프로젝트는 timminator의 원본 VideOCR의 포크입니다.",
   "lbl_about_fork_repo": "포크 저장소:",
   "lbl_get_newest": "최신 버전을 여기서 받으세요:",
   "lbl_bug_report": "버그를 발견했거나 제안이 있으신가요? 여기서 이슈를 열어주세요:",
-
   "update_title": "업데이트 사용 가능",
   "update_available_1": "VideOCR Recreated의 새 버전 ({})이 사용 가능합니다!",
   "update_available_2": "현재 버전 {}을 사용하고 있습니다.",
@@ -151,14 +144,11 @@
   "update_msg_uptodate": "VideOCR Recreated의 최신 버전을 실행하고 있습니다.",
   "update_title_error": "오류",
   "update_msg_error": "업데이트 확인에 실패했습니다.\n인터넷 연결을 확인해주세요.",
-
   "btn_yes": "예",
   "btn_no": "아니요",
-
   "save_as_title": "다른 이름으로 저장",
   "save_as_filter_name": "SubRip 자막",
   "save_as_all_files": "모든 파일",
-
   "status_starting": "자막 추출을 시작합니다...\n",
   "status_success": "자막 파일 생성에 성공했습니다!\n",
   "status_cancelling": "\n프로세스를 취소하고 있습니다...\n",
@@ -170,12 +160,10 @@
   "batch_finished_count": "일괄 처리 완료: {}개 파일 처리됨.",
   "status_queue_cancelled": "대기열 취소됨",
   "status_queue_finished": "대기열 완료됨",
-
   "lbl_step": "단계",
   "progress_step1_action": "비디오를 처리하는 중...",
   "progress_step2_action": "이미지 {current} / {total}에서 텍스트 감지를 수행하는 중 ({percent}%)",
   "progress_step3_action": "이미지 {current} / {total}에서 OCR을 수행하는 중 ({percent}%)",
-
   "cli_info_pass": "{}개의 이미지 그리드로 병합된 {}개의 필터링된 프레임에 대해 텍스트 감지 전용 패스를 실행하는 중...",
   "cli_filtered": "텍스트 감지 및 타이트 박스 SSIM 분석을 통해 {}개의 중복 프레임을 필터링했습니다.",
   "cli_analyzing": "프레임 {} / {} 분석 중",
@@ -185,9 +173,7 @@
   "cli_generating_subs": "자막을 생성하고 있습니다...",
   "log_reached_end": "종료 시간에 도달했습니다. 중지합니다.",
   "unknown": "알 수 없음",
-
   "eta_step": "ETA 단계",
-
   "fatal_error_header": "--- 치명적 오류 ---",
   "fatal_error_reason_1": "시스템이 하드웨어 요구사항을 충족하지 않습니다.",
   "fatal_error_reason_2": "이유:",
@@ -206,7 +192,6 @@
   "error_no_process_to_cancel": "\n취소할 실행 중인 프로세스가 없습니다.\n",
   "title_error": "오류",
   "error_video_not_found": "비디오 파일을 찾을 수 없습니다:\n{}",
-
   "val_err_header": "검증 오류:\n",
   "val_err_start_time": "유효하지 않은 시작 시간 형식입니다. MM:SS 또는 HH:MM:SS를 사용하세요.",
   "val_err_end_time": "유효하지 않은 종료 시간 형식입니다. MM:SS 또는 HH:MM:SS를 사용하세요.",
@@ -219,7 +204,6 @@
   "err_crop_y_out": "{} Y ({})가 비디오 높이 ({})를 벗어났습니다.",
   "err_crop_w_out": "{}가 범위를 벗어났습니다 (X+W > 너비).",
   "err_crop_h_out": "{}가 범위를 벗어났습니다 (Y+H > 높이).",
-
   "title_duplicate": "중복",
   "msg_duplicate_queue": "'{}'에 대한 작업이 이미 대기열에 있습니다.\n\n출력 경로를 변경하거나 대기열에서 작업을 삭제하세요.",
   "msg_duplicate_queue_running": "'{}'에 대한 작업이 현재 활성화되어 있습니다 (상태: {}).\n\n출력 경로를 변경하거나 완료될 때까지 기다려주세요.",
@@ -227,7 +211,6 @@
   "popup_duplicate_msg": "이 출력 파일에 대한 작업이 이미 존재합니다 (상태: {}).\n\n현재 설정으로 업데이트/다시 시작하시겠습니까?",
   "popup_cannot_edit_running": "현재 {} 상태인 작업은 편집할 수 없습니다.\n먼저 프로세스를 중지하거나 취소하세요.",
   "popup_cannot_remove_running": "현재 실행 중이거나 일시 정지된 작업은 삭제할 수 없습니다.\n먼저 프로세스를 중지하거나 취소하세요.",
-
   "title_progress": "진행 상황",
   "msg_scanning_init": "스캔 초기화 중...",
   "msg_scanning_progress": "파일 {} / {} 스캔 중...",
@@ -236,7 +219,6 @@
   "title_batch_report": "일괄 처리 보고서",
   "msg_batch_report_summary": "{}개 비디오 추가됨.\n\n{}개 비디오 건너뜀:\n",
   "msg_and_others": "...및 기타.",
-
   "lbl_when_ready": "완료 시:",
   "action_none": "아무것도 안 함",
   "action_sleep": "절전",
@@ -249,7 +231,6 @@
   "lbl_action_countdown": "시스템이 {} 초 후에 '{}' 작업을 수행합니다.",
   "btn_proceed": "지금 진행",
   "log_action_cancelled": "사용자가 완료 후 작업을 취소했습니다.",
-
   "status_pending": "대기 중",
   "status_processing": "처리 중",
   "status_completed": "완료됨",
@@ -304,6 +285,8 @@
   "tip_label_reappear_gap": "이 간격 내에서 같은 라벨의 재등장은 단일 이벤트로 병합됩니다.",
   "chk_label_filter_single": "단일 문자 라벨 노이즈 필터링",
   "tip_label_filter_single": "일반적으로 OCR 노이즈인 단일 ASCII 문자/숫자 라벨(예: \"M\", \"3\")을 제거합니다. 단일 한자는 유지됩니다.",
+  "chk_label_ssim_dedup": "라벨 SSIM 중복 제거 활성화 (단계 2)",
+  "tip_label_ssim_dedup": "단계 2에서 타이트박스 SSIM를 사용하여 시각적으로 동일한 라벨 감지를 중복 제거합니다. 확인 횟수를 유지하면서 중복 인식 호출을 줄입니다.",
   "lbl_label_conf_threshold": "라벨 신뢰도 임계값 (0-100):",
   "tip_label_conf_threshold": "라벨 텍스트 인식의 신뢰도 임계값. 낮은 값은 더 작거나 어려운 이름 텍스트를 유지하고, 높은 값은 불확실한 감지를 삭제합니다.",
   "lbl_label_text_similarity": "라벨 텍스트 유사도 (0-100):",

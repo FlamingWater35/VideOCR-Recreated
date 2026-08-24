@@ -77,6 +77,7 @@ LABEL_DEPENDENT_WIDGETS = (
     "--label_pos_drift",
     "--label_close_pos_distance",
     "--label_close_pos_length_ratio",
+    "--label_ssim_dedup",
 )
 
 
@@ -454,6 +455,14 @@ class SettingsTab(QWidget):
             "chk_label_filter_single",
             "Filter Single-Character Label Noise",
             "tip_label_filter_single",
+            True,
+        )
+        self._add_check(
+            label_form,
+            "--label_ssim_dedup",
+            "chk_label_ssim_dedup",
+            "Enable Label SSIM Dedup (Step 2)",
+            "tip_label_ssim_dedup",
             True,
         )
         self._add_line(

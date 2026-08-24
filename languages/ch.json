@@ -285,6 +285,8 @@
   "tip_label_reappear_gap": "同一标签在此间隔内的重现会被合并为单个事件。",
   "chk_label_filter_single": "过滤单字符标签噪声",
   "tip_label_filter_single": "丢弃单个 ASCII 字符/数字标签（如 \"M\"、\"3\"），它们通常是 OCR 噪声。单个中文字符会保留。",
+  "chk_label_ssim_dedup": "启用标签 SSIM 去重（步骤 2）",
+  "tip_label_ssim_dedup": "在步骤 2 中使用紧凑框 SSIM 去重视觉相同的标签检测。减少冗余识别调用，同时保留确认计数。",
   "lbl_label_conf_threshold": "标签置信度阈值（0-100）：",
   "tip_label_conf_threshold": "标签文本识别的置信度阈值。较低的值保留更小或更难的名称文本；较高的值丢弃不确定的检测。",
   "lbl_label_text_similarity": "标签文本相似度（0-100）：",

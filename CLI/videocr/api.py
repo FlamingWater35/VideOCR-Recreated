@@ -54,6 +54,7 @@ def save_subtitles_to_file(
     label_close_pos_distance: int = 40,
     label_close_pos_length_ratio: float = 0.5,
     label_conf_threshold: int = 60,
+    label_ssim_dedup: bool = True,
 ) -> None:
     total_start = time.perf_counter()
     if crop_zones is None:
@@ -185,6 +186,7 @@ def save_subtitles_to_file(
             label_close_pos_distance,
             label_close_pos_length_ratio,
             label_conf_threshold,
+            label_ssim_dedup,
         )
         ocr_end = time.perf_counter()
     except Exception as e:

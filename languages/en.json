@@ -290,6 +290,8 @@
   "tip_label_reappear_gap": "Reappearances of the same label within this gap are merged into a single event.",
   "chk_label_filter_single": "Filter Single-Character Label Noise",
   "tip_label_filter_single": "Drop single ASCII character/digit labels (e.g. \"M\", \"3\") which are usually OCR noise. Single Chinese characters are kept.",
+  "chk_label_ssim_dedup": "Enable Label SSIM Dedup (Step 2)",
+  "tip_label_ssim_dedup": "Deduplicate visually identical label detections in Step 2 using tight-box SSIM. Reduces redundant recognition calls while preserving confirmation counts.",
   "lbl_label_conf_threshold": "Label Confidence Threshold (0-100):",
   "tip_label_conf_threshold": "Confidence threshold for label text recognition. Lower values keep smaller or harder name text; higher values drop uncertain detections.",
   "lbl_label_text_similarity": "Label Text Similarity (0-100):",

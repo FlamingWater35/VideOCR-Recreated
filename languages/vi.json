@@ -3,7 +3,6 @@
   "tab_batch": "Hàng Đợi",
   "tab_advanced": "Cài Đặt Nâng Cao",
   "tab_about": "Giới Thiệu",
-
   "lbl_source": "Nguồn:",
   "lbl_output_srt": "Xuất SRT:",
   "lbl_ocr_engine": "Công Cụ OCR:",
@@ -34,7 +33,6 @@
   "lbl_log": "Nhật ký:",
   "video_file_types": "Tệp Video",
   "all_file_types": "Tất Cả Tệp",
-
   "lbl_ocr_settings": "Cài Đặt OCR:",
   "lbl_time_start": "Thời Gian Bắt Đầu (ví dụ: 0:00 hoặc 1:23:45):",
   "tip_time_start": "Chỉ định thời gian bắt đầu để bắt đầu xử lý.",
@@ -107,7 +105,6 @@
   "tip_prevent_sleep": "Nếu được chọn, máy tính sẽ không chuyển sang chế độ ngủ trong quá trình xử lý.",
   "chk_check_updates": "Kiểm Tra Cập Nhật Khi Khởi Động",
   "tip_check_updates": "Tự động kiểm tra phiên bản mới của VideOCR Recreated khi ứng dụng khởi động.",
-
   "btn_browse": "Mở Tệp...",
   "btn_browse_folder": "Mở Thư Mục...",
   "btn_save_as": "Lưu Thành...",
@@ -118,7 +115,6 @@
   "btn_add_all_to_queue": "Thêm Tất Cả vào Hàng Đợi",
   "btn_pause": "Tạm Dừng",
   "btn_resume": "Tiếp Tục",
-
   "lbl_queue_title": "Hàng Đợi",
   "col_video_file": "Tệp Video",
   "col_output_file": "Tệp Đầu Ra",
@@ -129,20 +125,17 @@
   "btn_edit": "Chỉnh Sửa",
   "btn_remove": "Xóa",
   "btn_clear_queue": "Xóa Hàng Đợi",
-
   "tip_batch_up": "Di chuyển công việc đã chọn lên trên trong hàng đợi hiện tại",
   "tip_batch_down": "Di chuyển công việc đã chọn xuống dưới trong hàng đợi hiện tại",
   "tip_batch_reset": "Đặt lại công việc đã hủy",
   "tip_batch_edit": "Gửi công việc trở lại cửa sổ chính để chỉnh sửa",
   "tip_batch_remove": "Xóa công việc đã chọn khỏi hàng đợi",
   "tip_batch_clear": "Xóa hàng đợi hiện tại",
-
   "lbl_about_version": "Phiên Bản: {version}",
   "lbl_about_fork": "Dự án này là một bản fork của VideOCR gốc của timminator.",
   "lbl_about_fork_repo": "Kho lưu trữ fork:",
   "lbl_get_newest": "Tải phiên bản mới nhất tại đây:",
   "lbl_bug_report": "Tìm thấy lỗi hoặc có đề xuất? Hãy mở một vấn đề tại:",
-
   "update_title": "Có Cập Nhật",
   "update_available_1": "Phiên bản mới của VideOCR Recreated ({}) đã có sẵn!",
   "update_available_2": "Bạn hiện đang sử dụng phiên bản {}.",
@@ -151,14 +144,11 @@
   "update_msg_uptodate": "Bạn đang chạy phiên bản mới nhất của VideOCR Recreated.",
   "update_title_error": "Lỗi",
   "update_msg_error": "Không thể kiểm tra cập nhật.\nVui lòng kiểm tra kết nối internet của bạn.",
-
   "btn_yes": "Có",
   "btn_no": "Không",
-
   "save_as_title": "Lưu Thành",
   "save_as_filter_name": "Phụ Đề SubRip",
   "save_as_all_files": "Tất Cả Tệp",
-
   "status_starting": "Bắt đầu trích xuất phụ đề...\n",
   "status_success": "Tạo tệp phụ đề thành công!\n",
   "status_cancelling": "\nĐang hủy quá trình...\n",
@@ -170,12 +160,10 @@
   "batch_finished_count": "Hàng đợi hoàn tất: đã xử lý {} tệp.",
   "status_queue_cancelled": "Hàng đợi đã bị hủy",
   "status_queue_finished": "Hàng đợi đã hoàn thành",
-
   "lbl_step": "Bước",
   "progress_step1_action": "Đang xử lý video...",
   "progress_step2_action": "Đang thực hiện Phát hiện văn bản trên hình ảnh {current} / {total} ({percent}%)",
   "progress_step3_action": "Đang thực hiện OCR trên hình ảnh {current} / {total} ({percent}%)",
-
   "cli_info_pass": "Đang chạy lượt chỉ-Phát-hiện-Văn-bản trên {} khung hình đã lọc được ghép thành {} lưới hình ảnh...",
   "cli_filtered": "Đã lọc ra {} khung hình thừa thông qua Phát hiện văn bản và phân tích SSIM hộp chặt.",
   "cli_analyzing": "Đang phân tích khung hình {} / {}",
@@ -185,9 +173,7 @@
   "cli_generating_subs": "Đang tạo phụ đề...",
   "log_reached_end": "Đã đạt đến thời gian kết thúc. Đang dừng.",
   "unknown": "không xác định",
-
   "eta_step": "ETA Bước",
-
   "fatal_error_header": "--- LỖI NGHIÊM TRỌNG ---",
   "fatal_error_reason_1": "Hệ thống của bạn không đáp ứng yêu cầu phần cứng.",
   "fatal_error_reason_2": "Lý do:",
@@ -206,7 +192,6 @@
   "error_no_process_to_cancel": "\nKhông có quá trình nào đang chạy để hủy.\n",
   "title_error": "Lỗi",
   "error_video_not_found": "Không tìm thấy tệp video:\n{}",
-
   "val_err_header": "Lỗi Xác Thực:\n",
   "val_err_start_time": "Định dạng Thời Gian Bắt Đầu không hợp lệ. Sử dụng MM:SS hoặc HH:MM:SS.",
   "val_err_end_time": "Định dạng Thời Gian Kết Thúc không hợp lệ. Sử dụng MM:SS hoặc HH:MM:SS.",
@@ -219,7 +204,6 @@
   "err_crop_y_out": "{} Y ({}) nằm ngoài chiều cao video ({}).",
   "err_crop_w_out": "{} mở rộng ra ngoài giới hạn (X+W > Chiều rộng).",
   "err_crop_h_out": "{} mở rộng ra ngoài giới hạn (Y+H > Chiều cao).",
-
   "title_duplicate": "Trùng Lặp",
   "msg_duplicate_queue": "Công việc cho '{}' đã có trong hàng đợi.\n\nVui lòng thay đổi đường dẫn đầu ra hoặc xóa công việc khỏi Hàng Đợi.",
   "msg_duplicate_queue_running": "Một công việc cho '{}' hiện đang hoạt động (Trạng thái: {}).\n\nVui lòng thay đổi đường dẫn đầu ra hoặc đợi nó hoàn tất.",
@@ -227,7 +211,6 @@
   "popup_duplicate_msg": "Một công việc cho tệp đầu ra này đã tồn tại (Trạng thái: {}).\n\nBạn có muốn cập nhật/khởi động lại nó với các cài đặt hiện tại không?",
   "popup_cannot_edit_running": "Một công việc hiện đang {} không thể được chỉnh sửa.\nVui lòng dừng hoặc hủy quá trình trước.",
   "popup_cannot_remove_running": "Không thể xóa công việc đang chạy hoặc tạm dừng.\nVui lòng dừng hoặc hủy quy trình trước.",
-
   "title_progress": "Tiến Trình",
   "msg_scanning_init": "Đang khởi tạo quét...",
   "msg_scanning_progress": "Đang quét tệp {} trên {}...",
@@ -236,7 +219,6 @@
   "title_batch_report": "Báo Cáo Hàng Đợi",
   "msg_batch_report_summary": "Đã thêm {} video.\n\nĐã bỏ qua {} video:\n",
   "msg_and_others": "...và những cái khác.",
-
   "lbl_when_ready": "Khi hoàn tất:",
   "action_none": "Không làm gì",
   "action_sleep": "Ngủ",
@@ -249,7 +231,6 @@
   "lbl_action_countdown": "Hệ thống sẽ thực hiện '{}' trong {} giây nữa.",
   "btn_proceed": "Tiến hành ngay",
   "log_action_cancelled": "Hành động sau khi hoàn tất đã bị người dùng hủy.",
-
   "status_pending": "Đang chờ",
   "status_processing": "Đang xử lý",
   "status_completed": "Hoàn thành",
@@ -304,6 +285,8 @@
   "tip_label_reappear_gap": "Các lần xuất hiện lại của cùng một nhãn trong khoảng cách này được gộp thành một sự kiện duy nhất.",
   "chk_label_filter_single": "Lọc Nhiễu Nhãn Một Ký Tự",
   "tip_label_filter_single": "Loại bỏ các nhãn một ký tự/chữ số ASCII (ví dụ: \"M\", \"3\") thường là nhiễu OCR. Các ký tự Trung Quốc đơn lẻ được giữ lại.",
+  "chk_label_ssim_dedup": "Bật Loại Bỏ Trùng Lặp SSIM Nhãn (Bước 2)",
+  "tip_label_ssim_dedup": "Loại bỏ các phát hiện nhãn trùng lặp trực quan ở Bước 2 bằng SSIM khung chặt. Giảm các lệnh gọi nhận dạng dư thừa trong khi vẫn giữ nguyên số đếm xác nhận.",
   "lbl_label_conf_threshold": "Ngưỡng độ tin cậy nhãn (0-100):",
   "tip_label_conf_threshold": "Ngưỡng độ tin cậy cho nhận dạng văn bản nhãn. Giá trị thấp hơn giữ lại văn bản tên nhỏ hơn hoặc khó hơn; giá trị cao hơn loại bỏ các phát hiện không chắc chắn.",
   "lbl_label_text_similarity": "Độ tương đồng văn bản nhãn (0-100):",

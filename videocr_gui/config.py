@@ -157,6 +157,7 @@ def get_default_settings() -> dict[str, Any]:
         "--label_pos_drift": "160",
         "--label_close_pos_distance": "40",
         "--label_close_pos_length_ratio": "0.5",
+        "--label_ssim_dedup": True,
     }
 
 
@@ -171,6 +172,7 @@ _BOOL_KEYS = {
     "enable_subtitle_alignment",
     "enable_label_detection",
     "--label_filter_single_char",
+    "--label_ssim_dedup",
     "--save_in_video_dir",
     "--send_notification",
     "--save_crop_box",

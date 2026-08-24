@@ -713,6 +713,7 @@ def process_ssim_group(
         else:
             best_item = max(current_similar_batch, key=lambda x: x["det_score"])
             best_item["frame_idx"] = current_similar_batch[0]["frame_idx"]
+            best_item["weight"] = len(current_similar_batch)
             local_surviving_items.append(best_item)
 
             current_similar_batch = [item_dict]
@@ -721,6 +722,7 @@ def process_ssim_group(
     if current_similar_batch:
         best_item = max(current_similar_batch, key=lambda x: x["det_score"])
         best_item["frame_idx"] = current_similar_batch[0]["frame_idx"]
+        best_item["weight"] = len(current_similar_batch)
         local_surviving_items.append(best_item)
 
     local_deleted = len(group_frames) - len(local_surviving_items)

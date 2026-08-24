@@ -80,6 +80,7 @@ class Video:
         self.avg_frame_duration_ms = 0.0
         self.label_zone = None
         self.label_frames = []
+        self._label_frame_weights: dict[int, int] = {}
         self.label_time_start_ms = 0.0
         self.label_time_end_ms: float | None = None
         props = get_video_properties(self.path)
@@ -769,6 +770,7 @@ class Video:
         label_close_pos_distance: int = 40,
         label_close_pos_length_ratio: float = 0.5,
         label_conf_threshold: int = 60,
+        label_ssim_dedup: bool = True,
     ) -> None:
         perf_total_start = time.perf_counter()
         step1_start = perf_total_start
@@ -787,6 +789,7 @@ class Video:
         self.pred_frames_zone2 = []
         self.label_zone = None
         self.label_frames = []
+        self._label_frame_weights = {}
         self.label_time_start_ms = 0.0
         self.label_time_end_ms = None
         self._label_min_display_duration_ms = (
@@ -1951,19 +1954,15 @@ class Video:
                             for union_rects, group_frames in chunk_groups
                         ]
                         for ssim_args in group_args:
-                            if z_idx == 2:
-                                # Label zone: keep every detected frame (no
-                                # tight-box SSIM dedup) so label appearances
-                                # are not lost.
+                            if z_idx == 2 and not label_ssim_dedup:
+                                # Label zone without dedup: keep every detected
+                                # frame so label appearances are not lost.
                                 _union_rects, group_frames, loaded_grids, _thr = (
                                     ssim_args
                                 )
                                 surviving_items = []
                                 for _fidx, _lr, _score, m in group_frames:
                                     grid_img = loaded_grids[m["grid_file"]]
-                                    # Clip to the actual grid bounds so a
-                                    # detection box at a grid edge never slices
-                                    # out of range.
                                     gh, gw = grid_img.shape[:2]
                                     y1 = min(int(m["y"]), max(0, gh - 1))
                                     x1 = min(int(m["x"]), max(0, gw - 1))
@@ -1983,6 +1982,13 @@ class Video:
                                     utils.process_ssim_group(*ssim_args)
                                 )
                                 frames_deleted_count += local_deleted
+                                if z_idx == 2:
+                                    # Label zone: SSIM-dedup keeps one
+                                    # representative per visually-identical run.
+                                    # Record how many frames each survivor stands
+                                    # for so confirmation counts survive dedup.
+                                    for item in surviving_items:
+                                        self._label_frame_weights[item["frame_idx"]] = item.get("weight", 1)
                             for item in surviving_items:
                                 surviving_frames_meta.add((item["frame_idx"], z_idx))
                                 filename = f"rec_image_{rec_counter:0{FILENAME_ZERO_PADDING}d}_zone{z_idx}.jpg"
@@ -2395,18 +2401,18 @@ class Video:
         def _close_event(ev: dict[str, Any]) -> None:
             ev["text"] = self._pick_best_label_text(ev)
 
-        def _open_event(text: str, cx: float, cy: float, frame: Any) -> dict[str, Any]:
+        def _open_event(text: str, cx: float, cy: float, frame: Any, weight: int) -> dict[str, Any]:
             ev = {
                 "start_ms": self._label_frame_start_ms(frame),
                 "end_ms": self._label_frame_end_ms(frame),
                 "text": text,
                 "cx": cx,
                 "cy": cy,
-                "votes": {_label_text_norm(text): 1},
+                "votes": {_label_text_norm(text): weight},
                 "text_samples": [text],
-                "cx_sum": cx,
-                "cy_sum": cy,
-                "count": 1,
+                "cx_sum": cx * weight,
+                "cy_sum": cy * weight,
+                "count": weight,
                 "last_frame_idx": frame.start_index,
                 "_matched_this_frame": True,
             }
@@ -2422,6 +2428,9 @@ class Video:
             # single line from matching the same event twice.
             for ev in events:
                 ev["_matched_this_frame"] = False
+            # Number of original frames this (SSIM-deduped) frame represents,
+            # so confirmation counts stay correct after dedup.
+            weight = self._label_frame_weights.get(frame.start_index, 1)
             for line in frame.lines:
                 text, cx, cy = _line_text_and_pos(line)
                 if not text:
@@ -2483,21 +2492,21 @@ class Video:
                         best_score = score
                         best_ev = ev
                 if best_ev is not None and best_score >= TEXT_SIM_THRESHOLD:
-                    # Extend the matched event.
+                    # Extend the matched event (weighted by the dedup run length).
                     best_ev["votes"][_label_text_norm(text)] = (
-                        best_ev["votes"].get(_label_text_norm(text), 0) + 1
+                        best_ev["votes"].get(_label_text_norm(text), 0) + weight
                     )
                     best_ev["text_samples"].append(text)
                     best_ev["end_ms"] = self._label_frame_end_ms(frame)
-                    best_ev["cx_sum"] += cx
-                    best_ev["cy_sum"] += cy
-                    best_ev["count"] += 1
+                    best_ev["cx_sum"] += cx * weight
+                    best_ev["cy_sum"] += cy * weight
+                    best_ev["count"] += weight
                     best_ev["cx"] = best_ev["cx_sum"] / best_ev["count"]
                     best_ev["cy"] = best_ev["cy_sum"] / best_ev["count"]
                     best_ev["last_frame_idx"] = frame.start_index
                     best_ev["_matched_this_frame"] = True
                 else:
-                    _open_event(text, cx, cy, frame)
+                    _open_event(text, cx, cy, frame, weight)
 
         for ev in events:
             _close_event(ev)
