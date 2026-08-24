@@ -72,6 +72,11 @@ LABEL_DEPENDENT_WIDGETS = (
     "--label_min_confirmation_frames",
     "--label_reappear_merge_gap",
     "--label_filter_single_char",
+    "--label_conf_threshold",
+    "--label_text_similarity",
+    "--label_pos_drift",
+    "--label_close_pos_distance",
+    "--label_close_pos_length_ratio",
 )
 
 
@@ -86,9 +91,9 @@ class SettingsTab(QWidget):
     """Advanced settings. Emits settings_changed(list_of_keys) on any change."""
 
     settings_changed = Signal(list)
-    ui_language_changed = Signal(str)      # native name
+    ui_language_changed = Signal(str)  # native name
     scaling_changed = Signal(str)
-    directml_gpu_changed = Signal(str)     # numeric index
+    directml_gpu_changed = Signal(str)  # numeric index
     restart_requested = Signal()
     info_requested = Signal()
     help_requested = Signal()
@@ -125,16 +130,86 @@ class SettingsTab(QWidget):
         form.setLabelAlignment(Qt.AlignmentFlag.AlignLeft)
         form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow)
 
-        self._add_line(form, "--time_start", "lbl_time_start", "Start Time (e.g., 0:00 or 1:23:45):", "0:00", "tip_time_start")
-        self._add_line(form, "--time_end", "lbl_time_end", "End Time (e.g., 0:10 or 2:34:56):", "", "tip_time_end")
-        self._add_line(form, "--conf_threshold", "lbl_conf_threshold", "Confidence Threshold (0-100):", "75", "tip_conf_threshold")
-        self._add_line(form, "--sim_threshold", "lbl_sim_threshold", "Similarity Threshold (0-100):", "80", "tip_sim_threshold")
-        self._add_line(form, "--max_merge_gap", "lbl_merge_gap", "Max Merge Gap (seconds):", "0.1", "tip_merge_gap")
-        self._add_line(form, "--brightness_threshold", "lbl_brightness", "Brightness Threshold (0-255):", "", "tip_brightness")
-        self._add_line(form, "--ssim_threshold", "lbl_ssim", "SSIM Threshold (0-100):", "92", "tip_ssim")
-        self._add_line(form, "--ocr_image_max_width", "lbl_ocr_width", "Max OCR Image Width (pixel):", "720", "tip_ocr_width")
-        self._add_line(form, "--frames_to_skip", "lbl_frames_skip", "Frames to Skip:", "1", "tip_frames_skip")
-        self._add_line(form, "--min_subtitle_duration", "lbl_min_duration", "Minimum Subtitle Duration (seconds):", "0.2", "tip_min_duration")
+        self._add_line(
+            form,
+            "--time_start",
+            "lbl_time_start",
+            "Start Time (e.g., 0:00 or 1:23:45):",
+            "0:00",
+            "tip_time_start",
+        )
+        self._add_line(
+            form,
+            "--time_end",
+            "lbl_time_end",
+            "End Time (e.g., 0:10 or 2:34:56):",
+            "",
+            "tip_time_end",
+        )
+        self._add_line(
+            form,
+            "--conf_threshold",
+            "lbl_conf_threshold",
+            "Confidence Threshold (0-100):",
+            "75",
+            "tip_conf_threshold",
+        )
+        self._add_line(
+            form,
+            "--sim_threshold",
+            "lbl_sim_threshold",
+            "Similarity Threshold (0-100):",
+            "80",
+            "tip_sim_threshold",
+        )
+        self._add_line(
+            form,
+            "--max_merge_gap",
+            "lbl_merge_gap",
+            "Max Merge Gap (seconds):",
+            "0.1",
+            "tip_merge_gap",
+        )
+        self._add_line(
+            form,
+            "--brightness_threshold",
+            "lbl_brightness",
+            "Brightness Threshold (0-255):",
+            "",
+            "tip_brightness",
+        )
+        self._add_line(
+            form,
+            "--ssim_threshold",
+            "lbl_ssim",
+            "SSIM Threshold (0-100):",
+            "92",
+            "tip_ssim",
+        )
+        self._add_line(
+            form,
+            "--ocr_image_max_width",
+            "lbl_ocr_width",
+            "Max OCR Image Width (pixel):",
+            "720",
+            "tip_ocr_width",
+        )
+        self._add_line(
+            form,
+            "--frames_to_skip",
+            "lbl_frames_skip",
+            "Frames to Skip:",
+            "1",
+            "tip_frames_skip",
+        )
+        self._add_line(
+            form,
+            "--min_subtitle_duration",
+            "lbl_min_duration",
+            "Minimum Subtitle Duration (seconds):",
+            "0.2",
+            "tip_min_duration",
+        )
         root.addWidget(ocr_box)
 
         # DirectML box
@@ -143,9 +218,18 @@ class SettingsTab(QWidget):
         self._section_boxes.append((dml_box, "lbl_dml_section", "DirectML (AMD GPU):"))
         dml_form = QFormLayout(dml_box)
         dml_form.setLabelAlignment(Qt.AlignmentFlag.AlignLeft)
-        dml_form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow)
+        dml_form.setFieldGrowthPolicy(
+            QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow
+        )
 
-        self._add_check(dml_form, "--use_gpu", "chk_use_gpu", "Enable GPU Usage", "tip_use_gpu", True)
+        self._add_check(
+            dml_form,
+            "--use_gpu",
+            "chk_use_gpu",
+            "Enable GPU Usage",
+            "tip_use_gpu",
+            True,
+        )
 
         gpu_row = QHBoxLayout()
         self._widgets["-DML_ADAPTER_COMBO-"] = WheelGuardComboBox()
@@ -162,16 +246,54 @@ class SettingsTab(QWidget):
         gpu_row.addStretch(1)
         dml_form.addRow(self._lbl("lbl_dml_device", "DirectML GPU:"), gpu_row)
 
-        self._add_combo(dml_form, "--directml_performance_preset", "lbl_dml_preset",
-                        "AMD Performance Preset:", C.DIRECTML_PERFORMANCE_DISPLAY, "tip_dml_preset")
-        self._add_combo(dml_form, "--directml_recognition_mode", "lbl_dml_recognition",
-                        "DirectML Recognition Mode:", C.DIRECTML_RECOGNITION_DISPLAY, "tip_dml_recognition")
-        self._add_combo(dml_form, "--directml_frame_scan_mode", "lbl_dml_frame_scan",
-                        "AMD Frame Scan Mode:", C.DIRECTML_FRAME_SCAN_DISPLAY, "tip_dml_frame_scan")
-        self._add_combo(dml_form, "--onnx_directml_tuning", "lbl_onnx_tuning",
-                        "ONNX DirectML Tuning:", C.ONNX_DIRECTML_TUNING_DISPLAY, "tip_onnx_tuning")
-        self._add_line(dml_form, "--directml_grid_max_width", "lbl_dml_grid_w", "DirectML Grid Max Width:", "2400", "tip_dml_grid_w")
-        self._add_line(dml_form, "--directml_grid_max_height", "lbl_dml_grid_h", "DirectML Grid Max Height:", "2400", "tip_dml_grid_h")
+        self._add_combo(
+            dml_form,
+            "--directml_performance_preset",
+            "lbl_dml_preset",
+            "AMD Performance Preset:",
+            C.DIRECTML_PERFORMANCE_DISPLAY,
+            "tip_dml_preset",
+        )
+        self._add_combo(
+            dml_form,
+            "--directml_recognition_mode",
+            "lbl_dml_recognition",
+            "DirectML Recognition Mode:",
+            C.DIRECTML_RECOGNITION_DISPLAY,
+            "tip_dml_recognition",
+        )
+        self._add_combo(
+            dml_form,
+            "--directml_frame_scan_mode",
+            "lbl_dml_frame_scan",
+            "AMD Frame Scan Mode:",
+            C.DIRECTML_FRAME_SCAN_DISPLAY,
+            "tip_dml_frame_scan",
+        )
+        self._add_combo(
+            dml_form,
+            "--onnx_directml_tuning",
+            "lbl_onnx_tuning",
+            "ONNX DirectML Tuning:",
+            C.ONNX_DIRECTML_TUNING_DISPLAY,
+            "tip_onnx_tuning",
+        )
+        self._add_line(
+            dml_form,
+            "--directml_grid_max_width",
+            "lbl_dml_grid_w",
+            "DirectML Grid Max Width:",
+            "2400",
+            "tip_dml_grid_w",
+        )
+        self._add_line(
+            dml_form,
+            "--directml_grid_max_height",
+            "lbl_dml_grid_h",
+            "DirectML Grid Max Height:",
+            "2400",
+            "tip_dml_grid_h",
+        )
         root.addWidget(dml_box)
 
         # OCR mode toggles
@@ -180,23 +302,84 @@ class SettingsTab(QWidget):
         self._section_boxes.append((mode_box, "lbl_ocr_mode", "OCR Mode:"))
         mode_form = QFormLayout(mode_box)
         mode_form.setLabelAlignment(Qt.AlignmentFlag.AlignLeft)
-        mode_form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow)
+        mode_form.setFieldGrowthPolicy(
+            QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow
+        )
 
-        self._add_check(mode_form, "--use_fullframe", "chk_full_frame", "Use Full Frame OCR", "tip_full_frame", False)
-        self._add_check(mode_form, "--use_dual_zone", "chk_dual_zone", "Enable Dual Zone OCR", "tip_dual_zone", False)
-        self._add_check(mode_form, "enable_subtitle_alignment", "chk_enable_subtitle_alignment",
-                        "Enable Subtitle Alignment", "tip_enable_subtitle_alignment", False)
-        self._add_combo(mode_form, "--subtitle_alignment", "lbl_subtitle_alignment1",
-                        "Zone 1 Alignment:", C.SUBTITLE_ALIGNMENT_LIST, "tip_subtitle_alignment1",
-                        internal_values=[v for _, v in C.SUBTITLE_ALIGNMENT_LIST])
-        self._add_combo(mode_form, "--subtitle_alignment2", "lbl_subtitle_alignment2",
-                        "Zone 2 Alignment:", C.SUBTITLE_ALIGNMENT_LIST, "tip_subtitle_alignment2",
-                        internal_values=[v for _, v in C.SUBTITLE_ALIGNMENT_LIST])
-        self._add_check(mode_form, "--use_angle_cls", "chk_angle_cls", "Enable Angle Classification", "tip_angle_cls", False)
-        self._add_check(mode_form, "--post_processing", "chk_post_processing", "Enable Post Processing", "tip_post_processing", False)
-        self._add_check(mode_form, "--normalize_to_simplified_chinese", "chk_normalize_chinese",
-                        "Normalize Traditional to Simplified Chinese", "tip_normalize_chinese", True)
-        self._add_check(mode_form, "--use_server_model", "chk_server_model", "Use Server Model", "tip_server_model", False)
+        self._add_check(
+            mode_form,
+            "--use_fullframe",
+            "chk_full_frame",
+            "Use Full Frame OCR",
+            "tip_full_frame",
+            False,
+        )
+        self._add_check(
+            mode_form,
+            "--use_dual_zone",
+            "chk_dual_zone",
+            "Enable Dual Zone OCR",
+            "tip_dual_zone",
+            False,
+        )
+        self._add_check(
+            mode_form,
+            "enable_subtitle_alignment",
+            "chk_enable_subtitle_alignment",
+            "Enable Subtitle Alignment",
+            "tip_enable_subtitle_alignment",
+            False,
+        )
+        self._add_combo(
+            mode_form,
+            "--subtitle_alignment",
+            "lbl_subtitle_alignment1",
+            "Zone 1 Alignment:",
+            C.SUBTITLE_ALIGNMENT_LIST,
+            "tip_subtitle_alignment1",
+            internal_values=[v for _, v in C.SUBTITLE_ALIGNMENT_LIST],
+        )
+        self._add_combo(
+            mode_form,
+            "--subtitle_alignment2",
+            "lbl_subtitle_alignment2",
+            "Zone 2 Alignment:",
+            C.SUBTITLE_ALIGNMENT_LIST,
+            "tip_subtitle_alignment2",
+            internal_values=[v for _, v in C.SUBTITLE_ALIGNMENT_LIST],
+        )
+        self._add_check(
+            mode_form,
+            "--use_angle_cls",
+            "chk_angle_cls",
+            "Enable Angle Classification",
+            "tip_angle_cls",
+            False,
+        )
+        self._add_check(
+            mode_form,
+            "--post_processing",
+            "chk_post_processing",
+            "Enable Post Processing",
+            "tip_post_processing",
+            False,
+        )
+        self._add_check(
+            mode_form,
+            "--normalize_to_simplified_chinese",
+            "chk_normalize_chinese",
+            "Normalize Traditional to Simplified Chinese",
+            "tip_normalize_chinese",
+            True,
+        )
+        self._add_check(
+            mode_form,
+            "--use_server_model",
+            "chk_server_model",
+            "Use Server Model",
+            "tip_server_model",
+            False,
+        )
         root.addWidget(mode_box)
 
         # Label detection settings (text outside the subtitle crop area, e.g. names)
@@ -205,59 +388,194 @@ class SettingsTab(QWidget):
         self._section_boxes.append((label_box, "lbl_label_section", "Label Detection:"))
         label_form = QFormLayout(label_box)
         label_form.setLabelAlignment(Qt.AlignmentFlag.AlignLeft)
-        label_form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow)
+        label_form.setFieldGrowthPolicy(
+            QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow
+        )
 
-        self._add_check(label_form, "enable_label_detection", "chk_label_detection",
-                        "Enable Label Detection (detect text outside the subtitle crop)", "tip_label_detection", False)
-        self._add_line(label_form, "--label_time_start", "lbl_label_time_start",
-                       "Label Start Time (e.g., 0:00 or 1:23:45):", "", "tip_label_time_start")
-        self._add_line(label_form, "--label_time_end", "lbl_label_time_end",
-                       "Label End Time (e.g., 0:10 or 2:34:56):", "", "tip_label_time_end")
-        self._add_line(label_form, "--label_ocr_image_max_width", "lbl_label_ocr_width",
-                       "Label Max OCR Image Width (pixel):", "720", "tip_label_ocr_width")
-        self._add_line(label_form, "--label_min_display_duration", "lbl_label_min_duration",
-                       "Label Minimum Display Duration (seconds):", "1.0", "tip_label_min_duration")
-        self._add_line(label_form, "--label_min_confirmation_frames", "lbl_label_conf_frames",
-                       "Label Minimum Confirmation Frames:", "2", "tip_label_conf_frames")
-        self._add_line(label_form, "--label_reappear_merge_gap", "lbl_label_reappear_gap",
-                       "Label Reappear Merge Gap (seconds):", "2.0", "tip_label_reappear_gap")
-        self._add_check(label_form, "--label_filter_single_char", "chk_label_filter_single",
-                        "Filter Single-Character Label Noise", "tip_label_filter_single", True)
+        self._add_check(
+            label_form,
+            "enable_label_detection",
+            "chk_label_detection",
+            "Enable Label Detection (detect text outside the subtitle crop)",
+            "tip_label_detection",
+            False,
+        )
+        self._add_line(
+            label_form,
+            "--label_time_start",
+            "lbl_label_time_start",
+            "Label Start Time (e.g., 0:00 or 1:23:45):",
+            "",
+            "tip_label_time_start",
+        )
+        self._add_line(
+            label_form,
+            "--label_time_end",
+            "lbl_label_time_end",
+            "Label End Time (e.g., 0:10 or 2:34:56):",
+            "",
+            "tip_label_time_end",
+        )
+        self._add_line(
+            label_form,
+            "--label_ocr_image_max_width",
+            "lbl_label_ocr_width",
+            "Label Max OCR Image Width (pixel):",
+            "720",
+            "tip_label_ocr_width",
+        )
+        self._add_line(
+            label_form,
+            "--label_min_display_duration",
+            "lbl_label_min_duration",
+            "Label Minimum Display Duration (seconds):",
+            "1.0",
+            "tip_label_min_duration",
+        )
+        self._add_line(
+            label_form,
+            "--label_min_confirmation_frames",
+            "lbl_label_conf_frames",
+            "Label Minimum Confirmation Frames:",
+            "2",
+            "tip_label_conf_frames",
+        )
+        self._add_line(
+            label_form,
+            "--label_reappear_merge_gap",
+            "lbl_label_reappear_gap",
+            "Label Reappear Merge Gap (seconds):",
+            "2.0",
+            "tip_label_reappear_gap",
+        )
+        self._add_check(
+            label_form,
+            "--label_filter_single_char",
+            "chk_label_filter_single",
+            "Filter Single-Character Label Noise",
+            "tip_label_filter_single",
+            True,
+        )
+        self._add_line(
+            label_form,
+            "--label_conf_threshold",
+            "lbl_label_conf_threshold",
+            "Label Confidence Threshold (0-100):",
+            "60",
+            "tip_label_conf_threshold",
+        )
+        self._add_line(
+            label_form,
+            "--label_text_similarity",
+            "lbl_label_text_similarity",
+            "Label Text Similarity (0-100):",
+            "55",
+            "tip_label_text_similarity",
+        )
+        self._add_line(
+            label_form,
+            "--label_pos_drift",
+            "lbl_label_pos_drift",
+            "Label Position Drift (px):",
+            "160",
+            "tip_label_pos_drift",
+        )
+        self._add_line(
+            label_form,
+            "--label_close_pos_distance",
+            "lbl_label_close_pos_distance",
+            "Label Close-Position Distance (px):",
+            "40",
+            "tip_label_close_pos_distance",
+        )
+        self._add_line(
+            label_form,
+            "--label_close_pos_length_ratio",
+            "lbl_label_close_pos_length_ratio",
+            "Label Close-Position Length Ratio (0-1):",
+            "0.5",
+            "tip_label_close_pos_length_ratio",
+        )
         root.addWidget(label_box)
 
         # VideOCR Recreated settings
         vo_box = QGroupBox()
         vo_box.setObjectName("sectionBox")
-        self._section_boxes.append((vo_box, "lbl_videocr_settings", "VideOCR Recreated Settings:"))
+        self._section_boxes.append(
+            (vo_box, "lbl_videocr_settings", "VideOCR Recreated Settings:")
+        )
         vo_form = QFormLayout(vo_box)
         vo_form.setLabelAlignment(Qt.AlignmentFlag.AlignLeft)
-        vo_form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow)
+        vo_form.setFieldGrowthPolicy(
+            QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow
+        )
 
         self._widgets["-UI_LANG_COMBO-"] = WheelGuardComboBox()
         self._widgets["-UI_LANG_COMBO-"].currentIndexChanged.connect(
             lambda _i: self._on_changed(["-UI_LANG_COMBO-"])
         )
-        vo_form.addRow(self._lbl("lbl_ui_lang", "UI Language:"), self._widgets["-UI_LANG_COMBO-"])
+        vo_form.addRow(
+            self._lbl("lbl_ui_lang", "UI Language:"), self._widgets["-UI_LANG_COMBO-"]
+        )
 
         self._widgets["gui_scaling"] = WheelGuardComboBox()
         self._widgets["gui_scaling"].currentIndexChanged.connect(
             lambda _i: self._on_changed(["gui_scaling"])
         )
-        vo_form.addRow(self._lbl("lbl_gui_scaling", "GUI Scaling:"), self._widgets["gui_scaling"])
+        vo_form.addRow(
+            self._lbl("lbl_gui_scaling", "GUI Scaling:"), self._widgets["gui_scaling"]
+        )
 
-        self._add_check(vo_form, "--save_crop_box", "chk_save_crop_box", "Save Crop Box Selection", "tip_save_crop_box", True)
-        self._add_check(vo_form, "--save_in_video_dir", "chk_save_in_video_dir", "Save SRT in Video Directory", "tip_save_in_video_dir", True)
+        self._add_check(
+            vo_form,
+            "--save_crop_box",
+            "chk_save_crop_box",
+            "Save Crop Box Selection",
+            "tip_save_crop_box",
+            True,
+        )
+        self._add_check(
+            vo_form,
+            "--save_in_video_dir",
+            "chk_save_in_video_dir",
+            "Save Subtitle File in Video Directory",
+            "tip_save_in_video_dir",
+            True,
+        )
 
         out_row = QHBoxLayout()
         self._widgets["--default_output_dir"] = QLineEdit()
-        self.browse_output_btn = QPushButton(i18n.tr("btn_browse_folder", "Open Folder..."))
+        self.browse_output_btn = QPushButton(
+            i18n.tr("btn_browse_folder", "Open Folder...")
+        )
         out_row.addWidget(self._widgets["--default_output_dir"])
         out_row.addWidget(self.browse_output_btn)
         vo_form.addRow(self._lbl("lbl_output_dir", "Output Directory:"), out_row)
 
-        self._add_line(vo_form, "--keyboard_seek_step", "lbl_seek_step", "Keyboard Seek Step (seconds):", "1", "tip_seek_step")
-        self._add_check(vo_form, "--send_notification", "chk_send_notification", "Send Notification", "tip_send_notification", True)
-        self._add_check(vo_form, "prevent_system_sleep", "chk_prevent_sleep", "Prevent System Sleep", "tip_prevent_sleep", True)
+        self._add_line(
+            vo_form,
+            "--keyboard_seek_step",
+            "lbl_seek_step",
+            "Keyboard Seek Step (seconds):",
+            "1",
+            "tip_seek_step",
+        )
+        self._add_check(
+            vo_form,
+            "--send_notification",
+            "chk_send_notification",
+            "Send Notification",
+            "tip_send_notification",
+            True,
+        )
+        self._add_check(
+            vo_form,
+            "prevent_system_sleep",
+            "chk_prevent_sleep",
+            "Prevent System Sleep",
+            "tip_prevent_sleep",
+            True,
+        )
         root.addWidget(vo_box)
 
         root.addStretch(1)
@@ -276,8 +594,15 @@ class SettingsTab(QWidget):
         self._labels.append(label)
         return label
 
-    def _add_line(self, form: QFormLayout, key: str, label_key: str, fallback_label: str, default: str,
-                  tooltip_key: str | None = None) -> QLineEdit:
+    def _add_line(
+        self,
+        form: QFormLayout,
+        key: str,
+        label_key: str,
+        fallback_label: str,
+        default: str,
+        tooltip_key: str | None = None,
+    ) -> QLineEdit:
         edit = QLineEdit(default)
         edit.setObjectName(key.lstrip("-").replace("_", "-"))
         self._widgets[key] = edit
@@ -288,9 +613,16 @@ class SettingsTab(QWidget):
         edit.textChanged.connect(lambda _t, k=key: self._on_changed([k]))
         return edit
 
-    def _add_combo(self, form: QFormLayout, key: str, label_key: str, fallback_label: str,
-                   options: list[tuple[str, str]] | list[str], tooltip_key: str | None = None,
-                   internal_values: list[str] | None = None) -> QComboBox:
+    def _add_combo(
+        self,
+        form: QFormLayout,
+        key: str,
+        label_key: str,
+        fallback_label: str,
+        options: list[tuple[str, str]] | list[str],
+        tooltip_key: str | None = None,
+        internal_values: list[str] | None = None,
+    ) -> QComboBox:
         combo = WheelGuardComboBox()
         if options and isinstance(options[0], tuple):
             display = [_translated_label(lang_key, name) for lang_key, name in options]
@@ -328,8 +660,15 @@ class SettingsTab(QWidget):
         }.get(combo_key, [])
         return [name for name, _ in source]
 
-    def _add_check(self, form: QFormLayout, key: str, label_key: str, fallback_label: str,
-                   tooltip_key: str, default: bool) -> QCheckBox:
+    def _add_check(
+        self,
+        form: QFormLayout,
+        key: str,
+        label_key: str,
+        fallback_label: str,
+        tooltip_key: str,
+        default: bool,
+    ) -> QCheckBox:
         cb = QCheckBox(_translated_label(label_key, fallback_label))
         cb.setChecked(default)
         cb.setToolTip(i18n.tr(tooltip_key, ""))
@@ -354,7 +693,11 @@ class SettingsTab(QWidget):
                 if isinstance(widget, QComboBox):
                     if key in self._combo_internal:
                         internal_list = self._combo_internal[key]
-                        idx = internal_list.index(str(value)) if str(value) in internal_list else 0
+                        idx = (
+                            internal_list.index(str(value))
+                            if str(value) in internal_list
+                            else 0
+                        )
                         widget.setCurrentIndex(idx)
                     elif key in DML_OPTION_COMBOS:
                         # settings store the English canonical value; the combo
@@ -432,17 +775,29 @@ class SettingsTab(QWidget):
                 if key in self._combo_internal:
                     internal_list = self._combo_internal[key]
                     idx = widget.currentIndex()
-                    settings[key] = internal_list[idx] if 0 <= idx < len(internal_list) else (internal_list[0] if internal_list else "")
+                    settings[key] = (
+                        internal_list[idx]
+                        if 0 <= idx < len(internal_list)
+                        else (internal_list[0] if internal_list else "")
+                    )
                 elif key == "gui_scaling":
                     # combo shows localized text; persist the internal key
                     internal_keys = [k for k, _ in C.GUI_SCALING_LIST]
                     idx = widget.currentIndex()
-                    settings[key] = internal_keys[idx] if 0 <= idx < len(internal_keys) else (internal_keys[0] if internal_keys else "")
+                    settings[key] = (
+                        internal_keys[idx]
+                        if 0 <= idx < len(internal_keys)
+                        else (internal_keys[0] if internal_keys else "")
+                    )
                 elif key in DML_OPTION_COMBOS:
                     # combo shows localized text; persist the English canonical value
                     names = self._dml_english_options(key)
                     idx = widget.currentIndex()
-                    settings[key] = names[idx] if 0 <= idx < len(names) else (names[0] if names else "")
+                    settings[key] = (
+                        names[idx]
+                        if 0 <= idx < len(names)
+                        else (names[0] if names else "")
+                    )
                 else:
                     settings[key] = widget.currentText()
             elif isinstance(widget, QCheckBox):
@@ -475,8 +830,15 @@ class SettingsTab(QWidget):
                 continue
             internal_list = self._combo_internal.get(key, [])
             idx = widget.currentIndex()
-            cur_internal = internal_list[idx] if 0 <= idx < len(internal_list) else (internal_list[0] if internal_list else "")
-            display = [_translated_label(lang_key, name) for lang_key, name in C.SUBTITLE_ALIGNMENT_LIST]
+            cur_internal = (
+                internal_list[idx]
+                if 0 <= idx < len(internal_list)
+                else (internal_list[0] if internal_list else "")
+            )
+            display = [
+                _translated_label(lang_key, name)
+                for lang_key, name in C.SUBTITLE_ALIGNMENT_LIST
+            ]
             widget.blockSignals(True)
             widget.clear()
             widget.addItems(display)
@@ -490,7 +852,10 @@ class SettingsTab(QWidget):
             if not isinstance(widget, QComboBox):
                 continue
             idx = widget.currentIndex()
-            display = [self._localized_option(key, name) for name in self._dml_english_options(key)]
+            display = [
+                self._localized_option(key, name)
+                for name in self._dml_english_options(key)
+            ]
             widget.blockSignals(True)
             widget.clear()
             widget.addItems(display)
@@ -548,7 +913,11 @@ class SettingsTab(QWidget):
             # emit the internal key, not the localized display text
             internal_keys = [k for k, _ in C.GUI_SCALING_LIST]
             idx = self._widgets[key].currentIndex()
-            internal = internal_keys[idx] if 0 <= idx < len(internal_keys) else (internal_keys[0] if internal_keys else "")
+            internal = (
+                internal_keys[idx]
+                if 0 <= idx < len(internal_keys)
+                else (internal_keys[0] if internal_keys else "")
+            )
             self.scaling_changed.emit(internal)
             return
         elif key == "-DML_ADAPTER_COMBO-":
@@ -570,7 +939,9 @@ class SettingsTab(QWidget):
     def _directml_index(self) -> str:
         from . import directml
 
-        return directml.option_to_index(self._widgets["-DML_ADAPTER_COMBO-"].currentText())
+        return directml.option_to_index(
+            self._widgets["-DML_ADAPTER_COMBO-"].currentText()
+        )
 
     def _apply_preset_grid(self) -> None:
         preset = self._dml_english_options("--directml_performance_preset")[
@@ -620,7 +991,9 @@ class SettingsTab(QWidget):
     def _browse_output_dir(self) -> None:
         from PySide6.QtWidgets import QFileDialog
 
-        folder = QFileDialog.getExistingDirectory(self, i18n.tr("lbl_output_dir", "Output Directory:"))
+        folder = QFileDialog.getExistingDirectory(
+            self, i18n.tr("lbl_output_dir", "Output Directory:")
+        )
         if folder:
             self._widgets["--default_output_dir"].setText(folder)
             self.settings_changed.emit(["--default_output_dir"])

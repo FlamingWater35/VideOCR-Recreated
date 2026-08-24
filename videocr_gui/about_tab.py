@@ -10,8 +10,6 @@ from PySide6.QtWidgets import QLabel, QVBoxLayout, QWidget
 from . import i18n
 
 FORK_REPO_URL = "https://github.com/FlamingWater35/VideOCR-Recreated"
-ORIGINAL_RELEASES_URL = "https://github.com/timminator/VideOCR/releases"
-ORIGINAL_ISSUES_URL = "https://github.com/timminator/VideOCR/issues"
 
 
 class ClickableLabel(QLabel):
@@ -65,26 +63,12 @@ class AboutTab(QWidget):
         self.newest_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(self.newest_lbl)
 
-        releases = ClickableLabel(ORIGINAL_RELEASES_URL)
+        releases = ClickableLabel(FORK_REPO_URL)
         releases.setObjectName("linkLabel")
         releases.setAlignment(Qt.AlignmentFlag.AlignCenter)
         releases.setCursor(Qt.CursorShape.PointingHandCursor)
-        releases.clicked.connect(lambda: webbrowser.open(ORIGINAL_RELEASES_URL))
+        releases.clicked.connect(lambda: webbrowser.open(FORK_REPO_URL))
         layout.addWidget(releases)
-
-        layout.addSpacing(8)
-
-        self.bug_lbl = QLabel(i18n.tr("lbl_bug_report", "Found a bug or have a suggestion? Feel free to open an issue at:"))
-        self.bug_lbl.setWordWrap(True)
-        self.bug_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(self.bug_lbl)
-
-        issues = ClickableLabel(ORIGINAL_ISSUES_URL)
-        issues.setObjectName("linkLabel")
-        issues.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        issues.setCursor(Qt.CursorShape.PointingHandCursor)
-        issues.clicked.connect(lambda: webbrowser.open(ORIGINAL_ISSUES_URL))
-        layout.addWidget(issues)
 
         layout.addStretch(1)
 
@@ -97,4 +81,3 @@ class AboutTab(QWidget):
         self.fork_lbl.setText(i18n.tr("lbl_about_fork", "This project is a fork of the original VideOCR by timminator."))
         self.fork_repo_lbl.setText(i18n.tr("lbl_about_fork_repo", "Fork repository:"))
         self.newest_lbl.setText(i18n.tr("lbl_get_newest", "Get the newest version here:"))
-        self.bug_lbl.setText(i18n.tr("lbl_bug_report", "Found a bug or have a suggestion? Feel free to open an issue at:"))

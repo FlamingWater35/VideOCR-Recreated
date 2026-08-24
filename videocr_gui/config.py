@@ -151,6 +151,12 @@ def get_default_settings() -> dict[str, Any]:
         "--label_min_confirmation_frames": "2",
         "--label_reappear_merge_gap": "2.0",
         "--label_filter_single_char": True,
+        # New configurable label-detection thresholds (fix 3 + fix 7)
+        "--label_conf_threshold": "60",
+        "--label_text_similarity": "55",
+        "--label_pos_drift": "160",
+        "--label_close_pos_distance": "40",
+        "--label_close_pos_length_ratio": "0.5",
     }
 
 

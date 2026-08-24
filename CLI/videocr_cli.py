@@ -50,46 +50,62 @@ _force_utf8_stdio()
 # custom validators for argparse
 def valid_video_path(arg: str) -> str:
     if not os.path.isfile(arg):
-        raise argparse.ArgumentTypeError(f"Video file does not exist or is not a valid file: '{arg}'")
+        raise argparse.ArgumentTypeError(
+            f"Video file does not exist or is not a valid file: '{arg}'"
+        )
     return arg
 
 
 def valid_output_path(arg: str) -> str:
-    dir_name = os.path.dirname(arg) or '.'
+    dir_name = os.path.dirname(arg) or "."
     if not os.path.isdir(dir_name):
-        raise argparse.ArgumentTypeError(f"Output directory does not exist: '{dir_name}'")
+        raise argparse.ArgumentTypeError(
+            f"Output directory does not exist: '{dir_name}'"
+        )
     if not os.access(dir_name, os.W_OK):
-        raise argparse.ArgumentTypeError(f"Output directory is not writable: '{dir_name}'")
+        raise argparse.ArgumentTypeError(
+            f"Output directory is not writable: '{dir_name}'"
+        )
     return arg
 
 
-def restricted_int(min_val: int | None = None, max_val: int | None = None) -> Callable[[str], int]:
+def restricted_int(
+    min_val: int | None = None, max_val: int | None = None
+) -> Callable[[str], int]:
     def validator(arg: str) -> int:
         try:
             value = int(arg)
         except ValueError:
-            raise argparse.ArgumentTypeError(f"Must be an integer. Got '{arg}'") from None
+            raise argparse.ArgumentTypeError(
+                f"Must be an integer. Got '{arg}'"
+            ) from None
 
         if min_val is not None and value < min_val:
             raise argparse.ArgumentTypeError(f"Value must be >= {min_val}")
         if max_val is not None and value > max_val:
             raise argparse.ArgumentTypeError(f"Value must be <= {max_val}")
         return value
+
     return validator
 
 
-def restricted_float(min_val: float | None = None, max_val: float | None = None) -> Callable[[str], float]:
+def restricted_float(
+    min_val: float | None = None, max_val: float | None = None
+) -> Callable[[str], float]:
     def validator(arg: str) -> float:
         try:
             value = float(arg)
         except ValueError:
-            raise argparse.ArgumentTypeError(f"Must be a decimal number. Got '{arg}'") from None
+            raise argparse.ArgumentTypeError(
+                f"Must be a decimal number. Got '{arg}'"
+            ) from None
 
         if min_val is not None and value < min_val:
             raise argparse.ArgumentTypeError(f"Value must be >= {min_val}")
         if max_val is not None and value > max_val:
             raise argparse.ArgumentTypeError(f"Value must be <= {max_val}")
         return value
+
     return validator
 
 
@@ -100,7 +116,9 @@ def valid_time_string(arg: str) -> str:
         utils.get_ms_from_time_str(arg)
         return arg
     except ValueError:
-        raise argparse.ArgumentTypeError(f"Invalid time format '{arg}'. Use MM:SS or HH:MM:SS.") from None
+        raise argparse.ArgumentTypeError(
+            f"Invalid time format '{arg}'. Use MM:SS or HH:MM:SS."
+        ) from None
 
 
 def valid_alignment_name(arg: str) -> str | None:
@@ -109,129 +127,422 @@ def valid_alignment_name(arg: str) -> str | None:
     if arg in utils.VALID_ALIGNMENT_NAMES:
         return utils.ALIGNMENT_MAP[arg]
     allowed_values = ", ".join(sorted(list(utils.VALID_ALIGNMENT_NAMES)))
-    raise argparse.ArgumentTypeError(f"Invalid alignment '{arg}'. Allowed values are: {allowed_values}")
+    raise argparse.ArgumentTypeError(
+        f"Invalid alignment '{arg}'. Allowed values are: {allowed_values}"
+    )
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description='Extract subtitles from a video using PaddleOCR, Google Lens, EasyOCR DirectML, or ONNX Runtime DirectML.')
+    parser = argparse.ArgumentParser(
+        description="Extract subtitles from a video using PaddleOCR, Google Lens, EasyOCR DirectML, or ONNX Runtime DirectML."
+    )
 
-    parser.add_argument('--video_path', type=valid_video_path, required=True, help='Path to the video file')
-    parser.add_argument('--output', type=valid_output_path, default='subtitle.srt', help='Output SRT file path (default: subtitle.srt)')
-    parser.add_argument('--ocr_engine', type=str, choices=['paddleocr', 'google_lens', 'easyocr_directml', 'onnx_directml'], default='paddleocr', help='OCR engine to use. Use easyocr_directml or onnx_directml for AMD/DirectML on Windows (default: paddleocr)')
-    parser.add_argument('--lang', type=str, default='en', help='OCR language code (default: en)')
-    parser.add_argument('--time_start', type=valid_time_string, default='0:00', help='Start time (MM:SS or HH:MM:SS)')
-    parser.add_argument('--time_end', type=valid_time_string, default='', help='End time (MM:SS or HH:MM:SS)')
-    parser.add_argument('--conf_threshold', type=restricted_int(0, 100), default=75, help='Confidence threshold (PaddleOCR only, default: 75)')
-    parser.add_argument('--sim_threshold', type=restricted_int(0, 100), default=80, help='Similarity threshold (default: 80)')
-    parser.add_argument('--max_merge_gap', type=restricted_float(min_val=0.0), default=0.1, help='Maximum time gap in seconds to merge similar subtitles (default: 0.1)')
-    parser.add_argument('--use_fullframe', type=lambda x: x.lower() == 'true', default=False, help='Use full frame for OCR (default: false)')
-    parser.add_argument('--use_gpu', type=lambda x: x.lower() == 'true', default=False, help='Enable GPU usage (default: false)')
-    parser.add_argument('--use_angle_cls', type=lambda x: x.lower() == 'true', default=False, help='Enable Classification (PaddleOCR only, default: false)')
-    parser.add_argument('--use_server_model', type=lambda x: x.lower() == 'true', default=False, help='Enable usage of server model (default: false)')
-    parser.add_argument('--brightness_threshold', type=restricted_int(0, 255), default=None, help='Brightness threshold')
-    parser.add_argument('--ssim_threshold', type=restricted_int(0, 100), default=92, help='SSIM similarity threshold for initial frame filtering in Step 1 (default: 92)')
-    parser.add_argument('--subtitle_position', type=str, default='center', help='Subtitle position alignment (center (default), left, right, any)')
-    parser.add_argument('--frames_to_skip', type=restricted_int(min_val=0), default=1, help='Frames to skip (default: 1)')
-    parser.add_argument('--normalize_to_simplified_chinese', type=lambda x: x.lower() == 'true', default=True, help='Normalize Traditional Chinese characters to Simplified Chinese for ch (default: true)')
-    parser.add_argument('--post_processing', type=lambda x: x.lower() == 'true', default=False, help='Enable post processing of subtitles (default: false)')
-    parser.add_argument('--min_subtitle_duration', type=restricted_float(min_val=0.0), default=0.2, help='Minimum subtitle duration in seconds (default: 0.2)')
-    parser.add_argument('--ocr_image_max_width', type=restricted_int(min_val=0), default=720, help='Maximum image width used for OCR; 0 disables downscaling (default: 720)')
-    parser.add_argument('--directml_device_index', type=restricted_int(min_val=0), default=None, help='DirectML adapter index for EasyOCR DirectML. On Ryzen+iGPU systems, 1 is often the discrete AMD GPU.')
-    parser.add_argument('--directml_grid_max_width', type=restricted_int(min_val=512), default=2400, help='Maximum stitched OCR grid width for EasyOCR DirectML manual mode (default: 2400)')
-    parser.add_argument('--directml_grid_max_height', type=restricted_int(min_val=512), default=2400, help='Maximum stitched OCR grid height for EasyOCR DirectML manual mode (default: 2400)')
-    parser.add_argument('--directml_performance_preset', type=str, choices=['compatibility', 'balanced', 'max', 'manual'], default='balanced', help='DirectML grid/performance preset for AMD GPUs (default: balanced)')
-    parser.add_argument('--directml_recognition_mode', type=str, choices=['stable', 'auto', 'experimental'], default='stable', help='DirectML recognition mode: stable=CPU recognizer, auto=try GPU recognizer with fallback, experimental=try GPU recognizer (default: stable)')
-    parser.add_argument('--directml_frame_scan_mode', type=str, choices=['cpu_ssim', 'directml_ssim', 'ffmpeg_d3d11va'], default='cpu_ssim', help='Step 1 frame scan mode. cpu_ssim is safest; directml_ssim moves SSIM-style comparisons to DirectML/AMD GPU; ffmpeg_d3d11va uses FFmpeg D3D11VA hardware decode prototype plus DirectML SSIM for EasyOCR DirectML.')
-    parser.add_argument('--onnx_directml_tuning', type=str, choices=['low_vram', 'balanced', 'max', 'manual'], default='balanced', help='ONNX DirectML tuning mode. low_vram/balanced reduce grid size and memory pressure; max uses larger grids; manual uses the DirectML grid width/height values (default: balanced)')
-    parser.add_argument('--benchmark_compare_engine', type=lambda x: x.lower() == 'true', default=False, help='Run a small sample EasyOCR-vs-ONNX benchmark after the main ONNX run (default: false)')
-    parser.add_argument('--benchmark_compare_sample_grids', type=restricted_int(min_val=1, max_val=20), default=3, help='Number of stitched OCR grids to use for the optional benchmark comparison (default: 3)')
-    parser.add_argument('--crop_x', type=int, default=None, help='(Zone 1) Crop start X')
-    parser.add_argument('--crop_y', type=int, default=None, help='(Zone 1) Crop start Y')
-    parser.add_argument('--crop_width', type=int, default=None, help='(Zone 1) Crop width')
-    parser.add_argument('--crop_height', type=int, default=None, help='(Zone 1) Crop height')
-    parser.add_argument('--crop_x2', type=int, default=None, help='(Zone 2) Crop start X')
-    parser.add_argument('--crop_y2', type=int, default=None, help='(Zone 2) Crop start Y')
-    parser.add_argument('--crop_width2', type=int, default=None, help='(Zone 2) Crop width')
-    parser.add_argument('--crop_height2', type=int, default=None, help='(Zone 2) Crop height')
-    parser.add_argument('--subtitle_alignment', type=valid_alignment_name, default=None, help='(Zone 1) Subtitle alignment. Allowed: bottom-left, bottom-center, bottom-right, middle-left, middle-center, middle-right, top-left, top-center, top-right')
-    parser.add_argument('--subtitle_alignment2', type=valid_alignment_name, default=None, help='(Zone 2) Subtitle alignment. See --subtitle_alignment for allowed values.')
-    parser.add_argument('--enable_label_detection', type=lambda x: x.lower() == 'true', default=False, help='Detect text outside the subtitle crop area (e.g. people/place name labels) and write an .ass subtitle file with positioned Label events (default: false)')
-    parser.add_argument('--label_time_start', type=valid_time_string, default='', help='Start time (MM:SS or HH:MM:SS) for label detection, within the subtitle extraction window; defaults to the main start (default: same as --time_start)')
-    parser.add_argument('--label_time_end', type=valid_time_string, default='', help='End time (MM:SS or HH:MM:SS) for label detection, within the subtitle extraction window; defaults to the main end (default: same as --time_end)')
-    parser.add_argument('--label_ocr_image_max_width', type=restricted_int(min_val=1), default=720, help='Maximum image width used for OCR in the label detection zone (default: 720)')
-    parser.add_argument('--label_min_display_duration', type=restricted_float(min_val=0.0), default=1.0, help='Minimum display duration in seconds for detected labels (default: 1.0)')
-    parser.add_argument('--label_min_confirmation_frames', type=restricted_int(min_val=1), default=2, help='Minimum number of sampled frames a label must appear in before it is emitted (filters OCR noise, default: 2)')
-    parser.add_argument('--label_reappear_merge_gap', type=restricted_float(min_val=0.0), default=2.0, help='Maximum gap in seconds between reappearances of the same label that are merged into one event (default: 2.0)')
-    parser.add_argument('--label_filter_single_char', type=lambda x: x.lower() == 'true', default=True, help='Drop single-character label detections (e.g. "M", "3") which are usually OCR noise (default: true)')
-    parser.add_argument('--allow_system_sleep', type=lambda x: x.lower() == 'true', default=False, help='Allow the system to sleep during processing (default: false)')
-
+    parser.add_argument(
+        "--video_path",
+        type=valid_video_path,
+        required=True,
+        help="Path to the video file",
+    )
+    parser.add_argument(
+        "--output",
+        type=valid_output_path,
+        default="subtitle.srt",
+        help="Output SRT file path (default: subtitle.srt)",
+    )
+    parser.add_argument(
+        "--ocr_engine",
+        type=str,
+        choices=["paddleocr", "google_lens", "easyocr_directml", "onnx_directml"],
+        default="paddleocr",
+        help="OCR engine to use. Use easyocr_directml or onnx_directml for AMD/DirectML on Windows (default: paddleocr)",
+    )
+    parser.add_argument(
+        "--lang", type=str, default="en", help="OCR language code (default: en)"
+    )
+    parser.add_argument(
+        "--time_start",
+        type=valid_time_string,
+        default="0:00",
+        help="Start time (MM:SS or HH:MM:SS)",
+    )
+    parser.add_argument(
+        "--time_end",
+        type=valid_time_string,
+        default="",
+        help="End time (MM:SS or HH:MM:SS)",
+    )
+    parser.add_argument(
+        "--conf_threshold",
+        type=restricted_int(0, 100),
+        default=75,
+        help="Confidence threshold (PaddleOCR only, default: 75)",
+    )
+    parser.add_argument(
+        "--sim_threshold",
+        type=restricted_int(0, 100),
+        default=80,
+        help="Similarity threshold (default: 80)",
+    )
+    parser.add_argument(
+        "--max_merge_gap",
+        type=restricted_float(min_val=0.0),
+        default=0.1,
+        help="Maximum time gap in seconds to merge similar subtitles (default: 0.1)",
+    )
+    parser.add_argument(
+        "--use_fullframe",
+        type=lambda x: x.lower() == "true",
+        default=False,
+        help="Use full frame for OCR (default: false)",
+    )
+    parser.add_argument(
+        "--use_gpu",
+        type=lambda x: x.lower() == "true",
+        default=False,
+        help="Enable GPU usage (default: false)",
+    )
+    parser.add_argument(
+        "--use_angle_cls",
+        type=lambda x: x.lower() == "true",
+        default=False,
+        help="Enable Classification (PaddleOCR only, default: false)",
+    )
+    parser.add_argument(
+        "--use_server_model",
+        type=lambda x: x.lower() == "true",
+        default=False,
+        help="Enable usage of server model (default: false)",
+    )
+    parser.add_argument(
+        "--brightness_threshold",
+        type=restricted_int(0, 255),
+        default=None,
+        help="Brightness threshold",
+    )
+    parser.add_argument(
+        "--ssim_threshold",
+        type=restricted_int(0, 100),
+        default=92,
+        help="SSIM similarity threshold for initial frame filtering in Step 1 (default: 92)",
+    )
+    parser.add_argument(
+        "--subtitle_position",
+        type=str,
+        default="center",
+        help="Subtitle position alignment (center (default), left, right, any)",
+    )
+    parser.add_argument(
+        "--frames_to_skip",
+        type=restricted_int(min_val=0),
+        default=1,
+        help="Frames to skip (default: 1)",
+    )
+    parser.add_argument(
+        "--normalize_to_simplified_chinese",
+        type=lambda x: x.lower() == "true",
+        default=True,
+        help="Normalize Traditional Chinese characters to Simplified Chinese for ch (default: true)",
+    )
+    parser.add_argument(
+        "--post_processing",
+        type=lambda x: x.lower() == "true",
+        default=False,
+        help="Enable post processing of subtitles (default: false)",
+    )
+    parser.add_argument(
+        "--min_subtitle_duration",
+        type=restricted_float(min_val=0.0),
+        default=0.2,
+        help="Minimum subtitle duration in seconds (default: 0.2)",
+    )
+    parser.add_argument(
+        "--ocr_image_max_width",
+        type=restricted_int(min_val=0),
+        default=720,
+        help="Maximum image width used for OCR; 0 disables downscaling (default: 720)",
+    )
+    parser.add_argument(
+        "--directml_device_index",
+        type=restricted_int(min_val=0),
+        default=None,
+        help="DirectML adapter index for EasyOCR DirectML. On Ryzen+iGPU systems, 1 is often the discrete AMD GPU.",
+    )
+    parser.add_argument(
+        "--directml_grid_max_width",
+        type=restricted_int(min_val=512),
+        default=2400,
+        help="Maximum stitched OCR grid width for EasyOCR DirectML manual mode (default: 2400)",
+    )
+    parser.add_argument(
+        "--directml_grid_max_height",
+        type=restricted_int(min_val=512),
+        default=2400,
+        help="Maximum stitched OCR grid height for EasyOCR DirectML manual mode (default: 2400)",
+    )
+    parser.add_argument(
+        "--directml_performance_preset",
+        type=str,
+        choices=["compatibility", "balanced", "max", "manual"],
+        default="balanced",
+        help="DirectML grid/performance preset for AMD GPUs (default: balanced)",
+    )
+    parser.add_argument(
+        "--directml_recognition_mode",
+        type=str,
+        choices=["stable", "auto", "experimental"],
+        default="stable",
+        help="DirectML recognition mode: stable=CPU recognizer, auto=try GPU recognizer with fallback, experimental=try GPU recognizer (default: stable)",
+    )
+    parser.add_argument(
+        "--directml_frame_scan_mode",
+        type=str,
+        choices=["cpu_ssim", "directml_ssim", "ffmpeg_d3d11va"],
+        default="cpu_ssim",
+        help="Step 1 frame scan mode. cpu_ssim is safest; directml_ssim moves SSIM-style comparisons to DirectML/AMD GPU; ffmpeg_d3d11va uses FFmpeg D3D11VA hardware decode prototype plus DirectML SSIM for EasyOCR DirectML.",
+    )
+    parser.add_argument(
+        "--onnx_directml_tuning",
+        type=str,
+        choices=["low_vram", "balanced", "max", "manual"],
+        default="balanced",
+        help="ONNX DirectML tuning mode. low_vram/balanced reduce grid size and memory pressure; max uses larger grids; manual uses the DirectML grid width/height values (default: balanced)",
+    )
+    parser.add_argument(
+        "--benchmark_compare_engine",
+        type=lambda x: x.lower() == "true",
+        default=False,
+        help="Run a small sample EasyOCR-vs-ONNX benchmark after the main ONNX run (default: false)",
+    )
+    parser.add_argument(
+        "--benchmark_compare_sample_grids",
+        type=restricted_int(min_val=1, max_val=20),
+        default=3,
+        help="Number of stitched OCR grids to use for the optional benchmark comparison (default: 3)",
+    )
+    parser.add_argument(
+        "--crop_x", type=int, default=None, help="(Zone 1) Crop start X"
+    )
+    parser.add_argument(
+        "--crop_y", type=int, default=None, help="(Zone 1) Crop start Y"
+    )
+    parser.add_argument(
+        "--crop_width", type=int, default=None, help="(Zone 1) Crop width"
+    )
+    parser.add_argument(
+        "--crop_height", type=int, default=None, help="(Zone 1) Crop height"
+    )
+    parser.add_argument(
+        "--crop_x2", type=int, default=None, help="(Zone 2) Crop start X"
+    )
+    parser.add_argument(
+        "--crop_y2", type=int, default=None, help="(Zone 2) Crop start Y"
+    )
+    parser.add_argument(
+        "--crop_width2", type=int, default=None, help="(Zone 2) Crop width"
+    )
+    parser.add_argument(
+        "--crop_height2", type=int, default=None, help="(Zone 2) Crop height"
+    )
+    parser.add_argument(
+        "--subtitle_alignment",
+        type=valid_alignment_name,
+        default=None,
+        help="(Zone 1) Subtitle alignment. Allowed: bottom-left, bottom-center, bottom-right, middle-left, middle-center, middle-right, top-left, top-center, top-right",
+    )
+    parser.add_argument(
+        "--subtitle_alignment2",
+        type=valid_alignment_name,
+        default=None,
+        help="(Zone 2) Subtitle alignment. See --subtitle_alignment for allowed values.",
+    )
+    parser.add_argument(
+        "--enable_label_detection",
+        type=lambda x: x.lower() == "true",
+        default=False,
+        help="Detect text outside the subtitle crop area (e.g. people/place name labels) and write an .ass subtitle file with positioned Label events (default: false)",
+    )
+    parser.add_argument(
+        "--label_time_start",
+        type=valid_time_string,
+        default="",
+        help="Start time (MM:SS or HH:MM:SS) for label detection, within the subtitle extraction window; defaults to the main start (default: same as --time_start)",
+    )
+    parser.add_argument(
+        "--label_time_end",
+        type=valid_time_string,
+        default="",
+        help="End time (MM:SS or HH:MM:SS) for label detection, within the subtitle extraction window; defaults to the main end (default: same as --time_end)",
+    )
+    parser.add_argument(
+        "--label_ocr_image_max_width",
+        type=restricted_int(min_val=1),
+        default=720,
+        help="Maximum image width used for OCR in the label detection zone (default: 720)",
+    )
+    parser.add_argument(
+        "--label_min_display_duration",
+        type=restricted_float(min_val=0.0),
+        default=1.0,
+        help="Minimum display duration in seconds for detected labels (default: 1.0)",
+    )
+    parser.add_argument(
+        "--label_min_confirmation_frames",
+        type=restricted_int(min_val=1),
+        default=2,
+        help="Minimum number of sampled frames a label must appear in before it is emitted (filters OCR noise, default: 2)",
+    )
+    parser.add_argument(
+        "--label_reappear_merge_gap",
+        type=restricted_float(min_val=0.0),
+        default=2.0,
+        help="Maximum gap in seconds between reappearances of the same label that are merged into one event (default: 2.0)",
+    )
+    parser.add_argument(
+        "--label_filter_single_char",
+        type=lambda x: x.lower() == "true",
+        default=True,
+        help='Drop single-character label detections (e.g. "M", "3") which are usually OCR noise (default: true)',
+    )
+    parser.add_argument(
+        "--label_conf_threshold",
+        type=restricted_int(0, 100),
+        default=60,
+        help="Confidence threshold for label text recognition; lower keeps smaller/harder name text (default: 60)",
+    )
+    parser.add_argument(
+        "--label_text_similarity",
+        type=restricted_int(0, 100),
+        default=55,
+        help="Minimum text similarity (0-100) for two detections to be merged as the same label (default: 55)",
+    )
+    parser.add_argument(
+        "--label_pos_drift",
+        type=restricted_int(min_val=1),
+        default=160,
+        help="Maximum on-screen position drift in pixels between detections of the same label (default: 160)",
+    )
+    parser.add_argument(
+        "--label_close_pos_distance",
+        type=restricted_int(min_val=0),
+        default=40,
+        help="Detections closer than this distance (px) are treated as the same label even with weaker text similarity (default: 40)",
+    )
+    parser.add_argument(
+        "--label_close_pos_length_ratio",
+        type=restricted_float(0.0, 1.0),
+        default=0.5,
+        help="Minimum length ratio between two close detections for the close-position merge shortcut (default: 0.5)",
+    )
+    parser.add_argument(
+        "--allow_system_sleep",
+        type=lambda x: x.lower() == "true",
+        default=False,
+        help="Allow the system to sleep during processing (default: false)",
+    )
     args = parser.parse_args()
 
     try:
-        if args.ocr_engine == 'paddleocr' and args.lang.lower() not in (set().union(*PADDLEOCR_LANGS.values())):
+        if args.ocr_engine == "paddleocr" and args.lang.lower() not in (
+            set().union(*PADDLEOCR_LANGS.values())
+        ):
             raise ValueError(f"Unsupported language code '{args.lang}' for PaddleOCR.")
-        if args.ocr_engine == 'google_lens' and args.lang not in GOOGLE_LENS_LANGS:
-            raise ValueError(f"Unsupported language code '{args.lang}' for Google Lens.")
-        if args.ocr_engine in ('easyocr_directml', 'onnx_directml'):
+        if args.ocr_engine == "google_lens" and args.lang not in GOOGLE_LENS_LANGS:
+            raise ValueError(
+                f"Unsupported language code '{args.lang}' for Google Lens."
+            )
+        if args.ocr_engine in ("easyocr_directml", "onnx_directml"):
             # DirectML backend language support is checked inside the backend so
             # custom mappings can be added without changing the CLI validator.
             if args.directml_device_index is not None:
-                os.environ["VIDEOCR_DIRECTML_DEVICE_INDEX"] = str(args.directml_device_index)
-                print(f"DirectML adapter requested from CLI: {args.directml_device_index}", flush=True)
-            os.environ["VIDEOCR_DIRECTML_RECOGNITION_MODE"] = args.directml_recognition_mode
+                os.environ["VIDEOCR_DIRECTML_DEVICE_INDEX"] = str(
+                    args.directml_device_index
+                )
+                print(
+                    f"DirectML adapter requested from CLI: {args.directml_device_index}",
+                    flush=True,
+                )
+            os.environ["VIDEOCR_DIRECTML_RECOGNITION_MODE"] = (
+                args.directml_recognition_mode
+            )
             os.environ.setdefault("VIDEOCR_DIRECTML_AUTO_PREFER_HIGH_PERFORMANCE", "1")
-            print(f"DirectML performance preset: {args.directml_performance_preset}", flush=True)
-            print(f"DirectML recognition mode: {args.directml_recognition_mode}", flush=True)
-            print(f"DirectML frame scan mode: {args.directml_frame_scan_mode}", flush=True)
-            if args.ocr_engine == 'onnx_directml':
-                os.environ['VIDEOCR_ONNX_DIRECTML_TUNING'] = args.onnx_directml_tuning
-                print(f"ONNX DirectML tuning mode: {args.onnx_directml_tuning}", flush=True)
-                if args.benchmark_compare_engine:
-                    print(f"Benchmark compare enabled: sample grids={args.benchmark_compare_sample_grids}", flush=True)
-
+            print(
+                f"DirectML performance preset: {args.directml_performance_preset}",
+                flush=True,
+            )
+            print(
+                f"DirectML recognition mode: {args.directml_recognition_mode}",
+                flush=True,
+            )
+            print(
+                f"DirectML frame scan mode: {args.directml_frame_scan_mode}", flush=True
+            )
+            if args.ocr_engine == "onnx_directml":
+                os.environ["VIDEOCR_ONNX_DIRECTML_TUNING"] = args.onnx_directml_tuning
+                print(
+                    f"ONNX DirectML tuning mode: {args.onnx_directml_tuning}",
+                    flush=True,
+                )
+            if args.benchmark_compare_engine:
+                print(
+                    f"Benchmark compare enabled: sample grids={args.benchmark_compare_sample_grids}",
+                    flush=True,
+                )
         if args.time_start and args.time_end:
             start_ms = utils.get_ms_from_time_str(args.time_start)
             end_ms = utils.get_ms_from_time_str(args.time_end)
             if start_ms > end_ms:
-                raise ValueError(f"Start Time ({args.time_start}) cannot be after End Time ({args.time_end}).")
-
+                raise ValueError(
+                    f"Start Time ({args.time_start}) cannot be after End Time ({args.time_end})."
+                )
         if args.label_time_start and args.label_time_end:
             label_start_ms = utils.get_ms_from_time_str(args.label_time_start)
             label_end_ms = utils.get_ms_from_time_str(args.label_time_end)
             if label_start_ms > label_end_ms:
-                raise ValueError(f"Label Start Time ({args.label_time_start}) cannot be after Label End Time ({args.label_time_end}).")
-
+                raise ValueError(
+                    f"Label Start Time ({args.label_time_start}) cannot be after Label End Time ({args.label_time_end})."
+                )
         crop_zones: list[dict[str, int]] = []
         if not args.use_fullframe:
             zone1_vars = [args.crop_x, args.crop_y, args.crop_width, args.crop_height]
-
             is_zone1_full = all(v is not None for v in zone1_vars)
             is_zone1_empty = all(v is None for v in zone1_vars)
-
             if is_zone1_full:
-                crop_zones.append({
-                    'x': args.crop_x, 'y': args.crop_y,
-                    'width': args.crop_width, 'height': args.crop_height
-                })
+                crop_zones.append(
+                    {
+                        "x": args.crop_x,
+                        "y": args.crop_y,
+                        "width": args.crop_width,
+                        "height": args.crop_height,
+                    }
+                )
             elif not is_zone1_empty:
-                raise ValueError("Partial crop coordinates detected for Zone 1. You must provide ALL four: --crop_x, --crop_y, --crop_width, and --crop_height.")
-
-            zone2_vars = [args.crop_x2, args.crop_y2, args.crop_width2, args.crop_height2]
-
+                raise ValueError(
+                    "Partial crop coordinates detected for Zone 1. You must provide ALL four: --crop_x, --crop_y, --crop_width, and --crop_height."
+                )
+            zone2_vars = [
+                args.crop_x2,
+                args.crop_y2,
+                args.crop_width2,
+                args.crop_height2,
+            ]
             is_zone2_full = all(v is not None for v in zone2_vars)
             is_zone2_empty = all(v is None for v in zone2_vars)
-
             if is_zone2_full:
-                crop_zones.append({
-                    'x': args.crop_x2, 'y': args.crop_y2,
-                    'width': args.crop_width2, 'height': args.crop_height2
-                })
+                crop_zones.append(
+                    {
+                        "x": args.crop_x2,
+                        "y": args.crop_y2,
+                        "width": args.crop_width2,
+                        "height": args.crop_height2,
+                    }
+                )
             elif not is_zone2_empty:
-                raise ValueError("Partial crop coordinates detected for Zone 2. You must provide ALL four: --crop_x2, --crop_y2, --crop_width2, and --crop_height2.")
+                raise ValueError(
+                    "Partial crop coordinates detected for Zone 2. You must provide ALL four: --crop_x2, --crop_y2, --crop_width2, and --crop_height2."
+                )
 
         disable_wakelock = args.allow_system_sleep or utils.is_running_in_container()
         keep_awake_manager = nullcontext() if disable_wakelock else keep.running()
-
         with keep_awake_manager:
             save_subtitles_to_file(
                 video_path=args.video_path,
@@ -272,12 +583,17 @@ def main() -> None:
                 label_min_display_duration_sec=args.label_min_display_duration,
                 label_min_confirmation_frames=args.label_min_confirmation_frames,
                 label_reappear_merge_gap_sec=args.label_reappear_merge_gap,
-                label_filter_single_char=args.label_filter_single_char
+                label_filter_single_char=args.label_filter_single_char,
+                label_text_similarity=args.label_text_similarity,
+                label_pos_drift=args.label_pos_drift,
+                label_close_pos_distance=args.label_close_pos_distance,
+                label_close_pos_length_ratio=args.label_close_pos_length_ratio,
+                label_conf_threshold=args.label_conf_threshold,
             )
     except ValueError as e:
         print(f"Error: {e}")
         sys.exit(1)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
