@@ -769,7 +769,7 @@ class SettingsTab(QWidget):
         labels_enabled = isinstance(label_check, QCheckBox) and label_check.isChecked()
         for key in LABEL_DEPENDENT_WIDGETS:
             widget = self._widgets.get(key)
-            if isinstance(widget, (QComboBox, QLineEdit)):
+            if isinstance(widget, (QComboBox, QLineEdit, QCheckBox)):
                 widget.setEnabled(labels_enabled)
 
     def read_settings(self) -> dict[str, Any]:

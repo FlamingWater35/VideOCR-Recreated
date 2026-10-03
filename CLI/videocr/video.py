@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ast
 import concurrent.futures
+import contextlib
 import json
 import os
 import queue
@@ -173,7 +174,6 @@ class Video:
         label_zone = self.label_zone
         use_label = label_zone is not None
 
-        zone_idx = 0
         z = self.validated_zones[0]
         target_w = int(z["w"])
         target_h = int(z["h"])
@@ -501,10 +501,8 @@ class Video:
             if label_batch:
                 det_counter = save_stitch_batch(label_batch, det_counter, 2)
                 label_batch = []
-            try:
+            with contextlib.suppress(OSError):
                 os.remove(label_raw_path)
-            except OSError:
-                pass
 
         if ocr_end <= 0 or det_counter <= 0:
             print(
@@ -1482,15 +1480,8 @@ class Video:
                                             if score > ssim_threshold_ratio:
                                                 prev_samples[zone_idx] = sample
                                                 continue
-                                        else:
-                                            score = fast_ssim.ssim(
-                                                prev_samples[zone_idx],
-                                                sample,
-                                                data_range=255,
-                                            )
-                                            if score > ssim_threshold_ratio:
-                                                prev_samples[zone_idx] = sample
-                                                continue
+                                        # First sample per zone: nothing to
+                                        # compare against yet — always keep it.
                                     prev_samples[zone_idx] = sample
                                     det_batches[zone_idx].append(
                                         {"img": img, "frame_idx": expected_index}

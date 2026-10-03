@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import QItemSelectionModel, Qt, Signal
 from PySide6.QtGui import QBrush, QColor
 from PySide6.QtWidgets import (
     QAbstractItemView,
@@ -150,8 +150,18 @@ class QueueTab(QWidget):
 
     def select_rows(self, rows: list[int]) -> None:
         self.table.clearSelection()
+        # selectRow() replaces the selection, so accumulate via the selection
+        # model to keep multi-row selections (reorder/edit restore).
+        selection = self.table.selectionModel()
+        if selection is None:
+            return
         for row in rows:
-            self.table.selectRow(row)
+            index = self.table.model().index(row, 0)
+            selection.select(
+                index,
+                QItemSelectionModel.SelectionFlag.Select
+                | QItemSelectionModel.SelectionFlag.Rows,
+            )
 
     def set_pause_text(self, paused: bool) -> None:
         self.pause_btn.setText(i18n.tr("btn_resume" if paused else "btn_pause", "Resume" if paused else "Pause"))

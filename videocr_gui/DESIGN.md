@@ -91,11 +91,31 @@ QSS theme.
   frame scan mode, ONNX tuning, grid width/height, Refresh button) are
   **disabled in the GUI** while the **Enable GPU Usage** checkbox is unchecked.
 - The label-detection controls (label OCR width, min duration, confirmation
-  frames, reappear gap, single-char filter) are **disabled** while the
-  **Enable Label Detection** checkbox is unchecked.
+  frames, reappear gap, single-char filter, label thresholds) are **disabled**
+  while the **Enable Label Detection** checkbox is unchecked — this includes
+  the label *checkboxes* (`--label_filter_single_char`, `--label_ssim_dedup`),
+  not just the line/combo inputs.
 - Implemented in `settings_tab.py` (`DML_DEPENDENT_WIDGETS`,
   `LABEL_DEPENDENT_WIDGETS`, `_update_dependent_states()`), re-evaluated on
   toggle and on `populate()`.
+
+## Queue multi-select restore (bug fix)
+
+- `QueueTab.select_rows()` accumulates the selection through
+  `QItemSelectionModel` instead of `QTableWidget.selectRow()`. `selectRow()`
+  *replaces* the selection, so restoring a multi-row selection after
+  reorder/edit used to keep only the last row.
+
+## GUI↔CLI testing contract
+
+- The suite lives in `tests/` (repo root) and runs Qt offscreen
+  (`QT_QPA_PLATFORM=offscreen`). See AGENTS.md § Tests.
+- `MainWindow(settings=<dict>)` accepts an injected settings dict, so tests can
+  construct the full window without reading or writing the real config file.
+- End-to-end coverage drives `CLIWorker` against the real `CLI/videocr_cli.py`
+  with a real video (ONNX DirectML engine) and asserts that every stdout line
+  classifies cleanly via `progress.classify_line` — the progress-parsing
+  contract between CLI and GUI.
 
 ## vsync / ffmpeg compatibility
 
@@ -161,4 +181,7 @@ videocr_gui/
   about_tab.py     About tab widget
   style.py         QSS theme ("warm obsidian & gold") + shared PALETTE
   DESIGN.md        this file
+
+tests/ (repo root)  pytest suite — see AGENTS.md § Tests; fixtures in
+                    conftest.py, local media in gitignored tests/data/
 ```

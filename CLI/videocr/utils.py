@@ -209,7 +209,9 @@ def resolve_model_dirs(lang: str, use_server_model: bool) -> tuple[str, str, str
     det_path = os.path.join(base_path, "det")
     rec_path = os.path.join(base_path, "rec")
     cls_path = os.path.join(base_path, "cls", "PP-LCNet_x1_0_textline_ori")
-    mode = "server" if use_server_model else "mobile"
+    # The PP-OCRv6 support archive names the tiers "small" (lightweight) and
+    # "medium" (higher accuracy) — unlike PP-OCRv5's "mobile"/"server".
+    mode = "medium" if use_server_model else "small"
 
     # DET
     if lang == "ka":

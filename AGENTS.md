@@ -19,6 +19,7 @@ The GUI never imports OCR libraries directly. It spawns `videocr-cli` (compiled 
 - `onnx_directml` — ONNX Runtime DirectML with PP-OCRv6, falls back to easyocr_directml
 
 **Other key directories:**
+- `tests/` — pytest suite (unit + integration). `tests/data/` holds a local test video (gitignored, see quirks).
 - `tools/` — diagnostics (`test_directml.py`, `diagnose_easyocr_directml.py`), benchmarks, release notes generator, `ass_qafix/` (ASS subtitle post-processor)
 - `languages/` — UI translation JSON files (14 languages)
 - `Installer/` — Windows Inno Setup + Linux shell scripts
@@ -34,6 +35,24 @@ mypy .                      # typecheck (strict mode, see pyproject.toml)
 ```
 
 Pre-commit config (`.pre-commit-config.yaml`) runs ruff then mypy. Install hooks with `pre-commit install`.
+
+Notes:
+- `mypy` has a **pre-existing error baseline** in the existing code; new changes should not add to it. The config must keep `explicit_package_bases = true` (otherwise `CLI/videocr/*.py` is discovered twice — as `videocr.*` and `CLI.videocr.*` — and mypy aborts before checking anything).
+- `tests/` is excluded from mypy (the pytest suite is not strictly typed).
+
+### Tests
+
+```bash
+python -m pytest tests/ -q                  # full suite (unit + integration)
+python -m pytest -m "not integration" -q    # skip the real-OCR end-to-end run
+python -m pytest tests/test_args.py -q      # single file
+```
+
+- Uses `pytest` + `pytest-qt` (both in the `dev` dependency group). On this machine the project env is `.conda`: `.conda\python.exe -m pytest tests/ -q`.
+- Qt tests run offscreen: `tests/conftest.py` sets `QT_QPA_PLATFORM=offscreen` before any Qt import.
+- `tests/conftest.py` puts the repo root and `CLI/` on `sys.path`, so both `videocr_gui` and `videocr` are importable. Autouse fixtures redirect config persistence, `log_error` writes, i18n state, and progress rate-limit state into per-test sandboxes — tests never touch the real `%APPDATA%` config.
+- **Integration tests** (`-m integration`) run the real CLI on a real video through the ONNX Runtime DirectML engine (rapidocr's bundled models, no network) and parse its stdout through `progress.classify_line` — the exact GUI contract. They skip automatically when the test video or the DirectML runtime is missing.
+- **The test video is not committed.** `tests/data/` is gitignored; place a clip at `tests/data/test_video_2.mp4`. The decode tests assert its properties (~17.5 s, 3840x1608, 25 fps — see `tests/test_integration.py`), so update those assertions if you use a different clip; when the file is absent they skip.
 
 ### Run from source
 
@@ -81,13 +100,14 @@ python -m pip install --force-reinstall --no-cache-dir "sympy==1.13.3" "mpmath==
 
 ## Important quirks
 
-- **No formal test suite.** No pytest, no test files, no conftest. Verification is manual or via `tools/test_directml.py` and `tools/diagnose_easyocr_directml.py`.
+- **Tests live in `tests/`** (pytest + pytest-qt, offscreen Qt; see the Tests section). No coverage gates are enforced; verification beyond the suite is still manual or via `tools/test_directml.py` / `tools/diagnose_easyocr_directml.py`.
+- **`tests/data/` is gitignored** — local test media only; tests skip gracefully when the video is absent.
 - **DirectML Windows-only.** `torch-directml`, `easyocr`, `onnxruntime-directml` are Windows-only deps. They won't install on Linux.
 - **`onnxruntime` vs `onnxruntime-directml` conflict.** Both provide the `onnxruntime` module and cannot coexist. CI and setup must ensure `onnxruntime-directml` wins. See the `pyproject.toml` `[directml]` extras and `build-release.yml` for the uninstall/reinstall dance.
 - **`sympy`/`mpmath` pin.** Must be `sympy==1.13.3` and `mpmath==1.3.0` for torch-directml compatibility.
 - **Version lives in `_version.py`** (`__version__ = "1.6.3"`). Setuptools reads it via `attr = "_version.__version__"`.
 - **Ruff config:** `target-version = "py39"`, select `E,F,I,UP,B,SIM,W`, ignore `E501,SIM108,SIM102,SIM114`. Preview mode enabled.
-- **Mypy config:** strict mode, excludes Nuitka build dirs (`VideOCR_qt.build`, `CLI/videocr_cli.build`).
+- **Mypy config:** strict mode with `explicit_package_bases = true`; excludes Nuitka build dirs, `Releases`, `build-artifacts`, `.conda`, and `tests`. Has a pre-existing error baseline — don't add to it.
 - **Config persistence:** `videocr_gui_config.ini` (INI format via configparser). Portable mode when `portable_mode.txt` exists; otherwise `%APPDATA%/VideOCR` (Windows) or XDG (Linux).
 - **GUI launches CLI as subprocess** (`workers.py`). The GUI's `workers.py` looks for: compiled `videocr-cli.exe`/`.bin` → PATH → `python CLI/videocr_cli.py` fallback.
 - **Legacy OCR engine names** in old configs are remapped via `constants.LEGACY_OCR_ENGINE_MAP` (e.g., "EasyOCR DirectML (AMD GPU)" → "ONNX Runtime DirectML (AMD GPU Experimental)").

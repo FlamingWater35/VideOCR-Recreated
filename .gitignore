@@ -22,3 +22,6 @@ ENV/
 
 # Reasonix
 .reasonix/
+
+# Test fixtures (large media binaries, kept locally only)
+/tests/data/

@@ -61,6 +61,8 @@ directml = [
 dev = [
     "mypy",
     "pre-commit",
+    "pytest",
+    "pytest-qt",
     "ruff",
 ]
 build = [
@@ -79,11 +81,27 @@ documentation = "https://github.com/FlamingWater35/VideOCR-Recreated/blob/master
 Repository = "https://github.com/FlamingWater35/VideOCR-Recreated.git"
 Issues = "https://github.com/FlamingWater35/VideOCR-Recreated/issues"
 
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+qt_api = "pyside6"
+markers = [
+    "integration: full-pipeline tests that decode video and run real OCR (deselect with -m 'not integration')",
+]
+
 [tool.mypy]
 strict = true
+# Without this, CLI/videocr/*.py is discovered twice (as `videocr.*` via the
+# package's own __init__.py and as `CLI.videocr.*` via the directory crawl),
+# which aborts the whole run with a duplicate-module error.
+explicit_package_bases = true
 exclude = [
     "VideOCR_qt\\.build",
-    "CLI/videocr_cli\\.build"
+    "CLI/videocr_cli\\.build",
+    "Releases",
+    "build-artifacts",
+    "\\.conda",
+    # The pytest suite is intentionally not strictly typed (see AGENTS.md).
+    "tests",
 ]
 
 [tool.setuptools]

@@ -23,8 +23,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from . import __version__, config, i18n, resources
 from . import args as argsmod
-from . import config, i18n, resources
 from . import constants as C
 from .about_tab import AboutTab
 from .dialogs import CountdownDialog, ask_yes_no, info
@@ -116,9 +116,7 @@ class MainWindow(QMainWindow):
         self.tabs.addTab(
             self.settings_tab, i18n.tr("tab_advanced", "Advanced Settings")
         )
-        self.about_tab = AboutTab(
-            config.__version__ if hasattr(config, "__version__") else "1.6.0"
-        )
+        self.about_tab = AboutTab(__version__)
         self.tabs.addTab(self.about_tab, i18n.tr("tab_about", "About"))
 
         # wire queue signals
@@ -551,7 +549,7 @@ class MainWindow(QMainWindow):
         self._populate_engine_lang_pos()
 
     def _version(self) -> str:
-        return getattr(config, "__version__", "1.6.0")
+        return __version__
 
     def _resize_to_work_area(self) -> None:
         screen = self.screen()
