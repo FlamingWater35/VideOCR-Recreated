@@ -136,7 +136,7 @@
   "tip_batch_clear": "Bersihkan antrean saat ini",
   "lbl_about_version": "Versi: {version}",
   "lbl_about_fork": "Proyek ini adalah fork dari VideOCR asli oleh timminator.",
-  "lbl_about_fork_repo": "Repositori fork:",
+  "lbl_about_related_repos": "Repositori terkait:",
   "lbl_get_newest": "Dapatkan versi terbaru di sini:",
   "lbl_bug_report": "Menemukan bug atau punya saran? Silakan buka issue di:",
   "update_title": "Pembaruan Tersedia",

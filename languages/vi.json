@@ -136,7 +136,7 @@
   "tip_batch_clear": "Xóa hàng đợi hiện tại",
   "lbl_about_version": "Phiên Bản: {version}",
   "lbl_about_fork": "Dự án này là một bản fork của VideOCR gốc của timminator.",
-  "lbl_about_fork_repo": "Kho lưu trữ fork:",
+  "lbl_about_related_repos": "Kho lưu trữ liên quan:",
   "lbl_get_newest": "Tải phiên bản mới nhất tại đây:",
   "lbl_bug_report": "Tìm thấy lỗi hoặc có đề xuất? Hãy mở một vấn đề tại:",
   "update_title": "Có Cập Nhật",

@@ -136,7 +136,7 @@
   "tip_batch_clear": "Vaciar la cola actual",
   "lbl_about_version": "Versión: {version}",
   "lbl_about_fork": "Este proyecto es un fork del VideOCR original de timminator.",
-  "lbl_about_fork_repo": "Repositorio del fork:",
+  "lbl_about_related_repos": "Repositorios relacionados:",
   "lbl_get_newest": "Obtén la versión más reciente aquí:",
   "lbl_bug_report": "¿Encontraste un error o tienes una sugerencia? Abre un informe en:",
   "update_title": "Actualización disponible",

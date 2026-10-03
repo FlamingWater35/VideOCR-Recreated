@@ -136,7 +136,7 @@
   "tip_batch_clear": "Vider la file d'attente actuelle",
   "lbl_about_version": "Version : {version}",
   "lbl_about_fork": "Ce projet est un fork du VideOCR original de timminator.",
-  "lbl_about_fork_repo": "Dépôt du fork :",
+  "lbl_about_related_repos": "Dépôts associés :",
   "lbl_get_newest": "Obtenez la dernière version ici :",
   "lbl_bug_report": "Vous avez trouvé un bug ou une suggestion ? Ouvrez un ticket ici :",
   "update_title": "Mise à jour disponible",

@@ -136,7 +136,7 @@
   "tip_batch_clear": "現在のキューをクリア",
   "lbl_about_version": "バージョン: {version}",
   "lbl_about_fork": "このプロジェクトは timminator によるオリジナルの VideOCR のフォークです。",
-  "lbl_about_fork_repo": "フォークリポジトリ:",
+  "lbl_about_related_repos": "関連リポジトリ:",
   "lbl_get_newest": "最新バージョンはこちらから入手:",
   "lbl_bug_report": "バグを見つけたり提案がありますか？こちらでイシューを開いてください:",
   "update_title": "アップデート利用可能",

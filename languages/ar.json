@@ -136,7 +136,7 @@
   "tip_batch_clear": "مسح القائمة الحالية",
   "lbl_about_version": "الإصدار: {version}",
   "lbl_about_fork": "هذا المشروع هو fork من VideOCR الأصلي بواسطة timminator.",
-  "lbl_about_fork_repo": "مستودع الفورك:",
+  "lbl_about_related_repos": "المستودعات المرتبطة:",
   "lbl_get_newest": "احصل على أحدث إصدار هنا:",
   "lbl_bug_report": "وجدت خطأ أو لديك اقتراح؟ افتح مشكلة هنا:",
   "update_title": "تحديث متاح",

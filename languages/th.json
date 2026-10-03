@@ -136,7 +136,7 @@
   "tip_batch_clear": "ล้างคิวปัจจุบัน",
   "lbl_about_version": "เวอร์ชัน: {version}",
   "lbl_about_fork": "โปรเจกต์นี้เป็น fork ของ VideOCR ต้นฉบับโดย timminator",
-  "lbl_about_fork_repo": "ที่เก็บ fork:",
+  "lbl_about_related_repos": "ที่เก็บที่เกี่ยวข้อง:",
   "lbl_get_newest": "รับเวอร์ชันใหม่ล่าสุดที่นี่:",
   "lbl_bug_report": "พบข้อผิดพลาดหรือมีข้อเสนอแนะ? เปิดปัญหาได้ที่:",
   "update_title": "มีการอัปเดต",

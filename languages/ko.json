@@ -136,7 +136,7 @@
   "tip_batch_clear": "현재 대기열 비우기",
   "lbl_about_version": "버전: {version}",
   "lbl_about_fork": "이 프로젝트는 timminator의 원본 VideOCR의 포크입니다.",
-  "lbl_about_fork_repo": "포크 저장소:",
+  "lbl_about_related_repos": "관련 저장소:",
   "lbl_get_newest": "최신 버전을 여기서 받으세요:",
   "lbl_bug_report": "버그를 발견했거나 제안이 있으신가요? 여기서 이슈를 열어주세요:",
   "update_title": "업데이트 사용 가능",

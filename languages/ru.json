@@ -136,7 +136,7 @@
   "tip_batch_clear": "Очистить текущую очередь",
   "lbl_about_version": "Версия: {version}",
   "lbl_about_fork": "Этот проект — форк оригинального VideOCR от timminator.",
-  "lbl_about_fork_repo": "Репозиторий форка:",
+  "lbl_about_related_repos": "Связанные репозитории:",
   "lbl_get_newest": "Получить новейшую версию здесь:",
   "lbl_bug_report": "Нашли ошибку или есть предложение? Откройте issue здесь:",
   "update_title": "Доступно Обновление",

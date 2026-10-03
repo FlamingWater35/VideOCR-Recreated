@@ -16,7 +16,7 @@ from within, gold on warm obsidian, with calm and exact controls.
 ### Palette (source of truth: `videocr_gui/style.py` → `PALETTE`)
 
 | Token | Hex | Use |
-|---|---|---|
+| --- | --- | --- |
 | `bg_deep` | `#0c0a07` | window / dialog background (obsidian) |
 | `bg_surface` | `#16110a` | tabs, inputs, group boxes (surface) |
 | `bg_raised` | `#201810` | hovered surfaces (raised) |
@@ -74,8 +74,9 @@ QSS theme.
 5. The GUI is **dark-only** — there is no light theme. The warm-obsidian + gold
    identity is deliberate.
 6. This project is a **fork** of the original VideOCR (by `timminator`); the
-   About tab states this and links both this repository
-   (`FlamingWater35/VideOCR-Recreated`) and the original.
+   About tab states this and links the related repositories: this repo
+   (`FlamingWater35/VideOCR-Recreated`), the AMD DirectML fork it builds
+   on (`BaseCrunch/VideOCR-AMD-DirectML`), and the original.
 
 ## DirectML device-index persistence (new behavior)
 
