@@ -85,21 +85,31 @@ jobs:
         shell: pwsh
 
       - name: Install Python dependencies
+        shell: pwsh
         run: |
+          # NOTE: pwsh does not stop on native-command failures, and GitHub
+          # Actions only propagates the script's FINAL exit code — so every
+          # command below is checked explicitly. (A swallowed failure here
+          # previously surfaced only later as a confusing verify-step error.)
           python -m pip install --upgrade pip setuptools wheel
+          if ($LASTEXITCODE -ne 0) { throw "pip self-upgrade failed with exit code $LASTEXITCODE" }
           # Base deps + AMD DirectML backend (easyocr, torch-directml, ONNX
           # Runtime DirectML). Installed for EVERY Windows target so the
           # Nuitka standalone bundle always contains the full engine set —
           # this mirrors building all targets from one environment locally.
           python -m pip install ".[directml]"
+          if ($LASTEXITCODE -ne 0) { throw "pip install .[directml] failed with exit code $LASTEXITCODE" }
           # Build tooling used by build.py (Nuitka compiler, downloads).
           python -m pip install nuitka requests
+          if ($LASTEXITCODE -ne 0) { throw "pip install build tooling failed with exit code $LASTEXITCODE" }
           # Ensure the DirectML build of ONNX Runtime wins over plain
           # onnxruntime pulled in by the unified rapidocr package.
           python -m pip uninstall -y onnxruntime onnxruntime-directml
           python -m pip install --no-cache-dir onnxruntime-directml
+          if ($LASTEXITCODE -ne 0) { throw "pip install onnxruntime-directml failed with exit code $LASTEXITCODE" }
           # SymPy/mpMath pins from the README (torch-directml compatibility).
           python -m pip install --force-reinstall --no-cache-dir "sympy==1.13.3" "mpmath==1.3.0"
+          if ($LASTEXITCODE -ne 0) { throw "pip install sympy/mpmath pins failed with exit code $LASTEXITCODE" }
 
       - name: Verify critical dependencies (Fail fast if missing)
         shell: bash
@@ -108,6 +118,7 @@ jobs:
           python -c "import sympy; print('SymPy OK:', sympy.__version__)"
           python -c "import onnxruntime as ort; providers = ort.get_available_providers(); print('ONNX Providers:', providers); assert 'DmlExecutionProvider' in providers, 'DmlExecutionProvider missing!'"
           python -c "import torch_directml; print('torch-directml OK')"
+          python -c "import PyTaskbar; assert hasattr(PyTaskbar, 'TaskbarProgress'), 'PyTaskbar API mismatch (need TaskbarProgress/ProgressType)'; print('PyTaskbar OK')"
 
       - name: Restore Nuitka cache
         uses: actions/cache@v4

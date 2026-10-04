@@ -33,7 +33,12 @@ dependencies = [
     # these at module level; rapidfuzz is already a transitive dep of thefuzz.
     "rich",
     "jieba3",
-    "PyTaskbarProgress @ git+https://github.com/timminator/PyTaskbar.git ; sys_platform == 'win32'",
+    # Taskbar progress (videocr_gui/app.py). PyPI package providing the
+    # TaskbarProgress/ProgressType API. The former git dependency
+    # (timminator/PyTaskbar, dist name "PyTaskbarProgress") was renamed to
+    # "PyTaskbar" with an incompatible Progress API upstream — the name
+    # mismatch made `pip install .[directml]` fail entirely in CI.
+    "PyTaskbar ; sys_platform == 'win32'",
     "winotify ; sys_platform == 'win32'",
     "plyer ; sys_platform != 'win32'",
 ]

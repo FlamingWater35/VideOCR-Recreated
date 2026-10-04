@@ -6,6 +6,8 @@ offscreen, and closed cleanly. No OCR worker is ever started.
 
 from __future__ import annotations
 
+import inspect
+import sys
 from typing import Any
 
 import pytest
@@ -177,3 +179,43 @@ class TestAppModuleImports:
 
     def test_qapplication_exists_for_gui_tests(self):
         assert QApplication.instance() is not None
+
+
+class TestTaskbarIntegration:
+    """Guards the PyTaskbar dependency contract used by app.py.
+
+    Regression for the v1.6.6 CI break: the old git dependency
+    (timminator/PyTaskbar) renamed its distribution and changed its API to
+    `Progress`, which (a) made `pip install .[directml]` fail outright and
+    (b) silently disabled taskbar progress because app.py calls
+    `TaskbarProgress`/`ProgressType`.
+    """
+
+    def test_installed_package_exposes_app_api(self):
+        PyTaskbar = pytest.importorskip("PyTaskbar")
+        assert hasattr(PyTaskbar, "TaskbarProgress"), (
+            "installed PyTaskbar lacks TaskbarProgress — the app.py API; "
+            "the timminator git fork's 'Progress' API is not compatible"
+        )
+        assert hasattr(PyTaskbar, "ProgressType")
+        for state in ("NOPROGRESS", "NORMAL", "PAUSED"):
+            assert hasattr(PyTaskbar.ProgressType, state), state
+        # app.py calls set_progress(value, 100) — the second arg must exist.
+        params = inspect.signature(PyTaskbar.TaskbarProgress.set_progress).parameters
+        assert "max" in params
+
+    @pytest.mark.skipif(sys.platform != "win32", reason="taskbar progress is Windows-only")
+    def test_taskbar_initializes_and_updates(self, qtbot, settings, _error_log):
+        win = MainWindow(settings=settings)
+        qtbot.addWidget(win)
+        win.show()
+        # _init_taskbar schedules _setup_taskbar via QTimer.singleShot(0, ...).
+        qtbot.wait(200)
+        assert win._taskbar is not None, (
+            "MainWindow taskbar failed to initialize: "
+            + "; ".join(m for m in _error_log if "Taskbar" in m)
+        )
+        win._update_taskbar(state="normal", progress=42)
+        win._update_taskbar(state="paused", progress=42)
+        win._update_taskbar(progress=100)
+        win.close()
