@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import os
 import shutil
 import stat
@@ -154,6 +155,38 @@ def check_7zip() -> None:
         print(" - Linux (Debian/Ubuntu): sudo apt-get install p7zip-full")
         sys.exit(1)
     print("7-Zip found.")
+
+
+def check_lazy_loader() -> None:
+    """Checks that lazy-loader is still introspectable by Nuitka.
+
+    The CLI bundle pulls in scikit-image (via easyocr), and Nuitka's
+    implicit-imports plugin analyses skimage's lazy-load stub by calling
+    ``lazy_loader._StubVisitor()``. lazy-loader 0.6 (2026-09-21) nested that
+    class inside ``attach_stub``, so the compile dies with an AttributeError
+    halfway through. pyproject pins ``lazy-loader<0.6``; this check turns a
+    late, cryptic Nuitka crash into an immediate, actionable failure.
+    """
+    if importlib.util.find_spec("skimage") is None:
+        # scikit-image is the only bundled package using lazy_loader.
+        return
+    try:
+        import lazy_loader  # type: ignore
+    except ImportError:
+        return
+
+    print_header("Checking lazy-loader / Nuitka compatibility...")
+    if hasattr(lazy_loader, "_StubVisitor"):
+        print("lazy-loader is Nuitka-compatible.")
+        return
+
+    version = getattr(lazy_loader, "__version__", "unknown")
+    print(f"ERROR: lazy-loader {version} breaks the Nuitka compile.")
+    print("Nuitka's implicit-imports plugin calls lazy_loader._StubVisitor(), which")
+    print("0.6 moved inside attach_stub, so building fails on module 'skimage'.")
+    print("Downgrade it before building:")
+    print('  python -m pip install "lazy-loader<0.6"')
+    sys.exit(1)
 
 
 def clean_pyside6_qml_artifacts() -> None:
@@ -659,6 +692,7 @@ def main() -> None:
         check_pyside6()
     check_dbus()
     check_7zip()
+    check_lazy_loader()
 
     if args.target in ("gpu", "gpu-directml", "all") and sys.platform == "win32":
         print_header("Checking DirectML Python dependencies...")

@@ -60,6 +60,12 @@ directml = [
     "rapidocr ; sys_platform == 'win32'",
     "sympy==1.13.3 ; sys_platform == 'win32'",
     "mpmath==1.3.0 ; sys_platform == 'win32'",
+    # easyocr -> scikit-image -> lazy-loader. lazy-loader 0.6 (2026-09-21)
+    # moved `_StubVisitor` inside `attach_stub`, and Nuitka's implicit-imports
+    # plugin still calls `lazy_loader._StubVisitor()` while analysing
+    # `skimage`, so the CLI compile dies with an AttributeError. Hold it below
+    # 0.6 until Nuitka ships a fix; skimage only needs >=0.4.
+    "lazy-loader<0.6",
 ]
 
 [dependency-groups]
