@@ -9,7 +9,7 @@ import sys
 from typing import Any
 
 from PySide6.QtCore import QSize, Qt, QTimer
-from PySide6.QtGui import QAction, QIcon, QKeySequence
+from PySide6.QtGui import QAction, QIcon, QKeySequence, QStandardItemModel
 from PySide6.QtWidgets import (
     QFileDialog,
     QHBoxLayout,
@@ -137,6 +137,7 @@ class MainWindow(QMainWindow):
         self.settings_tab.scaling_changed.connect(self._on_scaling_changed)
         self.settings_tab.directml_gpu_changed.connect(self._on_directml_gpu)
         self.settings_tab.restart_requested.connect(self._restart)
+        self.settings_tab.reset_requested.connect(self._on_reset_settings)
         self.settings_tab.info_requested.connect(self._show_engine_info)
         self.settings_tab.help_requested.connect(self._show_help)
 
@@ -407,8 +408,22 @@ class MainWindow(QMainWindow):
             # was removed from the list (e.g. EasyOCR DirectML); map it to the
             # engine that still uses it internally.
             engine = C.LEGACY_OCR_ENGINE_MAP.get(engine, engine)
+            # Engines the running package cannot serve are greyed out. A saved
+            # selection that lands on one of them falls back to the default so
+            # the combo never points at an unselectable entry.
+            if not config.supports_engine(engine):
+                engine = C.DEFAULT_OCR_ENGINE
+            self._settings["ocr_engine"] = engine
             self.engine_combo.clear()
             self.engine_combo.addItems(C.OCR_ENGINES)
+            # QComboBox has no item-enable API; the default model is a
+            # QStandardItemModel, so flip Qt.ItemIsEnabled on the rows instead.
+            engine_model = self.engine_combo.model()
+            if isinstance(engine_model, QStandardItemModel):
+                for i, name in enumerate(C.OCR_ENGINES):
+                    item = engine_model.item(i)
+                    if item is not None:
+                        item.setEnabled(config.supports_engine(name))
             idx = self.engine_combo.findText(engine)
             if idx >= 0:
                 self.engine_combo.setCurrentIndex(idx)
@@ -854,6 +869,47 @@ class MainWindow(QMainWindow):
             ),
         ):
             self._restart()
+
+    def _on_reset_settings(self) -> None:
+        """Restores every stored setting to its default and re-applies it to the UI.
+
+        Only configuration is reset: the loaded video, the drawn crop boxes and
+        the batch queue are left alone, because they are session state rather
+        than preferences.
+        """
+        if not ask_yes_no(
+            self,
+            i18n.tr("title_reset_settings", "Reset Settings"),
+            i18n.tr(
+                "msg_reset_settings",
+                "Restore all settings to their default values?\n\n"
+                "The UI language and GUI scaling are reset as well, so a "
+                "restart may be needed to apply the scaling. The loaded video, "
+                "crop boxes and queue are not affected.",
+            ),
+        ):
+            return
+
+        old_scaling = str(self._settings.get("gui_scaling", C.DEFAULT_GUI_SCALING))
+        self._settings = config.get_default_settings()
+        config.save_settings(self._settings)
+
+        i18n.load_language(str(self._settings.get("--language", "en")))
+        self.settings_tab.populate(
+            self._settings, sorted(i18n.get_available_languages().keys())
+        )
+        self._populate_engine_lang_pos()
+        self._retranslate_all()
+        self._refresh_directml_combo()
+        self.preview.set_dual_zone(bool(self._settings.get("--use_dual_zone", False)))
+        self._update_output_path()
+
+        new_scaling = str(self._settings.get("gui_scaling", C.DEFAULT_GUI_SCALING))
+        if new_scaling != old_scaling:
+            # Same path a manual scaling change takes: the value is already
+            # persisted, so all that is left is offering the restart that
+            # actually applies it.
+            self._on_scaling_changed(new_scaling)
 
     def _restart(self) -> None:
         if self._worker is not None and self._worker.isRunning():

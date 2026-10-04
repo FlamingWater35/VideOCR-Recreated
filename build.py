@@ -484,6 +484,16 @@ def package_target(
         if file_path.is_file():
             file_path.unlink(missing_ok=True)
 
+    # Tell the GUI which target this package is for. The GUI/CLI binaries are
+    # compiled once and shared by every target, so this marker is the only
+    # thing that lets the runtime grey out engines the package cannot run.
+    # It lands in the standalone CLI folder and, via the merge below, at the
+    # root of the GUI folder next to VideOCR.exe.
+    (temp_cli_dist / "build_variant.txt").write_text(
+        f"{build_target}\n", encoding="utf-8"
+    )
+    print(f"Wrote build_variant.txt ({build_target})")
+
     # Assemble Final Directory Structure
     print_header(f"Assembling Final Directory Structure for {display_target_name}")
 

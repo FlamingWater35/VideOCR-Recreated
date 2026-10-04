@@ -385,3 +385,75 @@ class TestBuildArgsMapping:
             "v.mp4", _default_settings(), [], output_path="/tmp/my videos/out.srt"
         )
         assert argd["output"] == "/tmp/my videos/out.srt"
+
+
+class TestUseGpuMapping:
+    """The CLI keeps a single --use_gpu flag; the GUI tracks CUDA and DirectML apart.
+
+    Which toggle feeds the flag depends on the engine (CUDA for PaddleOCR,
+    DirectML for ONNX), and a package that does not ship the backend forces it
+    off regardless of what a stale config still carries.
+    """
+
+    @staticmethod
+    def _build(marker, variant, **overrides):
+        marker.write_text(variant + "\n", encoding="utf-8")
+        argd, errors = args_mod.build_args(
+            "v.mp4", _default_settings(**overrides), [], output_path="o.srt"
+        )
+        assert errors == []
+        return argd
+
+    @pytest.mark.parametrize("variant", ["cpu", "gpu-cuda11.8", "gpu-cuda12.9", "gpu-directml"])
+    def test_directml_toggle_never_reaches_the_cli(self, _tmp_build_variant, variant):
+        argd = self._build(_tmp_build_variant, variant, ocr_engine=C.OCR_ENGINES[2])
+        assert "use_directml_gpu" not in argd
+
+    @pytest.mark.parametrize("variant", ["gpu-cuda11.8", "gpu-cuda12.9"])
+    def test_paddle_engine_follows_the_cuda_toggle(self, _tmp_build_variant, variant):
+        assert self._build(_tmp_build_variant, variant, **{"--use_gpu": True})["use_gpu"] is True
+        assert self._build(_tmp_build_variant, variant, **{"--use_gpu": False})["use_gpu"] is False
+
+    @pytest.mark.parametrize("variant", ["cpu", "gpu-directml"])
+    def test_cuda_toggle_is_forced_off_by_a_non_cuda_build(self, _tmp_build_variant, variant):
+        assert self._build(_tmp_build_variant, variant, **{"--use_gpu": True})["use_gpu"] is False
+
+    @pytest.mark.parametrize("variant", ["cpu", "gpu-cuda11.8", "gpu-cuda12.9"])
+    def test_directml_toggle_is_forced_off_outside_the_directml_build(
+        self, _tmp_build_variant, variant
+    ):
+        argd = self._build(
+            _tmp_build_variant,
+            variant,
+            ocr_engine=C.OCR_ENGINES[2],
+            **{"--use_directml_gpu": True},
+        )
+        assert argd["use_gpu"] is False
+
+    def test_onnx_engine_follows_the_directml_toggle(self, _tmp_build_variant):
+        assert self._build(
+            _tmp_build_variant,
+            "gpu-directml",
+            ocr_engine=C.OCR_ENGINES[2],
+            **{"--use_directml_gpu": True},
+        )["use_gpu"] is True
+        assert self._build(
+            _tmp_build_variant,
+            "gpu-directml",
+            ocr_engine=C.OCR_ENGINES[2],
+            **{"--use_directml_gpu": False},
+        )["use_gpu"] is False
+
+    def test_google_lens_engine_follows_the_cuda_toggle(self, _tmp_build_variant):
+        assert self._build(
+            _tmp_build_variant,
+            "gpu-cuda12.9",
+            ocr_engine=C.OCR_ENGINES[1],
+            **{"--use_gpu": True},
+        )["use_gpu"] is True
+        assert self._build(
+            _tmp_build_variant,
+            "cpu",
+            ocr_engine=C.OCR_ENGINES[1],
+            **{"--use_gpu": True},
+        )["use_gpu"] is False

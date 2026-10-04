@@ -168,6 +168,108 @@ class TestLegacyEngineMigration:
         assert current == C.OCR_ENGINES[2]
 
 
+class TestBuildVariantEngineAvailability:
+    """Engines the package cannot run are greyed out in the picker."""
+
+    @staticmethod
+    def _enabled_engines(combo):
+        model = combo.model()
+        enabled = []
+        for i in range(combo.count()):
+            item = model.item(i)
+            if item is None or item.isEnabled():
+                enabled.append(combo.itemText(i))
+        return enabled
+
+    def test_every_engine_enabled_without_a_marker(self, window):
+        from videocr_gui import constants as C
+
+        assert self._enabled_engines(window.engine_combo) == list(C.OCR_ENGINES)
+
+    @pytest.mark.parametrize("variant", ["cpu", "gpu-cuda11.8", "gpu-cuda12.9"])
+    def test_onnx_greyed_out_outside_the_directml_build(
+        self, qtbot, settings, _tmp_build_variant, variant
+    ):
+        from videocr_gui import constants as C
+
+        _tmp_build_variant.write_text(variant + "\n", encoding="utf-8")
+        win = MainWindow(settings=settings)
+        qtbot.addWidget(win)
+        assert self._enabled_engines(win.engine_combo) == list(C.OCR_ENGINES[:2])
+
+    def test_onnx_selectable_in_the_directml_build(self, qtbot, settings, _tmp_build_variant):
+        from videocr_gui import constants as C
+
+        _tmp_build_variant.write_text("gpu-directml\n", encoding="utf-8")
+        win = MainWindow(settings=settings)
+        qtbot.addWidget(win)
+        assert self._enabled_engines(win.engine_combo) == list(C.OCR_ENGINES)
+
+    def test_saved_onnx_selection_falls_back_when_greyed_out(
+        self, qtbot, settings, _tmp_build_variant
+    ):
+        from videocr_gui import constants as C
+
+        _tmp_build_variant.write_text("cpu\n", encoding="utf-8")
+        settings["ocr_engine"] = C.OCR_ENGINES[2]
+        win = MainWindow(settings=settings)
+        qtbot.addWidget(win)
+        assert win.engine_combo.currentText() == C.DEFAULT_OCR_ENGINE
+        assert win._settings["ocr_engine"] == C.DEFAULT_OCR_ENGINE
+
+
+class TestResetSettings:
+    """The Advanced Settings tab can restore every stored preference to default."""
+
+    @staticmethod
+    def _window(qtbot, settings):
+        win = MainWindow(settings=settings)
+        qtbot.addWidget(win)
+        return win
+
+    def test_confirmed_reset_restores_defaults(self, qtbot, settings, monkeypatch):
+        from videocr_gui import constants as C
+
+        settings["--conf_threshold"] = "11"
+        settings["ocr_engine"] = C.OCR_ENGINES[1]
+        win = self._window(qtbot, settings)
+        assert win.settings_tab.read_settings()["--conf_threshold"] == "11"
+
+        monkeypatch.setattr(app_module, "ask_yes_no", lambda *a, **k: True)
+        win.settings_tab.reset_btn.click()
+
+        defaults = config.get_default_settings()
+        assert win._settings["--conf_threshold"] == defaults["--conf_threshold"]
+        assert win._settings["ocr_engine"] == defaults["ocr_engine"]
+        assert win.settings_tab.read_settings()["--conf_threshold"] == (
+            defaults["--conf_threshold"]
+        )
+        assert win.engine_combo.currentText() == defaults["ocr_engine"]
+
+    def test_declined_reset_changes_nothing(self, qtbot, settings, monkeypatch):
+        settings["--conf_threshold"] = "11"
+        win = self._window(qtbot, settings)
+
+        monkeypatch.setattr(app_module, "ask_yes_no", lambda *a, **k: False)
+        win.settings_tab.reset_btn.click()
+
+        assert win._settings["--conf_threshold"] == "11"
+        assert win.settings_tab.read_settings()["--conf_threshold"] == "11"
+
+    def test_reset_persists_to_the_config_file(
+        self, qtbot, settings, monkeypatch, _tmp_config_file
+    ):
+        settings["--conf_threshold"] = "11"
+        win = self._window(qtbot, settings)
+
+        monkeypatch.setattr(app_module, "ask_yes_no", lambda *a, **k: True)
+        win.settings_tab.reset_btn.click()
+
+        assert config.load_settings()["--conf_threshold"] == (
+            config.get_default_settings()["--conf_threshold"]
+        )
+
+
 class TestAppModuleImports:
     def test_video_path_checked_at_start(self, monkeypatch, tmp_path):
         # The module-level VIDEOCR_PATH binding controls the "CLI not found"

@@ -88,6 +88,45 @@ def get_config_file_path() -> str:
 
 CONFIG_FILE = get_config_file_path()
 
+# --- Build variant ------------------------------------------------------------
+# build.py writes this marker next to the executable for every packaged target.
+# The GUI and CLI binaries are compiled once and shared across all targets, so
+# the marker is the only per-target signal available at runtime.
+BUILD_VARIANT_FILE = os.path.join(APP_DIR, "build_variant.txt")
+BUILD_VARIANTS = ("cpu", "gpu-cuda11.8", "gpu-cuda12.9", "gpu-directml")
+
+
+def get_build_variant() -> str:
+    """Returns the packaged build target, or ``"unknown"`` when not packaged.
+
+    Running from source has no marker, which deliberately reports ``"unknown"``
+    so every engine and GPU control stays available during development.
+    """
+    try:
+        with open(BUILD_VARIANT_FILE, encoding="utf-8") as handle:
+            variant = handle.read().strip()
+    except OSError:
+        return "unknown"
+    return variant if variant in BUILD_VARIANTS else "unknown"
+
+
+def supports_cuda() -> bool:
+    """True when this build ships the PaddleOCR CUDA helper bundle."""
+    return get_build_variant() in ("unknown", "gpu-cuda11.8", "gpu-cuda12.9")
+
+
+def supports_directml() -> bool:
+    """True when this build ships the ONNX Runtime / DirectML backend."""
+    return get_build_variant() in ("unknown", "gpu-directml")
+
+
+def supports_engine(engine_display_name: str) -> bool:
+    """True when the named OCR engine is selectable in this build variant."""
+    if engine_display_name in C.DIRECTML_ONLY_ENGINES:
+        return supports_directml()
+    return True
+
+
 try:
     DEFAULT_DOCUMENTS_DIR = str(pathlib.Path.home() / "Documents")
 except Exception:
@@ -125,6 +164,7 @@ def get_default_settings() -> dict[str, Any]:
         "--frames_to_skip": str(C.DEFAULT_FRAMES_TO_SKIP),
         "--use_fullframe": False,
         "--use_gpu": True,
+        "--use_directml_gpu": True,
         "--use_angle_cls": False,
         "--post_processing": False,
         "--min_subtitle_duration": str(C.DEFAULT_MIN_SUBTITLE_DURATION),
@@ -165,6 +205,7 @@ def get_default_settings() -> dict[str, Any]:
 _BOOL_KEYS = {
     "--use_fullframe",
     "--use_gpu",
+    "--use_directml_gpu",
     "--use_angle_cls",
     "--post_processing",
     "--use_server_model",
@@ -217,6 +258,14 @@ def load_settings() -> dict[str, Any]:
             except Exception as e:
                 log_error(f"Error loading setting '{key}': {e}. Using default.")
                 settings[key] = default
+
+    # Configs written before the GPU toggle was split stored a single combined
+    # "Enable GPU Usage" flag in --use_gpu. Carry its value over so a user who
+    # had GPU off does not get DirectML switched back on by the new toggle.
+    if parser.has_option(CONFIG_SECTION, "--use_gpu") and not parser.has_option(
+        CONFIG_SECTION, "--use_directml_gpu"
+    ):
+        settings["--use_directml_gpu"] = settings["--use_gpu"]
     return settings
 
 

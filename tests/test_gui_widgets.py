@@ -220,7 +220,7 @@ class TestSettingsTab:
 
     def test_dml_widgets_disabled_without_gpu(self, tab, languages):
         settings = get_default_settings()
-        settings["--use_gpu"] = False
+        settings["--use_directml_gpu"] = False
         tab.populate(settings, languages)
         for key in DML_DEPENDENT_WIDGETS:
             widget = tab._widgets[key]
@@ -229,7 +229,7 @@ class TestSettingsTab:
 
     def test_dml_widgets_enabled_with_gpu(self, tab, languages):
         settings = get_default_settings()
-        settings["--use_gpu"] = True
+        settings["--use_directml_gpu"] = True
         tab.populate(settings, languages)
         for key in DML_DEPENDENT_WIDGETS:
             widget = tab._widgets[key]
@@ -253,7 +253,7 @@ class TestSettingsTab:
 
     def test_toggling_gpu_checkbox_updates_dependents(self, tab, languages):
         tab.populate(get_default_settings(), languages)
-        gpu_check = tab._widgets["--use_gpu"]
+        gpu_check = tab._widgets["--use_directml_gpu"]
         assert isinstance(gpu_check, QCheckBox)
         gpu_check.setChecked(False)
         tab._update_dependent_states()
@@ -261,6 +261,48 @@ class TestSettingsTab:
         gpu_check.setChecked(True)
         tab._update_dependent_states()
         assert tab._widgets["--directml_performance_preset"].isEnabled()
+
+    @pytest.mark.parametrize(
+        ("variant", "cuda_ok", "dml_ok"),
+        [
+            ("cpu", False, False),
+            ("gpu-cuda11.8", True, False),
+            ("gpu-cuda12.9", True, False),
+            ("gpu-directml", False, True),
+        ],
+    )
+    def test_gpu_toggles_follow_the_build_variant(
+        self, tab, languages, _tmp_build_variant, variant, cuda_ok, dml_ok
+    ):
+        _tmp_build_variant.write_text(variant + "\n", encoding="utf-8")
+        tab.populate(get_default_settings(), languages)
+        assert tab._widgets["--use_gpu"].isEnabled() is cuda_ok
+        assert tab._widgets["--use_directml_gpu"].isEnabled() is dml_ok
+        # The DirectML controls follow both the toggle and the build variant.
+        assert tab._widgets["--directml_performance_preset"].isEnabled() is dml_ok
+        assert tab._widgets["-DML_ADAPTER_COMBO-"].isEnabled() is dml_ok
+        assert tab.refresh_btn.isEnabled() is dml_ok
+
+    def test_gpu_section_is_titled_for_both_backends(self, tab):
+        titles = [box.title() for box, _key, _fb in tab._section_boxes]
+        assert any("GPU Acceleration" in title for title in titles)
+
+    def test_reset_button_is_present_and_styled(self, tab):
+        assert tab.reset_btn.objectName() == "dangerButton"
+        assert tab.reset_btn.text() == i18n.tr(
+            "btn_reset_settings", "Reset to Defaults"
+        )
+
+    def test_reset_button_emits_reset_requested(self, tab, qtbot):
+        with qtbot.waitSignal(tab.reset_requested, timeout=1000):
+            tab.reset_btn.click()
+
+    def test_reset_button_retranslates(self, tab):
+        tab.reset_btn.setText("stale")
+        tab.retranslate()
+        assert tab.reset_btn.text() == i18n.tr(
+            "btn_reset_settings", "Reset to Defaults"
+        )
 
     def test_settings_changed_signal_emitted(self, tab, languages, qtbot):
         tab.populate(get_default_settings(), languages)

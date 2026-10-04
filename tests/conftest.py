@@ -89,6 +89,21 @@ def _tmp_config_file(monkeypatch, tmp_path):
 
 
 @pytest.fixture(autouse=True)
+def _tmp_build_variant(monkeypatch, tmp_path):
+    """Point the build-variant marker at a non-existent file.
+
+    That reports the "unknown" variant (running from source), which keeps every
+    engine and GPU control available. Tests that need a packaged variant write
+    the marker through this fixture's returned directory.
+    """
+    import videocr_gui.config as config
+
+    marker = tmp_path / "build_variant.txt"
+    monkeypatch.setattr(config, "BUILD_VARIANT_FILE", str(marker))
+    return marker
+
+
+@pytest.fixture(autouse=True)
 def _fresh_i18n():
     """Reset i18n module state before and after every test."""
     import videocr_gui.i18n as i18n

@@ -89,7 +89,9 @@ QSS theme.
 
 - The DirectML controls (GPU dropdown, performance preset, recognition mode,
   frame scan mode, ONNX tuning, grid width/height, Refresh button) are
-  **disabled in the GUI** while the **Enable GPU Usage** checkbox is unchecked.
+  **disabled in the GUI** while the **Enable DirectML (AMD GPU)** checkbox is
+  unchecked, or when the running package does not ship DirectML at all
+  (see "Build-variant gating" below).
 - The label-detection controls (label OCR width, min duration, confirmation
   frames, reappear gap, single-char filter, label thresholds) are **disabled**
   while the **Enable Label Detection** checkbox is unchecked — this includes
@@ -98,6 +100,43 @@ QSS theme.
 - Implemented in `settings_tab.py` (`DML_DEPENDENT_WIDGETS`,
   `LABEL_DEPENDENT_WIDGETS`, `_update_dependent_states()`), re-evaluated on
   toggle and on `populate()`.
+
+## Build-variant gating (new behavior)
+
+- `build.py` compiles the GUI and CLI **once** and only swaps the PaddleOCR
+  helper bundle per target, so the shipped binaries are identical across
+  targets. The only per-target signal is a `build_variant.txt` marker that
+  `package_target()` writes into the package root (next to `VideOCR.exe`, same
+  pattern as `portable_mode.txt`).
+- `config.get_build_variant()` reads it; a missing or unrecognised marker means
+  `"unknown"`, which **enables everything** — that is the from-source case, and
+  it keeps development and the test suite unrestricted.
+- Capabilities: `supports_cuda()` is true only for `gpu-cuda11.8`/`gpu-cuda12.9`,
+  `supports_directml()` only for `gpu-directml`. `supports_engine()` gates
+  `constants.DIRECTML_ONLY_ENGINES` (the ONNX Runtime DirectML engine) on the
+  latter.
+- The engine picker greys out unavailable entries via `QStandardItem.setEnabled`
+  (`QComboBox` has no item-enable API) and falls a saved selection back to
+  `DEFAULT_OCR_ENGINE` so the combo never points at a greyed-out row.
+- The single CLI `--use_gpu` flag is reconstructed in `args.build_args()`:
+  the CUDA toggle feeds it for the PaddleOCR/Google Lens engines, the DirectML
+  toggle for the ONNX engine, and a build that lacks that backend forces it off.
+
+## Reset-to-defaults (new behavior)
+
+- The last row of the **VideOCR Recreated Settings** section is a
+  `dangerButton`-styled **Reset to Defaults** button. It only *emits*
+  `SettingsTab.reset_requested`; the main window owns the confirmation dialog
+  and the rewrite, because the OCR engine / subtitle language / position live
+  in `MainWindow._settings`, not in the settings tab.
+- The handler swaps `self._settings` for `config.get_default_settings()`,
+  persists it, then re-runs the same apply path as startup
+  (`populate` → `_populate_engine_lang_pos` → `_retranslate_all` →
+  `_refresh_directml_combo`), except it deliberately leaves the loaded video,
+  the drawn crop boxes and the batch queue alone — those are session state.
+- If GUI scaling changed, it routes through `_on_scaling_changed` so the user
+  gets the usual "restart to apply" prompt instead of a silently stale scale
+  factor.
 
 ## Queue multi-select restore (bug fix)
 

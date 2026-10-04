@@ -158,6 +158,81 @@ class TestPathLogic:
         assert "[" in content
 
 
+class TestBuildVariant:
+    @pytest.mark.parametrize(
+        ("variant", "cuda", "directml"),
+        [
+            ("cpu", False, False),
+            ("gpu-cuda11.8", True, False),
+            ("gpu-cuda12.9", True, False),
+            ("gpu-directml", False, True),
+        ],
+    )
+    def test_packaged_variant_capabilities(self, _tmp_build_variant, variant, cuda, directml):
+        _tmp_build_variant.write_text(variant + "\n", encoding="utf-8")
+        assert config.get_build_variant() == variant
+        assert config.supports_cuda() is cuda
+        assert config.supports_directml() is directml
+
+    @pytest.mark.parametrize("content", [None, "", "gpu-turbo\n"])
+    def test_missing_or_unrecognised_marker_enables_everything(
+        self, _tmp_build_variant, content
+    ):
+        if content is not None:
+            _tmp_build_variant.write_text(content, encoding="utf-8")
+        assert config.get_build_variant() == "unknown"
+        assert config.supports_cuda() is True
+        assert config.supports_directml() is True
+
+    @pytest.mark.parametrize(
+        ("variant", "onnx_selectable"),
+        [
+            ("cpu", False),
+            ("gpu-cuda11.8", False),
+            ("gpu-cuda12.9", False),
+            ("gpu-directml", True),
+            ("unknown", True),
+        ],
+    )
+    def test_onnx_engine_follows_directml_support(
+        self, _tmp_build_variant, variant, onnx_selectable
+    ):
+        if variant != "unknown":
+            _tmp_build_variant.write_text(variant + "\n", encoding="utf-8")
+        onnx = C.OCR_ENGINES[2]
+        assert config.supports_engine(onnx) is onnx_selectable
+        # The PaddleOCR engines are packaged in every target.
+        assert config.supports_engine(C.OCR_ENGINES[0]) is True
+        assert config.supports_engine(C.OCR_ENGINES[1]) is True
+
+    def test_directml_only_set_names_the_onnx_engine(self):
+        assert {C.OCR_ENGINES[2]} == C.DIRECTML_ONLY_ENGINES
+
+
+class TestLegacyGpuFlagMigration:
+    def test_combined_flag_carries_over_to_directml_toggle(self, _tmp_config_file):
+        _tmp_config_file.write_text("[Settings]\n--use_gpu = false\n", encoding="utf-8")
+        loaded = config.load_settings()
+        assert loaded["--use_gpu"] is False
+        assert loaded["--use_directml_gpu"] is False
+
+    def test_split_flag_is_left_alone(self, _tmp_config_file):
+        _tmp_config_file.write_text(
+            "[Settings]\n--use_gpu = true\n--use_directml_gpu = false\n",
+            encoding="utf-8",
+        )
+        loaded = config.load_settings()
+        assert loaded["--use_gpu"] is True
+        assert loaded["--use_directml_gpu"] is False
+
+    def test_no_combined_flag_keeps_the_default(self, _tmp_config_file):
+        _tmp_config_file.write_text(
+            "[Settings]\n--conf_threshold = 40\n", encoding="utf-8"
+        )
+        loaded = config.load_settings()
+        assert loaded["--use_directml_gpu"] is True
+
+
 class TestParseSavedCropBoxes:
     def test_valid_list(self):
         raw = repr([{"crop_x": 0.1, "crop_y": 0.2, "crop_width": 0.5, "crop_height": 0.1}])

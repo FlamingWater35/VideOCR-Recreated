@@ -18,6 +18,12 @@ LEGACY_OCR_ENGINE_MAP = {
     'EasyOCR DirectML (AMD GPU)': 'ONNX Runtime DirectML (AMD GPU Experimental)',
 }
 
+# Engines that only exist in the gpu-directml package; every other build
+# variant must grey them out (see config.supports_engine).
+DIRECTML_ONLY_ENGINES = frozenset(
+    {'ONNX Runtime DirectML (AMD GPU Experimental)'}
+)
+
 # --- Language lists (name, code) ---
 PADDLEOCR_LANGUAGES_LIST = [('Abaza', 'abq'),
  ('Adyghe', 'ady'),

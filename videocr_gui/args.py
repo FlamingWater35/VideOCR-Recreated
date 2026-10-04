@@ -5,8 +5,8 @@ from __future__ import annotations
 import pathlib
 from typing import Any
 
+from . import config, i18n
 from . import constants as C
-from . import i18n
 from .config import DEFAULT_DOCUMENTS_DIR
 
 
@@ -205,7 +205,7 @@ def build_args(
         "--keyboard_seek_step", "--default_output_dir", "--save_in_video_dir",
         "--send_notification", "--save_crop_box", "--language", "--use_dual_zone",
         "--subtitle_alignment", "--subtitle_alignment2", "--saved_crop_boxes",
-        "--output",
+        "--output", "--use_directml_gpu",
     }
     for key, value in settings.items():
         if not key.startswith("--") or key in excluded:
@@ -225,6 +225,19 @@ def build_args(
             args[stripped] = value
         else:
             args[stripped] = str(value).strip()
+
+    # The CLI keeps a single --use_gpu flag whose meaning follows the engine:
+    # CUDA for the PaddleOCR engines, DirectML for the ONNX engine. Collapse
+    # the two GUI toggles onto it and drop the backend the package cannot run,
+    # so a stale config cannot ask a CPU/CUDA build for DirectML (or vice versa).
+    if args["ocr_engine"] in ("onnx_directml", "easyocr_directml"):
+        args["use_gpu"] = bool(settings.get("--use_directml_gpu", True)) and (
+            config.supports_directml()
+        )
+    else:
+        args["use_gpu"] = bool(settings.get("--use_gpu", True)) and (
+            config.supports_cuda()
+        )
 
     # subtitle alignment
     # settings store the internal value (e.g. "top-left"); also accept the

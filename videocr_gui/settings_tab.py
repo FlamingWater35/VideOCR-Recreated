@@ -19,8 +19,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from . import config, i18n
 from . import constants as C
-from . import i18n
 from .widgets import WheelGuardComboBox
 
 # Map DirectML combo widget key -> {English option name: i18n key}.
@@ -52,7 +52,8 @@ DML_OPTION_COMBOS = (
     "--onnx_directml_tuning",
 )
 
-# Widgets disabled while "Enable GPU Usage" is unchecked.
+# Widgets disabled while "Enable DirectML (AMD GPU)" is unchecked, or when the
+# running package does not ship the DirectML backend.
 DML_DEPENDENT_WIDGETS = (
     "-DML_ADAPTER_COMBO-",
     "--directml_performance_preset",
@@ -96,6 +97,7 @@ class SettingsTab(QWidget):
     scaling_changed = Signal(str)
     directml_gpu_changed = Signal(str)  # numeric index
     restart_requested = Signal()
+    reset_requested = Signal()
     info_requested = Signal()
     help_requested = Signal()
 
@@ -216,7 +218,7 @@ class SettingsTab(QWidget):
         # DirectML box
         dml_box = QGroupBox()
         dml_box.setObjectName("sectionBox")
-        self._section_boxes.append((dml_box, "lbl_dml_section", "DirectML (AMD GPU):"))
+        self._section_boxes.append((dml_box, "lbl_dml_section", "GPU Acceleration:"))
         dml_form = QFormLayout(dml_box)
         dml_form.setLabelAlignment(Qt.AlignmentFlag.AlignLeft)
         dml_form.setFieldGrowthPolicy(
@@ -227,8 +229,16 @@ class SettingsTab(QWidget):
             dml_form,
             "--use_gpu",
             "chk_use_gpu",
-            "Enable GPU Usage",
+            "Enable CUDA (PaddleOCR GPU builds)",
             "tip_use_gpu",
+            True,
+        )
+        self._add_check(
+            dml_form,
+            "--use_directml_gpu",
+            "chk_use_directml_gpu",
+            "Enable DirectML (AMD GPU)",
+            "tip_use_directml_gpu",
             True,
         )
 
@@ -585,6 +595,17 @@ class SettingsTab(QWidget):
             "tip_prevent_sleep",
             True,
         )
+
+        self.reset_btn = QPushButton(
+            i18n.tr("btn_reset_settings", "Reset to Defaults")
+        )
+        self.reset_btn.setObjectName("dangerButton")
+        self.reset_btn.setToolTip(i18n.tr("tip_reset_settings", ""))
+        self._tooltips[self.reset_btn] = "tip_reset_settings"
+        self.reset_btn.clicked.connect(
+            lambda _checked=False: self.reset_requested.emit()
+        )
+        vo_form.addRow(self.reset_btn)
         root.addWidget(vo_box)
 
         root.addStretch(1)
@@ -749,21 +770,34 @@ class SettingsTab(QWidget):
             self._block_signals = False
 
     def _update_dependent_states(self) -> None:
-        """Enables/disables dependent widgets based on master toggles.
+        """Enables/disables dependent widgets based on master toggles and build.
 
-        DirectML controls are disabled while "Enable GPU Usage" is unchecked;
-        label-detection controls are disabled while label detection is disabled.
+        The CUDA and DirectML toggles are greyed out when the running package
+        does not ship that backend; DirectML controls additionally follow the
+        DirectML master toggle; label-detection controls are disabled while
+        label detection is disabled.
         """
-        use_gpu = self._widgets.get("--use_gpu")
-        gpu_enabled = isinstance(use_gpu, QCheckBox) and use_gpu.isChecked()
+        cuda_ok = config.supports_cuda()
+        dml_ok = config.supports_directml()
+
+        cuda_check = self._widgets.get("--use_gpu")
+        if isinstance(cuda_check, QCheckBox):
+            cuda_check.setEnabled(cuda_ok)
+
+        dml_check = self._widgets.get("--use_directml_gpu")
+        if isinstance(dml_check, QCheckBox):
+            dml_check.setEnabled(dml_ok)
+        dml_enabled = (
+            dml_ok and isinstance(dml_check, QCheckBox) and dml_check.isChecked()
+        )
         for key in DML_DEPENDENT_WIDGETS:
             widget = self._widgets.get(key)
             if isinstance(widget, (QComboBox, QLineEdit, QPushButton)):
-                widget.setEnabled(gpu_enabled)
+                widget.setEnabled(dml_enabled)
         # The refresh button next to the adapter combo follows the same state.
         refresh_btn = getattr(self, "refresh_btn", None)
         if isinstance(refresh_btn, QPushButton):
-            refresh_btn.setEnabled(gpu_enabled)
+            refresh_btn.setEnabled(dml_enabled)
 
         label_check = self._widgets.get("enable_label_detection")
         labels_enabled = isinstance(label_check, QCheckBox) and label_check.isChecked()
@@ -894,6 +928,9 @@ class SettingsTab(QWidget):
         # Output directory browse button
         self.browse_output_btn.setText(i18n.tr("btn_browse_folder", "Open Folder..."))
 
+        # Reset-to-defaults button
+        self.reset_btn.setText(i18n.tr("btn_reset_settings", "Reset to Defaults"))
+
         # Tooltips
         for widget, tip_key in self._tooltips.items():
             widget.setToolTip(i18n.tr(tip_key, ""))
@@ -935,7 +972,7 @@ class SettingsTab(QWidget):
         elif key == "--use_dual_zone":
             self.settings_changed.emit([key, "--use_dual_zone"])
             return
-        elif key == "--use_gpu":
+        elif key == "--use_directml_gpu":
             # Re-evaluate DirectML controls' enabled state when the master
             # toggle flips, then emit the change.
             self._update_dependent_states()
