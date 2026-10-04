@@ -36,6 +36,14 @@ VideOCR Recreated extracts hardcoded/burned-in subtitles from videos and exports
 
 ---
 
+<p align="center">
+  <img src="Pictures/GUI.jpg" alt="VideOCR Recreated GUI" width="720">
+  <br />
+  <em>VideOCR Recreated main window</em>
+</p>
+
+---
+
 ## ⚙️ Settings Reference
 
 A quick guide to the most important GUI and CLI parameters to help you balance speed and accuracy.
