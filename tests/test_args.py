@@ -185,6 +185,23 @@ class TestBuildArgsValidation:
         assert argd is None
         assert any("Label Start Time cannot be after Label End Time" in e for e in errors)
 
+    @pytest.mark.parametrize(
+        ("key", "bad"),
+        [
+            ("--label_pos_drift", "abc"),
+            ("--label_hash_threshold", "99"),
+            ("--label_min_zone_height", "4"),
+            ("--label_fontsize", "0"),
+            ("--label_conf_threshold", "150"),
+            ("--label_close_pos_length_ratio", "2.5"),
+        ],
+    )
+    def test_label_numeric_validation(self, key, bad):
+        s = _default_settings(**{key: bad})
+        argd, errors = args_mod.build_args("v.mp4", s, [])
+        assert argd is None, key
+        assert any("Invalid value" in e for e in errors), errors
+
     def test_dual_zone_requires_two_boxes(self):
         s = _default_settings(**{"--use_dual_zone": True})
         box = {"coords": {"crop_x": 0, "crop_y": 0, "crop_width": 10, "crop_height": 10}}

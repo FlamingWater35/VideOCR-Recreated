@@ -5,8 +5,10 @@ from __future__ import annotations
 from typing import Any
 
 from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (
     QCheckBox,
+    QColorDialog,
     QComboBox,
     QFormLayout,
     QGroupBox,
@@ -21,6 +23,7 @@ from PySide6.QtWidgets import (
 
 from . import config, i18n
 from . import constants as C
+from .style import ass_color_to_html, html_to_ass_color
 from .widgets import WheelGuardComboBox
 
 # Map DirectML combo widget key -> {English option name: i18n key}.
@@ -79,6 +82,13 @@ LABEL_DEPENDENT_WIDGETS = (
     "--label_close_pos_distance",
     "--label_close_pos_length_ratio",
     "--label_ssim_dedup",
+    "--label_hash_threshold",
+    "--label_min_zone_height",
+    "--label_font",
+    "--label_fontsize",
+    "--label_primary_color",
+    "--label_outline_color",
+    "--label_alignment",
 )
 
 
@@ -471,9 +481,25 @@ class SettingsTab(QWidget):
             label_form,
             "--label_ssim_dedup",
             "chk_label_ssim_dedup",
-            "Enable Label SSIM Dedup (Step 2)",
+            "Enable Label Frame Deduplication",
             "tip_label_ssim_dedup",
             True,
+        )
+        self._add_line(
+            label_form,
+            "--label_hash_threshold",
+            "lbl_label_hash_threshold",
+            "Label Hash Threshold (0-64):",
+            "4",
+            "tip_label_hash_threshold",
+        )
+        self._add_line(
+            label_form,
+            "--label_min_zone_height",
+            "lbl_label_min_zone_height",
+            "Label Min Free-Band Height (px):",
+            "32",
+            "tip_label_min_zone_height",
         )
         self._add_line(
             label_form,
@@ -514,6 +540,47 @@ class SettingsTab(QWidget):
             "Label Close-Position Length Ratio (0-1):",
             "0.5",
             "tip_label_close_pos_length_ratio",
+        )
+        self._add_line(
+            label_form,
+            "--label_font",
+            "lbl_label_font",
+            "Label Font:",
+            "Arial",
+            "tip_label_font",
+        )
+        self._add_line(
+            label_form,
+            "--label_fontsize",
+            "lbl_label_fontsize",
+            "Label Font Size:",
+            "22",
+            "tip_label_fontsize",
+        )
+        self._add_color(
+            label_form,
+            "--label_primary_color",
+            "lbl_label_primary_color",
+            "Label Text Color:",
+            "&H00FFFFFF",
+            "tip_label_primary_color",
+        )
+        self._add_color(
+            label_form,
+            "--label_outline_color",
+            "lbl_label_outline_color",
+            "Label Outline Color:",
+            "&H00000000",
+            "tip_label_outline_color",
+        )
+        self._add_combo(
+            label_form,
+            "--label_alignment",
+            "lbl_label_alignment",
+            "Label Alignment:",
+            C.SUBTITLE_ALIGNMENT_LIST,
+            "tip_label_alignment",
+            internal_values=[v for _, v in C.SUBTITLE_ALIGNMENT_LIST],
         )
         root.addWidget(label_box)
 
@@ -710,6 +777,48 @@ class SettingsTab(QWidget):
         cb.toggled.connect(lambda _v, k=key: self._on_changed([k]))
         return cb
 
+    def _add_color(
+        self,
+        form: QFormLayout,
+        key: str,
+        label_key: str,
+        fallback_label: str,
+        default_ass: str,
+        tooltip_key: str | None = None,
+    ) -> QPushButton:
+        """Color swatch button storing an ASS &H00BBGGRR value."""
+        btn = QPushButton()
+        btn.setObjectName(key.lstrip("-").replace("_", "-"))
+        btn.setMinimumWidth(90)
+        btn.setProperty("assColor", default_ass)
+        self._apply_color_btn(btn, default_ass)
+        self._widgets[key] = btn
+        if tooltip_key:
+            btn.setToolTip(i18n.tr(tooltip_key, ""))
+            self._tooltips[btn] = tooltip_key
+        form.addRow(self._lbl(label_key, fallback_label), btn)
+        btn.clicked.connect(lambda _c=False, k=key: self._pick_color(k))
+        return btn
+
+    def _pick_color(self, key: str) -> None:
+        btn = self._widgets.get(key)
+        if not isinstance(btn, QPushButton):
+            return
+        current = str(btn.property("assColor") or "&H00FFFFFF")
+        initial = QColor(ass_color_to_html(current))
+        color = QColorDialog.getColor(initial, self)
+        if not color.isValid():
+            return
+        ass = html_to_ass_color(color.name())
+        btn.setProperty("assColor", ass)
+        self._apply_color_btn(btn, ass)
+        self._on_changed([key])
+
+    @staticmethod
+    def _apply_color_btn(btn: QPushButton, ass: str) -> None:
+        btn.setText(ass)
+        btn.setStyleSheet(f"background-color: {ass_color_to_html(ass)}; color: #000;")
+
     # --- public API ---------------------------------------------------------
     def populate(self, settings: dict[str, Any], ui_languages: list[str]) -> None:
         """Fills widgets from settings; called at startup and on language switch."""
@@ -746,6 +855,12 @@ class SettingsTab(QWidget):
                     widget.setChecked(bool(value))
                 elif isinstance(widget, QLineEdit):
                     widget.setText(str(value))
+                elif isinstance(widget, QPushButton) and (
+                    widget.property("assColor") is not None
+                ):
+                    ass = str(value)
+                    widget.setProperty("assColor", ass)
+                    self._apply_color_btn(widget, ass)
 
             lang_combo = self._widgets["-UI_LANG_COMBO-"]
             lang_combo.clear()
@@ -803,7 +918,7 @@ class SettingsTab(QWidget):
         labels_enabled = isinstance(label_check, QCheckBox) and label_check.isChecked()
         for key in LABEL_DEPENDENT_WIDGETS:
             widget = self._widgets.get(key)
-            if isinstance(widget, (QComboBox, QLineEdit, QCheckBox)):
+            if isinstance(widget, (QComboBox, QLineEdit, QCheckBox, QPushButton)):
                 widget.setEnabled(labels_enabled)
 
     def read_settings(self) -> dict[str, Any]:
@@ -847,6 +962,10 @@ class SettingsTab(QWidget):
                 settings[key] = widget.isChecked()
             elif isinstance(widget, QLineEdit):
                 settings[key] = widget.text()
+            elif isinstance(widget, QPushButton) and (
+                widget.property("assColor") is not None
+            ):
+                settings[key] = str(widget.property("assColor"))
         return settings
 
     def _retranslate(self) -> None:
@@ -867,7 +986,7 @@ class SettingsTab(QWidget):
                     widget.setText(_translated_label(prop, fallback or widget.text()))
 
         # Alignment combos: rebuild translated items preserving internal selection
-        for key in ("--subtitle_alignment", "--subtitle_alignment2"):
+        for key in ("--subtitle_alignment", "--subtitle_alignment2", "--label_alignment"):
             widget = self._widgets.get(key)
             if not isinstance(widget, QComboBox):
                 continue

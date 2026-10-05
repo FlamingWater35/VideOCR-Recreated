@@ -93,10 +93,14 @@ QSS theme.
   unchecked, or when the running package does not ship DirectML at all
   (see "Build-variant gating" below).
 - The label-detection controls (label OCR width, min duration, confirmation
-  frames, reappear gap, single-char filter, label thresholds) are **disabled**
-  while the **Enable Label Detection** checkbox is unchecked — this includes
-  the label *checkboxes* (`--label_filter_single_char`, `--label_ssim_dedup`),
-  not just the line/combo inputs.
+  frames, reappear gap, single-char filter, label thresholds, hash threshold,
+  min free-band height, and the Label style row: font, size, text/outline
+  color, alignment) are **disabled** while the **Enable Label Detection**
+  checkbox is unchecked — this includes the label *checkboxes*
+  (`--label_filter_single_char`, `--label_ssim_dedup`), not just the
+  line/combo inputs. The color swatch buttons are `QPushButton`s carrying an
+  `assColor` dynamic property (ASS `&H00BBGGRR`), converted at the widget
+  boundary by `style.ass_color_to_html` / `html_to_ass_color`.
 - Implemented in `settings_tab.py` (`DML_DEPENDENT_WIDGETS`,
   `LABEL_DEPENDENT_WIDGETS`, `_update_dependent_states()`), re-evaluated on
   toggle and on `populate()`.
@@ -179,8 +183,15 @@ QSS theme.
 - Label detection section: `enable_label_detection`, label start/end time
   (independent of the subtitle extraction window; empty falls back to the main
   window), label OCR width, min display duration, min confirmation frames,
-  reappear merge gap, single-char filter (`.ass` output with positioned Label
-  events).
+  reappear merge gap, single-char filter, frame dedup (`--label_ssim_dedup`
+  gates both the pre-OCR dHash skip and the Step-2 tight-box SSIM; threshold
+  in `--label_hash_threshold`), min free-band height (`--label_min_zone_height`
+  — every free band outside the subtitle crop above this height is scanned),
+  and the Label style row (`--label_font`, `--label_fontsize`,
+  `--label_primary_color`, `--label_outline_color`, `--label_alignment`;
+  `.ass` output with positioned Label events). `--label_lang` (label OCR
+  language, empty = subtitle language) has a config/CLI default but no widget
+  yet — set it in the INI or on the CLI.
 - OCR engine list: **EasyOCR DirectML is not offered** as a selectable GUI
   engine. It remains the internal fallback backend for the ONNX Runtime
   DirectML engine (see `CLI/videocr/onnx_directml_ocr.py`). Old configs /

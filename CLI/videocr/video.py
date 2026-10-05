@@ -11,7 +11,7 @@ import shutil
 import subprocess
 import threading
 import time
-from typing import Any, cast
+from typing import Any, NamedTuple, cast
 
 import av
 import fast_ssim  # type: ignore
@@ -37,6 +37,19 @@ def _is_single_ascii_label(text: str) -> bool:
     return t.isascii() and (t.isalnum())
 
 
+class _LabelLine(NamedTuple):
+    """One OCR'd label line: text, centroid, mean confidence, bbox."""
+
+    text: str
+    cx: float
+    cy: float
+    conf: float
+    x1: float
+    y1: float
+    x2: float
+    y2: float
+
+
 class Video:
     path: str
     lang: str
@@ -54,7 +67,7 @@ class Video:
     pred_frames_zone2: list[PredictedFrames]
     pred_subs: list[PredictedSubtitle]
     validated_zones: list[dict[str, Any]]
-    label_zone: dict[str, int] | None
+    label_zones: list[dict[str, Any]]
     label_frames: list[PredictedFrames]
     frame_timestamps: dict[int, float]
     start_time_offset_ms: float
@@ -79,9 +92,29 @@ class Video:
         self.frame_timestamps = {}
         self.start_time_offset_ms = 0.0
         self.avg_frame_duration_ms = 0.0
-        self.label_zone = None
+        self.label_zones = []
         self.label_frames = []
         self._label_frame_weights: dict[int, int] = {}
+        self._label_hash_weights: dict[int, int] = {}
+        self._label_hash_threshold = 4
+        self._label_dedup_enabled = True
+        self._label_min_zone_height = 32
+        # Pre-run_ocr placeholder only: run_ocr always assigns
+        # `label_lang_code or self.lang` (never "") before any consumer reads
+        # it (PredictedFrames construction, split-recognition passes).
+        # _merge_label_frames/_render_ass never touch _label_lang, and
+        # get_subtitles is only called after run_ocr, so "" is unreachable
+        # as an OCR language.
+        self._label_lang = ""
+        self._label_split_lang = False
+        self._label_model_dirs: dict[str, str] | None = None
+        self._label_style: dict[str, Any] = {
+            "font": "Arial",
+            "fontsize": 22,
+            "primary": "&H00FFFFFF",
+            "outline": "&H00000000",
+            "alignment": "an7",
+        }
         self.label_time_start_ms = 0.0
         self.label_time_end_ms: float | None = None
         props = get_video_properties(self.path)
@@ -171,8 +204,8 @@ class Video:
             )
             return False
 
-        label_zone = self.label_zone
-        use_label = label_zone is not None
+        label_zones = self.label_zones
+        use_label = bool(label_zones)
 
         z = self.validated_zones[0]
         target_w = int(z["w"])
@@ -183,21 +216,25 @@ class Video:
         FILENAME_ZERO_PADDING = 8
 
         label_raw_path = ""
-        label_target_w = label_target_h = label_frame_bytes = 0
-        label_batch: list[Any] = []
-        label_batch_limit = 0
+        label_target_w = label_frame_bytes = 0
+        label_batches: dict[int, list[Any]] = {}
+        label_batch_limits: dict[int, int] = {}
         if use_label:
-            label_target_w = int(label_zone["target_w"])
-            label_target_h = int(label_zone["target_h"])
-            label_frame_bytes = label_target_w * label_target_h * 3
+            # All bands share target_w (built with one scale ratio), so the
+            # FFmpeg label output is the bands vstacked into one composite.
+            label_target_w = int(label_zones[0]["target_w"])
+            total_label_h = sum(int(b["target_h"]) for b in label_zones)
+            label_frame_bytes = label_target_w * total_label_h * 3
             label_raw_path = os.path.join(temp_dir, "label_raw.rgb")
-            label_batch_limit = utils.get_batch_limit(
-                label_target_w,
-                label_target_h,
-                max_stitch_width,
-                max_stitch_height,
-                GRID_SPACING,
-            )
+            for k, band in enumerate(label_zones):
+                label_batches[2 + k] = []
+                label_batch_limits[2 + k] = utils.get_batch_limit(
+                    label_target_w,
+                    int(band["target_h"]),
+                    max_stitch_width,
+                    max_stitch_height,
+                    GRID_SPACING,
+                )
 
         modulo = frames_to_skip + 1
         det_stitched_dir = os.path.join(temp_dir, "det_stitched")
@@ -262,11 +299,33 @@ class Video:
 
         if use_label:
             select_part = f"select=not(mod(n\\,{modulo}))"
-            fc = (
-                f"[0:v]{select_part},split=2[s1][s2];"
-                f"[s1]crop={z['crop_str']},scale={z['scale_str']},format=rgb24[sub];"
-                f"[s2]crop={label_zone['crop_str']},scale={label_zone['scale_str']},format=rgb24[label]"
-            )
+            if len(label_zones) == 1:
+                # Single band: keep the original two-output graph as-is.
+                fc = (
+                    f"[0:v]{select_part},split=2[s1][s2];"
+                    f"[s1]crop={z['crop_str']},scale={z['scale_str']},format=rgb24[sub];"
+                    f"[s2]crop={label_zones[0]['crop_str']},scale={label_zones[0]['scale_str']},format=rgb24[label]"
+                )
+            else:
+                # Multiple bands: split once more per band, scale each to the
+                # shared target width, then vstack into the single [label]
+                # output (still exactly two FFmpeg outputs total).
+                k = len(label_zones)
+                fc = (
+                    f"[0:v]{select_part},split={k + 1}[s0]"
+                    + "".join(f"[l{i}]" for i in range(k))
+                    + ";"
+                    + f"[s0]crop={z['crop_str']},scale={z['scale_str']},format=rgb24[sub];"
+                )
+                for i, band in enumerate(label_zones):
+                    fc += (
+                        f"[l{i}]crop={band['crop_str']},scale={band['scale_str']},"
+                        f"format=rgb24[ls{i}];"
+                    )
+                fc += (
+                    "".join(f"[ls{i}]" for i in range(k))
+                    + f"vstack=inputs={k}[label]"
+                )
             cmd = [
                 ffmpeg_path,
                 "-hide_banner",
@@ -470,8 +529,11 @@ class Video:
             det_batch = []
 
         # Label zone (fix 6): read the second FFmpeg output and stitch the
-        # label frames without any SSIM filtering (labels must be detected on
-        # every appearance). Frame indices match the subtitle sampled frames.
+        # label frames. No SSIM here, but the optional pre-OCR dHash dedup
+        # (label_ssim_dedup) skips redundant frames per band while keeping
+        # confirmation weights. Frame indices match the subtitle sampled frames.
+        # The output holds all bands vstacked; split each composite frame back
+        # into per-band crops so every band stitches under its own zone index.
         if use_label:
             try:
                 with open(label_raw_path, "rb") as lf:
@@ -485,22 +547,51 @@ class Video:
                 len(label_data) // label_frame_bytes if label_frame_bytes > 0 else 0
             )
             label_frame_count = min(num_label_frames, ocr_end)
-            for i in range(label_frame_count):
-                offset = i * label_frame_bytes
-                img = (
-                    np.frombuffer(
-                        label_data[offset : offset + label_frame_bytes], dtype=np.uint8
-                    )
-                    .reshape((label_target_h, label_target_w, 3))
-                    .copy()
+            band_heights = [int(b["target_h"]) for b in label_zones]
+            row_strides = [label_target_w * th * 3 for th in band_heights]
+            row_offsets: list[int] = []
+            acc = 0
+            for stride in row_strides:
+                row_offsets.append(acc)
+                acc += stride
+            label_dedup: utils.LabelFrameDedup | None = None
+            if self._label_dedup_enabled:
+                label_dedup = utils.LabelFrameDedup(
+                    threshold=self._label_hash_threshold
                 )
-                label_batch.append({"img": img, "frame_idx": i})
-                if len(label_batch) >= label_batch_limit:
-                    det_counter = save_stitch_batch(label_batch, det_counter, 2)
-                    label_batch = []
-            if label_batch:
-                det_counter = save_stitch_batch(label_batch, det_counter, 2)
-                label_batch = []
+            for i in range(label_frame_count):
+                frame_base = i * label_frame_bytes
+                for k, band_height in enumerate(band_heights):
+                    zidx = 2 + k
+                    off = frame_base + row_offsets[k]
+                    img = (
+                        np.frombuffer(
+                            label_data[off : off + row_strides[k]], dtype=np.uint8
+                        )
+                        .reshape((band_height, label_target_w, 3))
+                        .copy()
+                    )
+                    if (
+                        label_dedup is not None
+                        and not label_dedup.consider(zidx, i, img)
+                    ):
+                        continue
+                    label_batches[zidx].append({"img": img, "frame_idx": i})
+                    if len(label_batches[zidx]) >= label_batch_limits[zidx]:
+                        det_counter = save_stitch_batch(
+                            label_batches[zidx], det_counter, zidx
+                        )
+                        label_batches[zidx] = []
+            for k in range(len(label_zones)):
+                zidx = 2 + k
+                if label_batches[zidx]:
+                    det_counter = save_stitch_batch(
+                        label_batches[zidx], det_counter, zidx
+                    )
+                    label_batches[zidx] = []
+            if label_dedup is not None:
+                label_dedup.finish()
+                self._publish_label_hash_weights(label_dedup)
             with contextlib.suppress(OSError):
                 os.remove(label_raw_path)
 
@@ -556,12 +647,14 @@ class Video:
             flush=True,
         )
         directml_ocr_start = time.perf_counter()
-        ocr_outputs = run_directml_ocr(
+        ocr_outputs = self._run_label_aware_directml_ocr(
+            run_directml_ocr,
             det_stitched_dir,
             det_stitch_map,
             self.lang,
             use_gpu,
             directml_recognition_mode,
+            ocr_engine,
         )
         directml_ocr_end = time.perf_counter()
 
@@ -615,22 +708,24 @@ class Video:
             for m in mappings:
                 active_frame_coords.add((int(m["frame_idx"]), int(m["zone_idx"])))
         frame_predictions_dict: dict[int, dict[int, PredictedFrames]] = {0: {}, 1: {}}
-        if use_label:
-            frame_predictions_dict[2] = {}
+        for k in range(len(label_zones)):
+            frame_predictions_dict[2 + k] = {}
         label_conf_ratio = getattr(
             self, "_label_conf_threshold_ratio", conf_threshold_ratio
         )
         for frame_index, zone_index in active_frame_coords:
             ocr_result = ocr_outputs.get((frame_index, zone_index), [])
             pred_data = [ocr_result] if ocr_result else [[]]
-            zone_conf = label_conf_ratio if zone_index == 2 else conf_threshold_ratio
+            zone_conf = (
+                label_conf_ratio if zone_index >= 2 else conf_threshold_ratio
+            )
             predicted_frame = PredictedFrames(
                 ocr_engine,
                 frame_index,
                 pred_data,
                 zone_conf,
                 zone_index,
-                lang,
+                self._label_lang if zone_index >= 2 else lang,
                 normalize_to_simplified_chinese,
             )
             frame_predictions_dict[zone_index][frame_index] = predicted_frame
@@ -649,8 +744,8 @@ class Video:
         self.pred_frames_zone1 = frame_predictions_list.get(0, [])
         self.pred_frames_zone2 = frame_predictions_list.get(1, [])
         self.label_frames = (
-            self._filter_label_frames_by_time(frame_predictions_list.get(2, []))
-            if self.label_zone is not None
+            self._collect_label_frames(frame_predictions_list)
+            if use_label
             else []
         )
 
@@ -730,6 +825,117 @@ class Video:
         except Exception:
             return 2400, 2400, "DirectML preset=manual fallback"
 
+    @staticmethod
+    def _build_label_band(
+        band: dict[str, int], crop_w: int, crop_h: int, ratio: float
+    ) -> dict[str, Any]:
+        """Derive crop/scale strings for one label band (shared scale ratio)."""
+        crop_x = max(0, band["x"]) & ~1
+        crop_y = max(0, band["y"]) & ~1
+        target_w = max(2, int(crop_w * ratio) & ~1)
+        target_h = max(2, int(crop_h * ratio) & ~1)
+        return {
+            "x": band["x"],  # original video coords
+            "y": band["y"],
+            "w": band["w"],
+            "h": band["h"],
+            "crop_x": crop_x,
+            "crop_y": crop_y,
+            "crop_w": crop_w,
+            "crop_h": crop_h,
+            "crop_str": f"{crop_w}:{crop_h}:{crop_x}:{crop_y}",
+            "scale_str": f"{target_w}:{target_h}:flags=area:threads=1",
+            "target_w": target_w,
+            "target_h": target_h,
+        }
+
+    def _label_band(self, zone_idx: int) -> dict[str, Any] | None:
+        """Band dict for a label zone index (label zones occupy 2..2+K-1)."""
+        i = zone_idx - 2
+        return self.label_zones[i] if 0 <= i < len(self.label_zones) else None
+
+    def _collect_label_frames(
+        self, frame_predictions_list: dict[int, list[PredictedFrames]]
+    ) -> list[PredictedFrames]:
+        """Gather label-band frames (zone indices >= 2) in time order and
+        apply the label-detection time window."""
+        out: list[PredictedFrames] = []
+        for zone_idx in sorted(k for k in frame_predictions_list if k >= 2):
+            out.extend(frame_predictions_list[zone_idx])
+        out.sort(key=lambda f: f.start_index)
+        return self._filter_label_frames_by_time(out)
+
+    def _run_label_aware_directml_ocr(
+        self,
+        runner: Any,
+        stitched_dir: str,
+        stitch_map: dict[str, list[dict[str, Any]]],
+        subtitle_lang: str,
+        use_gpu: bool,
+        recognition_mode: str,
+        ocr_engine: str,
+    ) -> dict[tuple[int, int], list[Any]]:
+        """Run DirectML recognition, splitting label bands into a second pass
+        with the label language when it differs.
+
+        Only easyocr_directml honors the split — the ONNX PP-OCRv6 model is
+        unified and ignores language (the CLI prints a note for it).
+        """
+        if not (self._label_split_lang and ocr_engine == "easyocr_directml"):
+            return cast(
+                dict[tuple[int, int], list[Any]],
+                runner(
+                    stitched_dir, stitch_map, subtitle_lang, use_gpu, recognition_mode
+                ),
+            )
+        sub_map: dict[str, list[dict[str, Any]]] = {}
+        label_map: dict[str, list[dict[str, Any]]] = {}
+        for grid, mappings in stitch_map.items():
+            for m in mappings:
+                target = label_map if int(m["zone_idx"]) >= 2 else sub_map
+                target.setdefault(grid, []).append(m)
+        outputs: dict[tuple[int, int], list[Any]] = {}
+        if sub_map:
+            outputs.update(
+                runner(
+                    stitched_dir, sub_map, subtitle_lang, use_gpu, recognition_mode
+                )
+            )
+        if label_map:
+            print(
+                f"Running label OCR pass (lang={self._label_lang})...",
+                flush=True,
+            )
+            outputs.update(
+                runner(
+                    stitched_dir,
+                    label_map,
+                    self._label_lang,
+                    use_gpu,
+                    recognition_mode,
+                )
+            )
+        return outputs
+
+    def _publish_label_hash_weights(self, dedup: utils.LabelFrameDedup) -> None:
+        """Merge finished dHash run weights into the label weight maps.
+
+        ``_label_hash_weights`` feeds Step-2 SSIM weight composition;
+        ``_label_frame_weights`` is what the merge step reads (and the only
+        consumer in paths without a Step-2 pass).
+        """
+        for rep, weight in dedup.weights.items():
+            self._label_hash_weights[rep] = weight
+            self._label_frame_weights[rep] = weight
+        if dedup.skipped:
+            kept = len(dedup.weights)
+            print(
+                f"[Perf] Label frame dedup (dHash): kept {kept} of "
+                f"{kept + dedup.skipped} sampled label frame(s); "
+                f"skipped {dedup.skipped} redundant.",
+                flush=True,
+            )
+
     def run_ocr(
         self,
         use_gpu: bool,
@@ -769,6 +975,15 @@ class Video:
         label_close_pos_length_ratio: float = 0.5,
         label_conf_threshold: int = 60,
         label_ssim_dedup: bool = True,
+        label_hash_threshold: int = 4,
+        label_min_zone_height: int = 32,
+        label_font: str = "Arial",
+        label_fontsize: int = 22,
+        label_primary_color: str = "&H00FFFFFF",
+        label_outline_color: str = "&H00000000",
+        label_alignment: str = "an7",
+        label_lang: str = "",
+        label_model_dirs: dict[str, str] | None = None,
     ) -> None:
         perf_total_start = time.perf_counter()
         step1_start = perf_total_start
@@ -785,9 +1000,34 @@ class Video:
         self.validated_zones = []
         self.pred_frames_zone1 = []
         self.pred_frames_zone2 = []
-        self.label_zone = None
+        self.label_zones = []
         self.label_frames = []
         self._label_frame_weights = {}
+        self._label_hash_weights = {}
+        self._label_hash_threshold = max(0, min(64, int(label_hash_threshold)))
+        self._label_dedup_enabled = bool(label_ssim_dedup)
+        self._label_min_zone_height = max(8, int(label_min_zone_height or 32))
+        # Label ASS style (see _render_ass). Alignment normalizes both
+        # "anN" codes and GUI alignment names to a valid an1..an9 tag.
+        align = str(label_alignment or "an7")
+        align = utils.ALIGNMENT_MAP.get(align, align)
+        if not re.fullmatch(r"an[1-9]", align):
+            align = "an7"
+        self._label_style = {
+            "font": str(label_font or "Arial").replace(",", ""),
+            "fontsize": max(1, int(label_fontsize or 22)),
+            "primary": str(label_primary_color or "&H00FFFFFF"),
+            "outline": str(label_outline_color or "&H00000000"),
+            "alignment": align,
+        }
+        # Label-specific OCR language (empty = subtitle language). When it
+        # differs, recognition runs a second pass for label images only.
+        label_lang_code = (label_lang or "").strip()
+        self._label_lang = label_lang_code or self.lang
+        self._label_split_lang = bool(
+            label_lang_code and label_lang_code != self.lang
+        )
+        self._label_model_dirs = label_model_dirs
         self.label_time_start_ms = 0.0
         self.label_time_end_ms = None
         self._label_min_display_duration_ms = (
@@ -937,64 +1177,73 @@ class Video:
             val_zone["crop_str"] = f"{crop_w}:{crop_h}:{crop_x}:{crop_y}"
             val_zone["scale_str"] = f"{target_w}:{target_h}:flags=area:threads=1"
 
-        # Label detection area: everything OUTSIDE the subtitle crop zone(s).
+        # Label detection area: horizontal bands OUTSIDE the subtitle crop
+        # zone(s). Every free band >= min_height is scanned so labels in
+        # smaller regions (e.g. a top band) are not missed.
         if enable_label_detection:
-            label_zone = utils.compute_label_zone(
-                self.width, self.height, self.validated_zones
+            min_zone_height = self._label_min_zone_height
+            bands = utils.compute_label_zones(
+                self.width, self.height, self.validated_zones,
+                min_height=min_zone_height,
             )
-            if label_zone is None or label_zone["h"] < 8:
+            if not bands:
                 print(
-                    "Warning: Label detection requested, but the subtitle crop area covers the whole frame. Label detection skipped.",
+                    "Warning: Label detection requested, but no free band "
+                    f"(>= {min_zone_height}px) remains outside the subtitle "
+                    "crop area (this includes --use_fullframe). Label detection skipped.",
                     flush=True,
                 )
-                self.label_zone = None
+                self.label_zones = []
             else:
-                crop_w = max(
-                    2,
-                    (
-                        min(self.width, label_zone["x"] + label_zone["w"])
-                        - max(0, label_zone["x"])
-                    )
-                    & ~1,
-                )
-                crop_h = max(
-                    2,
-                    (
-                        min(self.height, label_zone["y"] + label_zone["h"])
-                        - max(0, label_zone["y"])
-                    )
-                    & ~1,
-                )
-                crop_x = max(0, label_zone["x"]) & ~1
-                crop_y = max(0, label_zone["y"]) & ~1
+                # One shared scale ratio for all bands so every band's OCR
+                # crop has the same target width (required to vstack bands
+                # into a single FFmpeg label output).
                 MIN_SIDE = 64
-                scale_ratio = 1.0
-                if label_ocr_image_max_width and crop_w > label_ocr_image_max_width:
-                    scale_ratio = label_ocr_image_max_width / crop_w
-                    min_required_ratio = MIN_SIDE / min(crop_w, crop_h)
-                    if scale_ratio < min_required_ratio:
-                        scale_ratio = min_required_ratio
-                target_w = max(2, int(crop_w * scale_ratio) & ~1)
-                target_h = max(2, int(crop_h * scale_ratio) & ~1)
-                self.label_zone = {
-                    "x": label_zone["x"],  # original video coords
-                    "y": label_zone["y"],
-                    "w": label_zone["w"],
-                    "h": label_zone["h"],
-                    "crop_x": crop_x,
-                    "crop_y": crop_y,
-                    "crop_w": crop_w,
-                    "crop_h": crop_h,
-                    "crop_str": f"{crop_w}:{crop_h}:{crop_x}:{crop_y}",
-                    "scale_str": f"{target_w}:{target_h}:flags=area:threads=1",
-                    "target_w": target_w,
-                    "target_h": target_h,
-                }
-                print(
-                    f"Label detection zone (outside subtitle crop): x={label_zone['x']} y={label_zone['y']} "
-                    f"w={label_zone['w']} h={label_zone['h']}",
-                    flush=True,
-                )
+                crop_ws = [
+                    max(
+                        2,
+                        (
+                            min(self.width, b["x"] + b["w"])
+                            - max(0, b["x"])
+                        )
+                        & ~1,
+                    )
+                    for b in bands
+                ]
+                crop_hs = [
+                    max(
+                        2,
+                        (
+                            min(self.height, b["y"] + b["h"])
+                            - max(0, b["y"])
+                        )
+                        & ~1,
+                    )
+                    for b in bands
+                ]
+                # Per-band ratio (same formula as the subtitle zones), then one
+                # shared value so every band's OCR crop has the same target
+                # width (required to vstack bands into one FFmpeg output).
+                band_ratios: list[float] = []
+                for crop_w, crop_h in zip(crop_ws, crop_hs):
+                    band_ratio = 1.0
+                    if label_ocr_image_max_width and crop_w > label_ocr_image_max_width:
+                        band_ratio = label_ocr_image_max_width / crop_w
+                        min_required_ratio = MIN_SIDE / min(crop_w, crop_h)
+                        if band_ratio < min_required_ratio:
+                            band_ratio = min_required_ratio
+                    band_ratios.append(band_ratio)
+                ratio = max(band_ratios)
+                self.label_zones = [
+                    self._build_label_band(b, crop_w, crop_h, ratio)
+                    for b, crop_w, crop_h in zip(bands, crop_ws, crop_hs)
+                ]
+                for band in self.label_zones:
+                    print(
+                        f"Label detection band (outside subtitle crop): x={band['x']} y={band['y']} "
+                        f"w={band['w']} h={band['h']}",
+                        flush=True,
+                    )
 
         temp_dir = utils.create_clean_temp_dir()
         try:
@@ -1135,11 +1384,12 @@ class Video:
                             graph = av.filter.Graph()
                             buffer_node = graph.add_buffer(template=raw_frame)
                             num_zones = len(self.validated_zones)
-                            label_zone = self.label_zone
-                            num_outputs = num_zones + (
-                                1 if label_zone is not None else 0
+                            label_zones = self.label_zones
+                            num_label_bands = len(label_zones)
+                            num_outputs = num_zones + num_label_bands
+                            label_sink_base = (
+                                num_zones if num_label_bands > 0 else -1
                             )
-                            label_sink_idx = num_zones if label_zone is not None else -1
                             if num_outputs == 1:
                                 # Single Zone (User crop, Bottom Third, Full Frame)
                                 # Pipeline: Buffer -> Crop -> Scale -> Sink
@@ -1152,7 +1402,7 @@ class Video:
                                 scale_node.link_to(sink_node)
                                 sinks.append(sink_node)
                             else:
-                                # Multiple outputs (Dual Zone and/or Label zone):
+                                # Multiple outputs (Dual Zone and/or Label bands):
                                 # Buffer -> Split(N) -> (Crop -> Scale -> Sink) x N.
                                 # Every output goes through the split so each branch
                                 # gets an explicit output pad (avoids PyAV linking
@@ -1160,8 +1410,7 @@ class Video:
                                 split_node = graph.add("split", str(num_outputs))
                                 buffer_node.link_to(split_node)
                                 all_zones = list(self.validated_zones)
-                                if label_zone is not None:
-                                    all_zones.append(label_zone)
+                                all_zones.extend(label_zones)
                                 for i, z in enumerate(all_zones):
                                     crop_node = graph.add("crop", z["crop_str"])
                                     scale_node = graph.add("scale", z["scale_str"])
@@ -1181,7 +1430,7 @@ class Video:
                             # anyway so a missing label frame never blocks the
                             # whole worker (missing label = skip this frame).
                             is_label_sink = (
-                                self.label_zone is not None and idx == label_sink_idx
+                                label_sink_base >= 0 and idx >= label_sink_base
                             )
                             try:
                                 processed_raw_frame = cast(av.VideoFrame, sink.pull())
@@ -1190,11 +1439,11 @@ class Video:
                                     continue
                                 raise
                             img = utils.frame_to_array(processed_raw_frame, fmt="rgb24")
-                            # The label sink is the label zone branch.
+                            # Label sinks are the label-zone branches (2..2+K-1).
                             if is_label_sink:
                                 images_to_process.append(
                                     {
-                                        "zone_idx": 2,  # label zone index
+                                        "zone_idx": 2 + (idx - label_sink_base),
                                         "img": img,
                                         "ssim_sample": None,
                                     }
@@ -1315,10 +1564,10 @@ class Video:
                 batch_limits[z_idx] = utils.get_batch_limit(
                     z["w"], z["h"], MAX_STITCH_WIDTH, MAX_STITCH_HEIGHT, GRID_SPACING
                 )
-            if self.label_zone is not None:
-                batch_limits[2] = utils.get_batch_limit(
-                    self.label_zone["target_w"],
-                    self.label_zone["target_h"],
+            for k, band in enumerate(self.label_zones):
+                batch_limits[2 + k] = utils.get_batch_limit(
+                    band["target_w"],
+                    band["target_h"],
                     MAX_STITCH_WIDTH,
                     MAX_STITCH_HEIGHT,
                     GRID_SPACING,
@@ -1352,17 +1601,17 @@ class Video:
             det_stitch_map: dict[str, list[dict[str, Any]]] = {}
             det_counter = 0
             det_batches: dict[int, list[Any]] = {0: [], 1: []}
-            if self.label_zone is not None:
-                det_batches[2] = []
-            prev_samples = (
-                [None]
-                * (
-                    len(self.validated_zones)
-                    + (1 if self.label_zone is not None else 0)
+            for k in range(len(self.label_zones)):
+                det_batches[2 + k] = []
+            # Dict (not list): zone indices are sparse — subtitle zones are
+            # 0/1 while label bands start at 2 regardless of zone count.
+            prev_samples: dict[int, Any] = {}
+            # Pre-OCR dHash dedup for label bands (gated by label_ssim_dedup).
+            label_dedup: utils.LabelFrameDedup | None = None
+            if self.label_zones and self._label_dedup_enabled:
+                label_dedup = utils.LabelFrameDedup(
+                    threshold=self._label_hash_threshold
                 )
-                if (self.validated_zones or self.label_zone)
-                else [None]
-            )
             dml_frame_filter = None
             dml_frame_filter_failed = False
             dml_frame_scan_mode_normalized = (
@@ -1448,13 +1697,12 @@ class Video:
                                     zone_idx = zone_data["zone_idx"]
                                     img = zone_data["img"]
                                     sample = zone_data["ssim_sample"]
-                                    # Label zone (index 2) is never SSIM-filtered:
-                                    # labels must be detected on every appearance.
-                                    is_label_zone = (
-                                        self.label_zone is not None and zone_idx == 2
-                                    )
+                                    # Label bands (indices >= 2) are never
+                                    # SSIM-filtered: labels must be detected
+                                    # on every appearance.
+                                    is_label_zone = zone_idx >= 2
                                     if not is_label_zone and ssim_threshold_ratio < 1:
-                                        if prev_samples[zone_idx] is not None:
+                                        if prev_samples.get(zone_idx) is not None:
                                             if dml_frame_filter is not None:
                                                 try:
                                                     if dml_frame_filter.is_similar(
@@ -1483,6 +1731,16 @@ class Video:
                                         # First sample per zone: nothing to
                                         # compare against yet — always keep it.
                                     prev_samples[zone_idx] = sample
+                                    if (
+                                        is_label_zone
+                                        and label_dedup is not None
+                                        and not label_dedup.consider(
+                                            zone_idx, expected_index, img
+                                        )
+                                    ):
+                                        # Redundant label frame: folded into
+                                        # the kept representative's weight.
+                                        continue
                                     det_batches[zone_idx].append(
                                         {"img": img, "frame_idx": expected_index}
                                     )
@@ -1510,6 +1768,9 @@ class Video:
                                 det_stitched_dir,
                                 det_stitch_map,
                             )
+                    if label_dedup is not None:
+                        label_dedup.finish()
+                        self._publish_label_hash_weights(label_dedup)
                     if not error_list and expected_index > 0:
                         last_idx = expected_index - 1
                         final_ms = self.frame_timestamps.get(last_idx, 0)
@@ -1586,7 +1847,7 @@ class Video:
                     "[Perf] No frames survived OCR filtering. Nothing to recognize.",
                     flush=True,
                 )
-                self.label_zone = None
+                self.label_zones = []
                 self.label_frames = []
                 return
 
@@ -1619,12 +1880,14 @@ class Video:
                     flush=True,
                 )
                 directml_ocr_start = time.perf_counter()
-                ocr_outputs = run_directml_ocr(
+                ocr_outputs = self._run_label_aware_directml_ocr(
+                    run_directml_ocr,
                     det_stitched_dir,
                     det_stitch_map,
                     self.lang,
                     use_gpu,
                     directml_recognition_mode,
+                    ocr_engine,
                 )
                 directml_ocr_end = time.perf_counter()
 
@@ -1688,15 +1951,15 @@ class Video:
                     0: {},
                     1: {},
                 }
-                if self.label_zone is not None:
-                    frame_predictions_dict[2] = {}
+                for k in range(len(self.label_zones)):
+                    frame_predictions_dict[2 + k] = {}
                 for frame_index, zone_index in active_frame_coords:
                     ocr_result = ocr_outputs.get((frame_index, zone_index), [])
                     pred_data = [ocr_result] if ocr_result else [[]]
-                    # Fix 7: label zone uses its own (lower) confidence gate.
+                    # Fix 7: label bands use their own (lower) confidence gate.
                     zone_conf = (
                         self._label_conf_threshold_ratio
-                        if zone_index == 2
+                        if zone_index >= 2
                         else conf_threshold_ratio
                     )
                     predicted_frame = PredictedFrames(
@@ -1705,7 +1968,7 @@ class Video:
                         pred_data,
                         zone_conf,
                         zone_index,
-                        lang,
+                        self._label_lang if zone_index >= 2 else lang,
                         normalize_to_simplified_chinese,
                     )
                     frame_predictions_dict[zone_index][frame_index] = predicted_frame
@@ -1727,8 +1990,8 @@ class Video:
                 self.pred_frames_zone1 = frame_predictions_list.get(0, [])
                 self.pred_frames_zone2 = frame_predictions_list.get(1, [])
                 self.label_frames = (
-                    self._filter_label_frames_by_time(frame_predictions_list.get(2, []))
-                    if self.label_zone is not None
+                    self._collect_label_frames(frame_predictions_list)
+                    if self.label_zones
                     else []
                 )
 
@@ -1796,8 +2059,8 @@ class Video:
 
             # Parse JSON Outputs and unstitch coordinates
             parsed_detections: dict[int, list[Any]] = {0: [], 1: []}
-            if self.label_zone is not None:
-                parsed_detections[2] = []
+            for k in range(len(self.label_zones)):
+                parsed_detections[2 + k] = []
             for json_file in os.listdir(det_res_dir):
                 if not json_file.endswith(".json"):
                     continue
@@ -1837,6 +2100,13 @@ class Video:
             next_print_target = 15
             rec_images_dir = os.path.join(temp_dir, "rec_images")
             os.makedirs(rec_images_dir, exist_ok=True)
+            # Separate directory for label rec-images when labels OCR in a
+            # different language (second recognition pass over just these).
+            label_rec_images_dir = ""
+            label_rec_written = 0
+            if self._label_split_lang:
+                label_rec_images_dir = os.path.join(temp_dir, "rec_images_label")
+                os.makedirs(label_rec_images_dir, exist_ok=True)
             empty_frames_meta: set[tuple[int, int]] = set()
             surviving_frames_meta: set[tuple[int, int]] = set()
             rec_image_map: dict[str, dict[str, int]] = {}
@@ -1945,8 +2215,8 @@ class Video:
                             for union_rects, group_frames in chunk_groups
                         ]
                         for ssim_args in group_args:
-                            if z_idx == 2 and not label_ssim_dedup:
-                                # Label zone without dedup: keep every detected
+                            if z_idx >= 2 and not label_ssim_dedup:
+                                # Label bands without dedup: keep every detected
                                 # frame so label appearances are not lost.
                                 _union_rects, group_frames, loaded_grids, _thr = (
                                     ssim_args
@@ -1970,11 +2240,18 @@ class Video:
                                 local_deleted = 0
                             else:
                                 surviving_items, local_deleted = (
-                                    utils.process_ssim_group(*ssim_args)
+                                    utils.process_ssim_group(
+                                        *ssim_args,
+                                        frame_weights=(
+                                            self._label_hash_weights
+                                            if z_idx >= 2
+                                            else None
+                                        ),
+                                    )
                                 )
                                 frames_deleted_count += local_deleted
-                                if z_idx == 2:
-                                    # Label zone: SSIM-dedup keeps one
+                                if z_idx >= 2:
+                                    # Label band: SSIM-dedup keeps one
                                     # representative per visually-identical run.
                                     # Record how many frames each survivor stands
                                     # for so confirmation counts survive dedup.
@@ -1983,13 +2260,23 @@ class Video:
                             for item in surviving_items:
                                 surviving_frames_meta.add((item["frame_idx"], z_idx))
                                 filename = f"rec_image_{rec_counter:0{FILENAME_ZERO_PADDING}d}_zone{z_idx}.jpg"
-                                filepath = os.path.join(rec_images_dir, filename)
+                                route_to_label_dir = (
+                                    self._label_split_lang and z_idx >= 2
+                                )
+                                zone_dir = (
+                                    label_rec_images_dir
+                                    if route_to_label_dir
+                                    else rec_images_dir
+                                )
+                                filepath = os.path.join(zone_dir, filename)
                                 h, w = item["img"].shape[:2]
                                 write_queue.put((filepath, w, h, [(item["img"], 0, 0)]))
                                 rec_image_map[filename] = {
                                     "frame_idx": item["frame_idx"],
                                     "zone_idx": z_idx,
                                 }
+                                if route_to_label_dir:
+                                    label_rec_written += 1
                                 rec_counter += 1
                             frames_processed += len(ssim_args[1])
                             if frames_processed >= next_print_target:
@@ -2030,7 +2317,7 @@ class Video:
                 flush=True,
             )
             if rec_counter == 0:
-                self.label_zone = None
+                self.label_zones = []
                 self.label_frames = []
                 return
 
@@ -2040,106 +2327,153 @@ class Video:
             rec_ocr_outputs: dict[str, list[Any]] = {}
             ocr_image_index = 0
             if ocr_engine == "google_lens":
-                args = [
-                    self.google_lens_path,
-                    rec_images_dir,
-                    self.lang,
-                    "--get-coords",
-                    "--oneline",
-                    "-q",
-                ]
-                print("Starting Google Lens CLI...", flush=True)
-                for line in utils.stream_cli_process(args, "google_lens_error.log"):
-                    line = line.strip()
-                    if not line or not line.startswith("{") or '"file"' not in line:
-                        continue
-                    data = json.loads(line)
-                    stitched_filename = data["file"]
-                    if stitched_filename not in rec_image_map:
-                        continue
-                    grid_w = data["dimensions"]["original_width"]
-                    grid_h = data["dimensions"]["original_height"]
-                    results: list[list[Any]] = []
-                    for word_item in data["words"]:
-                        text = word_item["text"]
-                        separator = word_item["separator"]
-                        geom = word_item["geometry"]
-                        if not geom:
+
+                def _run_lens(input_dir: str, code: str) -> None:
+                    nonlocal ocr_image_index
+                    lens_args = [
+                        self.google_lens_path,
+                        input_dir,
+                        code,
+                        "--get-coords",
+                        "--oneline",
+                        "-q",
+                    ]
+                    for line in utils.stream_cli_process(
+                        lens_args, "google_lens_error.log"
+                    ):
+                        line = line.strip()
+                        if (
+                            not line
+                            or not line.startswith("{")
+                            or '"file"' not in line
+                        ):
                             continue
-                        cx = geom["center_x"] * grid_w
-                        cy = geom["center_y"] * grid_h
-                        w = geom["width"] * grid_w
-                        h = geom["height"] * grid_h
-                        x1, x2 = cx - w / 2.0, cx + w / 2.0
-                        y1, y2 = cy - h / 2.0, cy + h / 2.0
-                        box = [[x1, y1], [x2, y1], [x2, y2], [x1, y2]]
-                        combined_text = text + separator
-                        results.append([box, (combined_text, 1.0)])
-                    rec_ocr_outputs[stitched_filename] = results
-                    ocr_image_index += 1
+                        data = json.loads(line)
+                        stitched_filename = data["file"]
+                        if stitched_filename not in rec_image_map:
+                            continue
+                        grid_w = data["dimensions"]["original_width"]
+                        grid_h = data["dimensions"]["original_height"]
+                        results: list[list[Any]] = []
+                        for word_item in data["words"]:
+                            text = word_item["text"]
+                            separator = word_item["separator"]
+                            geom = word_item["geometry"]
+                            if not geom:
+                                continue
+                            cx = geom["center_x"] * grid_w
+                            cy = geom["center_y"] * grid_h
+                            w = geom["width"] * grid_w
+                            h = geom["height"] * grid_h
+                            x1, x2 = cx - w / 2.0, cx + w / 2.0
+                            y1, y2 = cy - h / 2.0, cy + h / 2.0
+                            box = [[x1, y1], [x2, y1], [x2, y2], [x1, y2]]
+                            combined_text = text + separator
+                            results.append([box, (combined_text, 1.0)])
+                        rec_ocr_outputs[stitched_filename] = results
+                        ocr_image_index += 1
+                        print(
+                            f"\rStep 3/3: Performing OCR on image {ocr_image_index} of {len(rec_image_map)}",
+                            end="",
+                            flush=True,
+                        )
+
+                print("Starting Google Lens CLI...", flush=True)
+                _run_lens(rec_images_dir, self.lang)
+                if self._label_split_lang and label_rec_written > 0:
                     print(
-                        f"\rStep 3/3: Performing OCR on image {ocr_image_index} of {len(rec_image_map)}",
-                        end="",
+                        "Starting Google Lens CLI label pass "
+                        f"(lang={self._label_lang})...",
                         flush=True,
                     )
+                    _run_lens(label_rec_images_dir, self._label_lang)
                 print()
             elif ocr_engine == "paddleocr":
-                args = [
-                    self.paddleocr_path,
-                    "ocr",
-                    "--input",
-                    rec_images_dir,
-                    "--device",
-                    "gpu" if use_gpu else "cpu",
-                    "--use_textline_orientation",
-                    "true" if use_angle_cls else "false",
-                    "--use_doc_orientation_classify",
-                    "false",
-                    "--use_doc_unwarping",
-                    "false",
-                    "--lang",
-                    self.lang,
-                    "--text_detection_model_dir",
-                    self.det_model_dir,
-                    "--text_detection_model_name",
-                    os.path.basename(self.det_model_dir),
-                    "--text_recognition_model_dir",
-                    self.rec_model_dir,
-                    "--text_recognition_model_name",
-                    os.path.basename(self.rec_model_dir),
-                ]
-                if use_angle_cls:
-                    args += ["--textline_orientation_model_dir", self.cls_model_dir]
-                    args += [
-                        "--textline_orientation_model_name",
-                        os.path.basename(self.cls_model_dir),
+
+                def _run_paddle(input_dir: str, code: str, model_dirs: dict[str, str]) -> None:
+                    nonlocal ocr_image_index
+                    rec_args = [
+                        self.paddleocr_path,
+                        "ocr",
+                        "--input",
+                        input_dir,
+                        "--device",
+                        "gpu" if use_gpu else "cpu",
+                        "--use_textline_orientation",
+                        "true" if use_angle_cls else "false",
+                        "--use_doc_orientation_classify",
+                        "false",
+                        "--use_doc_unwarping",
+                        "false",
+                        "--lang",
+                        code,
+                        "--text_detection_model_dir",
+                        model_dirs["det"],
+                        "--text_detection_model_name",
+                        os.path.basename(model_dirs["det"]),
+                        "--text_recognition_model_dir",
+                        model_dirs["rec"],
+                        "--text_recognition_model_name",
+                        os.path.basename(model_dirs["rec"]),
                     ]
-                print("Starting PaddleOCR...", flush=True)
-                current_image = None
-                for line in utils.stream_cli_process(args, "paddleocr_error.log"):
-                    line = line.strip()
-                    if "ppocr INFO: **********" in line:
-                        match = re.search(r"\*+(.+?)\*+$", line)
-                        if match:
-                            current_image = os.path.basename(match.group(1)).strip()
-                            rec_ocr_outputs[current_image] = []
-                            ocr_image_index += 1
-                            print(
-                                f"\rStep 3/3: Performing OCR on image {ocr_image_index} of {len(rec_image_map)}",
-                                end="",
-                                flush=True,
-                            )
-                    elif current_image and "[[" in line:
-                        try:
-                            match = re.search(r"ppocr INFO:\s*(\[.+\])", line)
+                    if use_angle_cls:
+                        rec_args += [
+                            "--textline_orientation_model_dir",
+                            model_dirs["cls"],
+                        ]
+                        rec_args += [
+                            "--textline_orientation_model_name",
+                            os.path.basename(model_dirs["cls"]),
+                        ]
+                    current_image = None
+                    for line in utils.stream_cli_process(
+                        rec_args, "paddleocr_error.log"
+                    ):
+                        line = line.strip()
+                        if "ppocr INFO: **********" in line:
+                            match = re.search(r"\*+(.+?)\*+$", line)
                             if match:
-                                parsed = ast.literal_eval(match.group(1))
-                                rec_ocr_outputs[current_image].append(parsed)
-                        except Exception as e:
-                            print(
-                                f"Error parsing OCR for {current_image}: {e}",
-                                flush=True,
-                            )
+                                current_image = os.path.basename(
+                                    match.group(1)
+                                ).strip()
+                                rec_ocr_outputs[current_image] = []
+                                ocr_image_index += 1
+                                print(
+                                    f"\rStep 3/3: Performing OCR on image {ocr_image_index} of {len(rec_image_map)}",
+                                    end="",
+                                    flush=True,
+                                )
+                        elif current_image and "[[" in line:
+                            try:
+                                match = re.search(
+                                    r"ppocr INFO:\s*(\[.+\])", line
+                                )
+                                if match:
+                                    parsed = ast.literal_eval(match.group(1))
+                                    rec_ocr_outputs[current_image].append(parsed)
+                            except Exception as e:
+                                print(
+                                    f"Error parsing OCR for {current_image}: {e}",
+                                    flush=True,
+                                )
+
+                print("Starting PaddleOCR...", flush=True)
+                main_dirs = {
+                    "det": self.det_model_dir,
+                    "rec": self.rec_model_dir,
+                    "cls": self.cls_model_dir,
+                }
+                _run_paddle(rec_images_dir, self.lang, main_dirs)
+                if self._label_split_lang and label_rec_written > 0:
+                    print(
+                        "Starting PaddleOCR label pass "
+                        f"(lang={self._label_lang})...",
+                        flush=True,
+                    )
+                    label_dirs = self._label_model_dirs or main_dirs
+                    _run_paddle(
+                        label_rec_images_dir, self._label_lang, label_dirs
+                    )
                 print()
 
             # Map 2D coordinates
@@ -2159,15 +2493,15 @@ class Video:
                 0: {},
                 1: {},
             }
-            if self.label_zone is not None:
-                frame_predictions_dict[2] = {}
+            for k in range(len(self.label_zones)):
+                frame_predictions_dict[2 + k] = {}
             for frame_index, zone_index in active_frame_coords:
                 ocr_result = ocr_outputs.get((frame_index, zone_index), [])
                 pred_data = [ocr_result] if ocr_result else [[]]
-                # Fix 7: label zone uses its own (lower) confidence gate.
+                # Fix 7: label bands use their own (lower) confidence gate.
                 zone_conf = (
                     self._label_conf_threshold_ratio
-                    if zone_index == 2
+                    if zone_index >= 2
                     else conf_threshold_ratio
                 )
                 predicted_frame = PredictedFrames(
@@ -2176,7 +2510,7 @@ class Video:
                     pred_data,
                     zone_conf,
                     zone_index,
-                    lang,
+                    self._label_lang if zone_index >= 2 else lang,
                     normalize_to_simplified_chinese,
                 )
                 frame_predictions_dict[zone_index][frame_index] = predicted_frame
@@ -2199,8 +2533,8 @@ class Video:
             self.pred_frames_zone1 = frame_predictions_list.get(0, [])
             self.pred_frames_zone2 = frame_predictions_list.get(1, [])
             self.label_frames = (
-                self._filter_label_frames_by_time(frame_predictions_list.get(2, []))
-                if self.label_zone is not None
+                self._collect_label_frames(frame_predictions_list)
+                if self.label_zones
                 else []
             )
 
@@ -2235,7 +2569,7 @@ class Video:
         )
         # Label detection always produces ASS output with proper ASS timestamps
         # and \pos-positioned label events.
-        if self.label_zone is not None:
+        if self.label_zones:
             return self._render_ass(subtitle_alignments)
         srt_lines: list[str] = []
         for i, sub in enumerate(self.pred_subs, 1):
@@ -2283,8 +2617,16 @@ class Video:
         lines.append(
             "Style: Default,Arial,28,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,2,1,2,10,10,10,1"
         )
+        style = getattr(self, "_label_style", {})
+        label_font = str(style.get("font", "Arial")).replace(",", "")
+        label_fontsize = int(style.get("fontsize", 22))
+        label_primary = str(style.get("primary", "&H00FFFFFF"))
+        label_outline = str(style.get("outline", "&H00000000"))
+        label_align = int(str(style.get("alignment", "an7")).removeprefix("an") or 7)
         lines.append(
-            "Style: Label,Arial,22,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,1.5,0.5,7,10,10,10,1"
+            f"Style: Label,{label_font},{label_fontsize},{label_primary},"
+            f"&H000000FF,{label_outline},&H80000000,0,0,0,0,100,100,0,0,1,1.5,0.5,"
+            f"{label_align},10,10,10,1"
         )
         lines.append("")
         lines.append("[Events]")
@@ -2304,45 +2646,68 @@ class Video:
             )
 
         # Label events: cluster per label text and position each at its actual
-        # on-screen location (original video coordinates).
-        label_zone = self.label_zone or {}
-        # Use the clipped crop origin (crop_x/crop_y) — matches the coordinates
-        # the OCR actually saw; falls back to the raw zone origin.
-        zone_x = int(label_zone.get("crop_x", label_zone.get("x", 0)))
-        zone_y = int(label_zone.get("crop_y", label_zone.get("y", 0)))
-        # Scale factors: label OCR crop size -> original frame coordinates.
-        target_w = int(label_zone.get("target_w") or 1)
-        target_h = int(label_zone.get("target_h") or 1)
-        crop_w = int(label_zone.get("crop_w") or 1)
-        crop_h = int(label_zone.get("crop_h") or 1)
-        sx = crop_w / target_w if target_w > 0 else 1.0
-        sy = crop_h / target_h if target_h > 0 else 1.0
-
-        label_subs = self._merge_label_frames(label_zone)
-        for label in label_subs:
-            start_ms, end_ms = label["start_ms"], label["end_ms"]
-            text = label["text"]
-            cx = label["cx"]
-            cy = label["cy"]
-            # Convert label-zone crop-local center to full-frame coordinates.
-            pos_x = int(round(zone_x + cx * sx))
-            pos_y = int(round(zone_y + cy * sy))
+        # on-screen location (original video coordinates). Each event maps
+        # back through its own band's crop origin/scale, then colliding
+        # events are shifted apart vertically.
+        render_items: list[dict[str, Any]] = []
+        for label in self._merge_label_frames():
+            band = self._label_band(label["zone_index"])
+            if band is None:
+                continue
+            # Use the clipped crop origin (crop_x/crop_y) — matches the
+            # coordinates the OCR actually saw.
+            zone_x = int(band["crop_x"])
+            zone_y = int(band["crop_y"])
+            # Scale factors: label OCR crop size -> original frame coordinates.
+            sx = band["crop_w"] / band["target_w"] if band["target_w"] else 1.0
+            sy = band["crop_h"] / band["target_h"] if band["target_h"] else 1.0
+            bx1, by1, bx2, by2 = label["bbox"]
+            render_items.append(
+                {
+                    "start_ms": label["start_ms"],
+                    "end_ms": label["end_ms"],
+                    "text": label["text"],
+                    "fx1": zone_x + bx1 * sx,
+                    "fy1": zone_y + by1 * sy,
+                    "fx2": zone_x + bx2 * sx,
+                    "fy2": zone_y + by2 * sy,
+                }
+            )
+        utils.resolve_label_overlaps(
+            render_items,
+            self.height,
+            # Scale the gap with the label font size so large labels still
+            # read as separate events; the floor keeps the 4 px default at
+            # the standard 22 pt.
+            margin=max(4.0, label_fontsize / 6.0),
+        )
+        for item in render_items:
+            # \pos carries the bbox corner/edge/center matching the Label
+            # style's \anN alignment, so the text renders exactly in place.
+            anchor_x, anchor_y = utils.ass_anchor_point(
+                label_align, item["fx1"], item["fy1"], item["fx2"], item["fy2"]
+            )
+            pos_x = int(round(anchor_x))
+            pos_y = int(round(anchor_y))
             lines.append(
-                f"Dialogue: 2,{_ass_time(start_ms)},{_ass_time(end_ms)},Label,,0,0,0,,{{\\pos({pos_x},{pos_y})}}{_esc(text)}"
+                f"Dialogue: 2,{_ass_time(item['start_ms'])},{_ass_time(item['end_ms'])},Label,,0,0,0,,"
+                f"{{\\pos({pos_x},{pos_y})}}{_esc(item['text'])}"
             )
         return "\n".join(lines) + "\n"
 
-    def _merge_label_frames(self, label_zone: dict[str, Any]) -> list[dict[str, Any]]:
+    def _merge_label_frames(self) -> list[dict[str, Any]]:
         """Cluster raw label detections into stable label events.
 
         OCR text for the same on-screen label is unstable between frames
         (e.g. "乔" vs "乔羽", "主" vs "楼城城主", "楼城少城丰" vs "楼城少城主"),
         so events are merged by text similarity AND position proximity rather
-        than exact equality. The most frequently observed text wins, and the
-        position is the average across the event's frames.
+        than exact equality. Events never span label bands — a frame only
+        matches an event from its own band (zone_index).
 
-        Returns a list of dicts with start_ms/end_ms/text/cx/cy where cx,cy is
-        the average label position in label-zone crop coordinates.
+        Returns a list of dicts with start_ms/end_ms/text/cx/cy/zone_index
+        where cx,cy is the average label position in band crop coordinates,
+        plus "bbox" — the averaged (x1,y1,x2,y2) text bounding box used for
+        ASS \\pos anchoring.
         """
         from thefuzz import fuzz  # type: ignore
 
@@ -2358,29 +2723,44 @@ class Video:
         CLOSE_POS_DIST = float(getattr(self, "_label_close_pos_distance_px", 40.0))
         CLOSE_POS_LEN_RATIO = float(getattr(self, "_label_close_pos_length_ratio", 0.5))
 
-        def _line_text_and_pos(line: list[Any]) -> tuple[str, float, float]:
+        def _line_text_and_pos(line: list[Any]) -> _LabelLine:
             text = "".join(w.text for w in line).strip()
             xs: list[float] = []
             ys: list[float] = []
+            confs: list[float] = []
             for w in line:
                 xs.extend(p[0] for p in w.bounding_box)
                 ys.extend(p[1] for p in w.bounding_box)
+                confs.append(float(w.confidence))
             cx = sum(xs) / len(xs) if xs else 0.0
             cy = sum(ys) / len(ys) if ys else 0.0
-            return text, cx, cy
+            return _LabelLine(
+                text=text,
+                cx=cx,
+                cy=cy,
+                conf=sum(confs) / len(confs) if confs else 1.0,
+                x1=min(xs) if xs else 0.0,
+                y1=min(ys) if ys else 0.0,
+                x2=max(xs) if xs else 0.0,
+                y2=max(ys) if ys else 0.0,
+            )
 
-        # Normalize label zone scale so POS_DRIFT is in *original video*
-        # coordinates (consistent regardless of OCR downscale).
-        crop_w = int(label_zone.get("crop_w") or 1)
-        target_w = int(label_zone.get("target_w") or 1)
-        crop_h = int(label_zone.get("crop_h") or 1)
-        target_h = int(label_zone.get("target_h") or 1)
-        pos_scale_x = crop_w / target_w if target_w > 0 else 1.0
-        pos_scale_y = crop_h / target_h if target_h > 0 else 1.0
+        def _band_scale(zone_idx: int) -> tuple[float, float]:
+            # Per-band crop->frame scale so POS_DRIFT is in *original video*
+            # coordinates regardless of which band the OCR crop came from.
+            band = self._label_band(zone_idx)
+            if band is None:
+                return 1.0, 1.0
+            cw = int(band.get("crop_w") or 1)
+            tw = int(band.get("target_w") or 1)
+            ch = int(band.get("crop_h") or 1)
+            th = int(band.get("target_h") or 1)
+            return (cw / tw if tw > 0 else 1.0, ch / th if th > 0 else 1.0)
 
         def _drift(ev: dict[str, Any], cx: float, cy: float) -> float:
-            dx = (ev["cx"] - cx) * pos_scale_x
-            dy = (ev["cy"] - cy) * pos_scale_y
+            sx, sy = _band_scale(ev["zone_index"])
+            dx = (ev["cx"] - cx) * sx
+            dy = (ev["cy"] - cy) * sy
             return (dx * dx + dy * dy) ** 0.5
 
         # A label may have multiple simultaneous text blocks (e.g. person name
@@ -2391,18 +2771,32 @@ class Video:
 
         def _close_event(ev: dict[str, Any]) -> None:
             ev["text"] = self._pick_best_label_text(ev)
+            count = ev.get("count") or 1
+            ev["bbox"] = (
+                ev["x1_sum"] / count,
+                ev["y1_sum"] / count,
+                ev["x2_sum"] / count,
+                ev["y2_sum"] / count,
+            )
 
-        def _open_event(text: str, cx: float, cy: float, frame: Any, weight: int) -> dict[str, Any]:
+        def _open_event(info: _LabelLine, frame: Any, weight: int) -> dict[str, Any]:
             ev = {
                 "start_ms": self._label_frame_start_ms(frame),
                 "end_ms": self._label_frame_end_ms(frame),
-                "text": text,
-                "cx": cx,
-                "cy": cy,
-                "votes": {_label_text_norm(text): weight},
-                "text_samples": [text],
-                "cx_sum": cx * weight,
-                "cy_sum": cy * weight,
+                "text": info.text,
+                "cx": info.cx,
+                "cy": info.cy,
+                "zone_index": frame.zone_index,
+                # Votes weighted by run length x confidence so a noisy low-conf
+                # reading counts less than a stable high-conf one.
+                "votes": {_label_text_norm(info.text): weight * info.conf},
+                "text_samples": [info.text],
+                "cx_sum": info.cx * weight,
+                "cy_sum": info.cy * weight,
+                "x1_sum": info.x1 * weight,
+                "y1_sum": info.y1 * weight,
+                "x2_sum": info.x2 * weight,
+                "y2_sum": info.y2 * weight,
                 "count": weight,
                 "last_frame_idx": frame.start_index,
                 "_matched_this_frame": True,
@@ -2423,12 +2817,17 @@ class Video:
             # so confirmation counts stay correct after dedup.
             weight = self._label_frame_weights.get(frame.start_index, 1)
             for line in frame.lines:
-                text, cx, cy = _line_text_and_pos(line)
+                info = _line_text_and_pos(line)
+                text, cx, cy = info.text, info.cx, info.cy
                 if not text:
                     continue
                 best_ev: dict[str, Any] | None = None
                 best_score: float = -1.0
                 for ev in events:
+                    # Bands are disjoint: a frame only ever matches an event
+                    # from its own band.
+                    if ev["zone_index"] != frame.zone_index:
+                        continue
                     # Skip events whose last detection is older than the
                     # reappear-merge gap (they belong to an earlier, separate
                     # appearance), and skip events this frame already extended
@@ -2483,21 +2882,27 @@ class Video:
                         best_score = score
                         best_ev = ev
                 if best_ev is not None and best_score >= TEXT_SIM_THRESHOLD:
-                    # Extend the matched event (weighted by the dedup run length).
+                    # Extend the matched event (weighted by the dedup run
+                    # length and the line's OCR confidence).
                     best_ev["votes"][_label_text_norm(text)] = (
-                        best_ev["votes"].get(_label_text_norm(text), 0) + weight
+                        best_ev["votes"].get(_label_text_norm(text), 0)
+                        + weight * info.conf
                     )
                     best_ev["text_samples"].append(text)
                     best_ev["end_ms"] = self._label_frame_end_ms(frame)
                     best_ev["cx_sum"] += cx * weight
                     best_ev["cy_sum"] += cy * weight
+                    best_ev["x1_sum"] += info.x1 * weight
+                    best_ev["y1_sum"] += info.y1 * weight
+                    best_ev["x2_sum"] += info.x2 * weight
+                    best_ev["y2_sum"] += info.y2 * weight
                     best_ev["count"] += weight
                     best_ev["cx"] = best_ev["cx_sum"] / best_ev["count"]
                     best_ev["cy"] = best_ev["cy_sum"] / best_ev["count"]
                     best_ev["last_frame_idx"] = frame.start_index
                     best_ev["_matched_this_frame"] = True
                 else:
-                    _open_event(text, cx, cy, frame, weight)
+                    _open_event(info, frame, weight)
 
         for ev in events:
             _close_event(ev)
@@ -2546,7 +2951,8 @@ class Video:
     def _pick_best_label_text(event: dict[str, Any]) -> str:
         """Pick the most stable OCR text for a label event.
 
-        The most frequently observed normalized text wins; ties go to the
+        Votes are weighted by frame-run length x OCR confidence, so frequent
+        high-confidence readings beat occasional noisy ones; ties go to the
         longest variant (which usually carries the full label, e.g. prefer
         "楼城城主" over "主").
         """

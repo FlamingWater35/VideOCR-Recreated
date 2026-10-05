@@ -71,28 +71,182 @@ def get_ass_timestamp_from_ms(ms: float) -> str:
     return f"{hours}:{minutes:02d}:{seconds:02d}.{centiseconds:02d}"
 
 
-def compute_label_zone(
-    width: int, height: int, subtitle_zones: list[dict[str, Any]]
-) -> dict[str, int] | None:
-    """Compute the label-detection area: the region of the frame NOT covered
-    by the subtitle crop zone(s) (e.g. people/place names that appear above or
-    below the hardcoded subtitle area).
+def ass_anchor_point(
+    align: int, x1: float, y1: float, x2: float, y2: float
+) -> tuple[float, float]:
+    """ASS \\an1..\\an9 anchor point of the bounding box (x1, y1, x2, y2).
 
-    Subtitles are usually a horizontal band, so the free area is split into
-    horizontal bands; the largest band is returned as the label zone.
+    ASS places \\pos at the alignment point of the text block, so with \\an7
+    (top-left) the anchor is the box's top-left corner, with \\an5 its center,
+    etc. Out-of-range values fall back to top-left.
+    """
+    if not 1 <= align <= 9:
+        align = 7
+    cx = (x1 + x2) / 2
+    cy = (y1 + y2) / 2
+    xs = {1: x1, 2: cx, 3: x2, 4: x1, 5: cx, 6: x2, 7: x1, 8: cx, 9: x2}
+    ys = {1: y2, 2: y2, 3: y2, 4: cy, 5: cy, 6: cy, 7: y1, 8: y1, 9: y1}
+    return xs[align], ys[align]
+
+
+# Sampled frames per label run before a force-keep flush. Bounds worst-case
+# label-detection latency and the OCR floor for content whose 64-bit hash
+# never moves past the similarity threshold.
+LABEL_HASH_MAX_RUN = 20
+
+
+def dhash64(img: np.ndarray[Any, Any]) -> int:
+    """64-bit difference hash of an image array (gradient signature).
+
+    Grayscale -> 9x8 bilinear resize -> 8 horizontal brightness comparisons
+    per row -> 64 bits (1 when the left pixel is brighter). Gradient-based,
+    so global brightness shifts (fades) barely move the hash.
+    """
+    if img.ndim == 3:
+        pil: Image.Image = Image.fromarray(img.astype(np.uint8), mode="RGB")
+    else:
+        pil = Image.fromarray(img.astype(np.uint8))
+    small = np.asarray(
+        pil.convert("L").resize((9, 8), Image.Resampling.BILINEAR), dtype=np.uint8
+    ).reshape(8, 9)
+    bits = (small[:, :8] > small[:, 1:9]).astype(np.uint8).flatten()
+    return int.from_bytes(np.packbits(bits).tobytes(), "big")
+
+
+def hamming_distance(a: int, b: int) -> int:
+    """Number of differing bits between two hashes (py39: no int.bit_count)."""
+    return bin(a ^ b).count("1")
+
+
+class LabelFrameDedup:
+    """Pre-OCR frame dedup for label bands via last-kept-reference dHash.
+
+    A frame is skipped when its hash is within ``threshold`` bits of the last
+    KEPT representative (comparing against the kept reference — not the
+    previous frame — so slow fade-ins still accumulate a detectable delta).
+    Every skipped frame is folded into the representative's weight so
+    confirmation counting recovers the skipped frames. Runs force-flush after
+    ``max_run`` sampled frames so static content periodically re-enters OCR.
+    """
+
+    def __init__(
+        self, threshold: int = 4, max_run: int = LABEL_HASH_MAX_RUN
+    ) -> None:
+        self.threshold = threshold
+        self.max_run = max(1, max_run)
+        self.weights: dict[int, int] = {}
+        self.skipped = 0
+        self._prev_hash: dict[int, int] = {}
+        self._rep: dict[int, int] = {}
+        self._run_len: dict[int, int] = {}
+
+    def consider(
+        self, zone_idx: int, frame_idx: int, img: np.ndarray[Any, Any]
+    ) -> bool:
+        """True = keep the frame for OCR; False = redundant, skip it."""
+        h = dhash64(img)
+        prev = self._prev_hash.get(zone_idx)
+        if prev is None or hamming_distance(h, prev) > self.threshold:
+            self._flush(zone_idx)
+            self._start(zone_idx, frame_idx, h)
+            return True
+        self._run_len[zone_idx] += 1
+        if self._run_len[zone_idx] >= self.max_run:
+            self._flush(zone_idx)
+            self._start(zone_idx, frame_idx, h)
+            return True
+        self.skipped += 1
+        return False
+
+    def finish(self) -> None:
+        """Flush all pending runs (call once the scan is complete)."""
+        for zone_idx in list(self._rep):
+            self._flush(zone_idx)
+        self._prev_hash.clear()
+
+    def _start(self, zone_idx: int, frame_idx: int, h: int) -> None:
+        self._prev_hash[zone_idx] = h
+        self._rep[zone_idx] = frame_idx
+        self._run_len[zone_idx] = 1
+
+    def _flush(self, zone_idx: int) -> None:
+        rep = self._rep.pop(zone_idx, None)
+        if rep is not None:
+            self.weights[rep] = self._run_len.pop(zone_idx, 1)
+
+
+def resolve_label_overlaps(
+    items: list[dict[str, Any]], frame_height: int, margin: float = 4.0
+) -> None:
+    """Shift colliding label events apart vertically (in place).
+
+    Each item needs start_ms/end_ms and a frame-coordinate bbox
+    (fx1/fy1/fx2/fy2). Items are ordered by start time; a later item that
+    overlaps an already-positioned one in time AND in both axes is pushed
+    down until clear. The final position is clamped to the frame bottom —
+    if clamping re-introduces an overlap, the overlap is accepted (visible
+    beats pushed off-screen).
+    """
+
+    def _collides(a: dict[str, Any], b: dict[str, Any]) -> bool:
+        return bool(
+            a["start_ms"] < b["end_ms"]
+            and b["start_ms"] < a["end_ms"]
+            and a["fx2"] > b["fx1"]
+            and b["fx2"] > a["fx1"]
+            and a["fy2"] > b["fy1"]
+            and b["fy2"] > a["fy1"]
+        )
+
+    ordered = sorted(items, key=lambda it: (it["start_ms"], it["fy1"]))
+    for i, cur in enumerate(ordered):
+        height = cur["fy2"] - cur["fy1"]
+        # Strictly monotonic downward shifts, so this terminates.
+        for _ in range(len(ordered)):
+            hit = next(
+                (other for other in ordered[:i] if _collides(cur, other)), None
+            )
+            if hit is None:
+                break
+            cur["fy1"] = float(hit["fy2"]) + margin
+            cur["fy2"] = cur["fy1"] + height
+        if cur["fy2"] > frame_height:
+            cur["fy2"] = float(frame_height)
+            cur["fy1"] = max(0.0, cur["fy2"] - height)
+
+
+def compute_label_zones(
+    width: int,
+    height: int,
+    subtitle_zones: list[dict[str, Any]],
+    min_height: int = 32,
+    max_bands: int = 4,
+) -> list[dict[str, int]]:
+    """Compute the label-detection areas: horizontal bands of the frame NOT
+    covered by the subtitle crop zone(s) (e.g. people/place names that appear
+    above or below the hardcoded subtitle area).
+
+    Subtitles are usually a horizontal band, so the free area splits into
+    horizontal bands; every band at least ``min_height`` pixels tall is
+    returned (top to-bottom), capped at the ``max_bands`` tallest. Returning
+    multiple bands lets labels in a smaller free region (e.g. a top band)
+    be detected alongside the dominant one.
 
     Args:
         width: Video width in pixels.
         height: Video height in pixels.
         subtitle_zones: Validated subtitle zones with 'x_start'/'x_end'/
                        'y_start'/'y_end' (original video coordinates).
+        min_height: Minimum band height (px) to be worth scanning.
+        max_bands: Maximum number of bands (caps split-branch/OCR cost).
 
     Returns:
-        A dict {'x', 'y', 'w', 'h'} in original video coordinates, or None
-        when the subtitle zones cover the entire frame height.
+        A list of {'x', 'y', 'w', 'h'} dicts in original video coordinates
+        (full width), ordered top to bottom. Empty when nothing qualifies
+        (invalid dims, full coverage, or all bands below min_height).
     """
     if not subtitle_zones or width <= 0 or height <= 0:
-        return None
+        return []
 
     # Merge the y-intervals covered by the subtitle zones.
     covered: list[list[int]] = []
@@ -120,12 +274,14 @@ def compute_label_zone(
     if cursor < height:
         bands.append([cursor, height])
 
-    if not bands:
-        return None
-
-    # Pick the largest free band as the label zone (full width).
-    y1, y2 = max(bands, key=lambda b: b[1] - b[0])
-    return {"x": 0, "y": y1, "w": width, "h": y2 - y1}
+    qualifying = [b for b in bands if b[1] - b[0] >= min_height]
+    if len(qualifying) > max_bands:
+        # Keep the tallest, then restore top-to-bottom order.
+        qualifying = sorted(qualifying, key=lambda b: b[1] - b[0], reverse=True)
+        qualifying = sorted(qualifying[:max_bands], key=lambda b: b[0])
+    return [
+        {"x": 0, "y": y1, "w": width, "h": y2 - y1} for y1, y2 in qualifying
+    ]
 
 
 def frame_to_array(frame: av.VideoFrame, fmt: str) -> np.ndarray[Any, Any]:
@@ -672,11 +828,22 @@ def process_ssim_group(
     group_frames: list[tuple[int, list[list[float]], float, dict[str, Any]]],
     loaded_grids: dict[str, Any],
     ssim_threshold: float,
+    frame_weights: dict[int, int] | None = None,
 ) -> tuple[list[dict[str, Any]], int]:
-    """Processes a group for SSIM, keeping the frame with the highest detection score per contiguous block."""
+    """Processes a group for SSIM, keeping the frame with the highest detection score per contiguous block.
+
+    ``frame_weights`` optionally maps frame_idx -> number of original sampled
+    frames it represents (set by pre-OCR label-frame dedup), so a survivor's
+    weight sums represented frames instead of counting stitched frames.
+    """
     local_surviving_items: list[dict[str, Any]] = []
     current_similar_batch: list[dict[str, Any]] = []
     prev_crops: list[Any] = []
+
+    def _batch_weight(items: list[dict[str, Any]]) -> int:
+        if frame_weights is None:
+            return len(items)
+        return sum(frame_weights.get(it["frame_idx"], 1) for it in items)
 
     for i, (_, _, det_score, m) in enumerate(group_frames):
         grid_img = loaded_grids[m["grid_file"]]
@@ -714,8 +881,11 @@ def process_ssim_group(
             current_similar_batch.append(item_dict)
         else:
             best_item = max(current_similar_batch, key=lambda x: x["det_score"])
+            # Weight before the frame_idx rewrite below — best_item may not be
+            # batch[0], and _batch_weight reads each item's own frame_idx.
+            weight = _batch_weight(current_similar_batch)
             best_item["frame_idx"] = current_similar_batch[0]["frame_idx"]
-            best_item["weight"] = len(current_similar_batch)
+            best_item["weight"] = weight
             local_surviving_items.append(best_item)
 
             current_similar_batch = [item_dict]
@@ -723,8 +893,9 @@ def process_ssim_group(
 
     if current_similar_batch:
         best_item = max(current_similar_batch, key=lambda x: x["det_score"])
+        weight = _batch_weight(current_similar_batch)
         best_item["frame_idx"] = current_similar_batch[0]["frame_idx"]
-        best_item["weight"] = len(current_similar_batch)
+        best_item["weight"] = weight
         local_surviving_items.append(best_item)
 
     local_deleted = len(group_frames) - len(local_surviving_items)

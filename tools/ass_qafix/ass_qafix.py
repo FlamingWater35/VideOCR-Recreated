@@ -616,6 +616,7 @@ def merge_consecutive_dialogues(dialogue_lines: List[str], fields_order: List[st
         parsed_dialogues.append(
             {
                 "original_line": line,
+                "layer": m.get("Layer", "").strip(),
                 "start": m.get("Start", "").strip(),
                 "end": m.get("End", "").strip(),
                 "style": m.get("Style", "").strip(),
@@ -709,6 +710,7 @@ def merge_consecutive_dialogues(dialogue_lines: List[str], fields_order: List[st
                 and current["marginr"] == next_dialogue["marginr"]
                 and current["marginv"] == next_dialogue["marginv"]
                 and current["effect"] == next_dialogue["effect"]
+                and current["layer"] == next_dialogue["layer"]
             ):
                 # Merge them
                 merged_end = next_dialogue["end"]
@@ -720,7 +722,7 @@ def merge_consecutive_dialogues(dialogue_lines: List[str], fields_order: List[st
         if j > i + 1:  # We found at least one merge
             # Create merged dialogue
             merged_values = {
-                "Layer": "0",  # Default layer
+                "Layer": current["layer"],
                 "Start": merged_start,
                 "End": merged_end,
                 "Style": current["style"],
@@ -771,6 +773,7 @@ def merge_alternating_ocr_variants(dialogue_lines: List[str], fields_order: List
         parsed_dialogues.append(
             {
                 "original_line": line,
+                "layer": m.get("Layer", "").strip(),
                 "start": m.get("Start", "").strip(),
                 "end": m.get("End", "").strip(),
                 "style": m.get("Style", "").strip(),
@@ -824,6 +827,7 @@ def merge_alternating_ocr_variants(dialogue_lines: List[str], fields_order: List
                 and first["marginr"] == second["marginr"] == third["marginr"]
                 and first["marginv"] == second["marginv"] == third["marginv"]
                 and first["effect"] == second["effect"] == third["effect"]
+                and first["layer"] == second["layer"] == third["layer"]
             )
 
             if is_consecutive and is_alternating and fields_match:
@@ -850,7 +854,7 @@ def merge_alternating_ocr_variants(dialogue_lines: List[str], fields_order: List
                             break
 
                     # Check fields match
-                    if not (next_d["style"] == first["style"] and next_d["name"] == first["name"] and next_d["marginl"] == first["marginl"] and next_d["marginr"] == first["marginr"] and next_d["marginv"] == first["marginv"] and next_d["effect"] == first["effect"]):
+                    if not (next_d["style"] == first["style"] and next_d["name"] == first["name"] and next_d["marginl"] == first["marginl"] and next_d["marginr"] == first["marginr"] and next_d["marginv"] == first["marginv"] and next_d["effect"] == first["effect"] and next_d["layer"] == first["layer"]):
                         break
 
                     merged_end = next_d["end"]
@@ -858,7 +862,7 @@ def merge_alternating_ocr_variants(dialogue_lines: List[str], fields_order: List
 
                 # Create merged dialogue using first variant's text
                 merged_values = {
-                    "Layer": "0",
+                    "Layer": first["layer"],
                     "Start": merged_start,
                     "End": merged_end,
                     "Style": first["style"],
@@ -936,7 +940,10 @@ def fix_overlapping_timestamps(dialogue_lines: List[str], fields_order: List[str
 
         # Check if we have valid timestamps and overlap
         if current_cs_end is not None and next_cs_start is not None:
-            if current_cs_end > next_cs_start:
+            if (
+                current["layer"] == next_dialogue["layer"]
+                and current_cs_end > next_cs_start
+            ):
                 # Calculate the overlap
                 overlap = current_cs_end - next_cs_start
 

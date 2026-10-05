@@ -25,6 +25,8 @@ Palette:
 
 from __future__ import annotations
 
+import re
+
 from PySide6.QtWidgets import QApplication
 
 # Shared palette (used by style.py and imported by other modules that draw
@@ -494,3 +496,24 @@ QScrollArea {
 def apply(app: QApplication) -> None:
     app.setStyle("Fusion")
     app.setStyleSheet(QSS)
+
+
+def ass_color_to_html(ass: str) -> str:
+    """Convert an ASS color (&HAABBGGRR or &HBBGGRR) to #RRGGBB (alpha dropped)."""
+    m = re.fullmatch(r"&H([0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})", ass or "")
+    if not m:
+        return "#000000"
+    hex_part = m.group(1)
+    if len(hex_part) == 8:
+        hex_part = hex_part[2:]  # drop alpha
+    blue, green, red = hex_part[0:2], hex_part[2:4], hex_part[4:6]
+    return f"#{red}{green}{blue}"
+
+
+def html_to_ass_color(html: str) -> str:
+    """Convert #RRGGBB to an opaque ASS color (&H00BBGGRR)."""
+    m = re.fullmatch(r"#([0-9A-Fa-f]{6})", html or "")
+    if not m:
+        return "&H00000000"
+    red, green, blue = m.group(1)[0:2], m.group(1)[2:4], m.group(1)[4:6]
+    return f"&H00{blue}{green}{red}".upper()

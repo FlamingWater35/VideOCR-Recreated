@@ -53,6 +53,35 @@ class TestStyle:
         finally:
             qapp.setStyleSheet(original)
 
+    @pytest.mark.parametrize(
+        ("ass", "html"),
+        [
+            ("&H00FFFFFF", "#FFFFFF"),
+            ("&H00000000", "#000000"),
+            ("&H00FF0000", "#0000FF"),  # ASS BBGGRR: blue=FF → html blue
+            ("&H0000FF00", "#00FF00"),
+            ("&H00123456", "#563412"),
+        ],
+    )
+    def test_ass_color_to_html(self, ass, html):
+        assert style.ass_color_to_html(ass).upper() == html.upper()
+
+    @pytest.mark.parametrize(
+        ("html", "ass"),
+        [("#FFFFFF", "&H00FFFFFF"), ("#0000FF", "&H00FF0000"), ("#00FF00", "&H0000FF00")],
+    )
+    def test_html_to_ass_color(self, html, ass):
+        assert style.html_to_ass_color(html) == ass
+
+    def test_color_round_trip(self):
+        for ass in ("&H00FFFFFF", "&H00FF0000", "&H00123456"):
+            assert style.html_to_ass_color(style.ass_color_to_html(ass)) == ass
+
+    @pytest.mark.parametrize("bad", ["", "red", "&H00", "#GGG"])
+    def test_invalid_ass_color_falls_back_black(self, bad):
+        assert style.ass_color_to_html(bad) == "#000000"
+        assert style.html_to_ass_color(bad) == "&H00000000"
+
 
 class TestQueueTab:
     @pytest.fixture

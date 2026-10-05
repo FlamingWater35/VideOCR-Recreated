@@ -148,6 +148,18 @@ def build_args(
         "--frames_to_skip": (int, 0, None, "Frames to Skip"),
         "--max_merge_gap": (float, 0.0, None, "Max Merge Gap"),
         "--min_subtitle_duration": (float, 0.0, None, "Minimum Subtitle Duration"),
+        "--label_ocr_image_max_width": (int, 1, None, "Label Max OCR Image Width"),
+        "--label_min_display_duration": (float, 0.0, None, "Label Min Display Duration"),
+        "--label_min_confirmation_frames": (int, 1, None, "Label Min Confirmation Frames"),
+        "--label_reappear_merge_gap": (float, 0.0, None, "Label Reappear Merge Gap"),
+        "--label_conf_threshold": (int, 0, 100, "Label Confidence Threshold"),
+        "--label_text_similarity": (int, 0, 100, "Label Text Similarity"),
+        "--label_pos_drift": (int, 1, None, "Label Position Drift"),
+        "--label_close_pos_distance": (int, 0, None, "Label Close Distance"),
+        "--label_close_pos_length_ratio": (float, 0.0, 1.0, "Label Close Length Ratio"),
+        "--label_hash_threshold": (int, 0, 64, "Label Hash Threshold"),
+        "--label_min_zone_height": (int, 8, None, "Label Min Zone Height"),
+        "--label_fontsize": (int, 1, None, "Label Font Size"),
     }
     for key, (cast_type, min_val, max_val, name) in numeric_params.items():
         value_str = str(settings.get(key, "")).strip()

@@ -68,42 +68,286 @@ class TestTimestamps:
         assert utils.get_ass_timestamp_from_ms(ms) == expected
 
 
-class TestComputeLabelZone:
-    def test_no_zones_returns_none(self):
-        assert utils.compute_label_zone(100, 100, []) is None
+class TestComputeLabelZones:
+    def test_no_zones_returns_empty(self):
+        assert utils.compute_label_zones(100, 100, []) == []
 
-    def test_zero_dimensions_returns_none(self):
+    def test_zero_dimensions_returns_empty(self):
         zone = {"y_start": 10, "y_end": 20}
-        assert utils.compute_label_zone(0, 100, [zone]) is None
-        assert utils.compute_label_zone(100, 0, [zone]) is None
+        assert utils.compute_label_zones(0, 100, [zone]) == []
+        assert utils.compute_label_zones(100, 0, [zone]) == []
 
     def test_free_band_below_subtitle(self):
         # Subtitle band occupies y 80..100 of a 100px-high frame → label zone 0..80.
         zones = [{"x_start": 0, "x_end": 100, "y_start": 80, "y_end": 100}]
-        result = utils.compute_label_zone(100, 100, zones)
-        assert result == {"x": 0, "y": 0, "w": 100, "h": 80}
+        result = utils.compute_label_zones(100, 100, zones)
+        assert result == [{"x": 0, "y": 0, "w": 100, "h": 80}]
 
-    def test_largest_gap_wins(self):
+    def test_single_gap_band(self):
         zones = [
             {"y_start": 0, "y_end": 20},    # top band occupied
             {"y_start": 60, "y_end": 100},  # bottom band occupied
         ]
         # Free gap between them (20..60) is the only band.
-        result = utils.compute_label_zone(100, 100, zones)
-        assert result == {"x": 0, "y": 20, "w": 100, "h": 40}
+        result = utils.compute_label_zones(100, 100, zones)
+        assert result == [{"x": 0, "y": 20, "w": 100, "h": 40}]
+
+    def test_all_free_bands_returned_top_to_bottom(self):
+        # Subtitles in the middle → free bands above AND below are both kept
+        # (the old single-zone API only returned the largest).
+        zones = [{"y_start": 30, "y_end": 70}]
+        result = utils.compute_label_zones(100, 100, zones, min_height=25)
+        assert result == [
+            {"x": 0, "y": 0, "w": 100, "h": 30},
+            {"x": 0, "y": 70, "w": 100, "h": 30},
+        ]
+
+    def test_small_bands_filtered_by_min_height(self):
+        # Free bands: 40px top (kept) and 10px bottom (below min_height → dropped).
+        zones = [{"y_start": 40, "y_end": 90}]
+        result = utils.compute_label_zones(100, 100, zones, min_height=20)
+        assert result == [{"x": 0, "y": 0, "w": 100, "h": 40}]
+
+    def test_max_bands_keeps_tallest(self):
+        # Three free bands: 30, 30, 20 px; with max_bands=2 the 20px one goes.
+        zones = [
+            {"y_start": 30, "y_end": 40},
+            {"y_start": 70, "y_end": 80},
+        ]
+        result = utils.compute_label_zones(100, 100, zones, min_height=15, max_bands=2)
+        assert result == [
+            {"x": 0, "y": 0, "w": 100, "h": 30},
+            {"x": 0, "y": 40, "w": 100, "h": 30},
+        ]
 
     def test_overlapping_zones_merge(self):
         zones = [
             {"y_start": 30, "y_end": 60},
             {"y_start": 50, "y_end": 80},
         ]
-        # Merged 30..80 → free bands [0..30] (larger) and [80..100].
-        result = utils.compute_label_zone(100, 100, zones)
-        assert result == {"x": 0, "y": 0, "w": 100, "h": 30}
+        # Merged 30..80 → free bands [0..30] and [80..100].
+        result = utils.compute_label_zones(100, 100, zones, min_height=15)
+        assert result == [
+            {"x": 0, "y": 0, "w": 100, "h": 30},
+            {"x": 0, "y": 80, "w": 100, "h": 20},
+        ]
 
     def test_zones_cover_full_height(self):
         zones = [{"y_start": 0, "y_end": 100}]
-        assert utils.compute_label_zone(100, 100, zones) is None
+        assert utils.compute_label_zones(100, 100, zones) == []
+
+
+class TestAssAnchorPoint:
+    X1, Y1, X2, Y2 = 10.0, 20.0, 110.0, 60.0  # center = (60, 40)
+
+    @pytest.mark.parametrize(
+        ("align", "expected"),
+        [
+            (1, (10.0, 60.0)),   # bottom-left
+            (2, (60.0, 60.0)),   # bottom-center
+            (3, (110.0, 60.0)),  # bottom-right
+            (4, (10.0, 40.0)),   # middle-left
+            (5, (60.0, 40.0)),   # center
+            (6, (110.0, 40.0)),  # middle-right
+            (7, (10.0, 20.0)),   # top-left (default label alignment)
+            (8, (60.0, 20.0)),   # top-center
+            (9, (110.0, 20.0)),  # top-right
+        ],
+    )
+    def test_alignment_points(self, align, expected):
+        assert utils.ass_anchor_point(
+            align, self.X1, self.Y1, self.X2, self.Y2
+        ) == expected
+
+    def test_out_of_range_falls_back_to_top_left(self):
+        assert utils.ass_anchor_point(0, self.X1, self.Y1, self.X2, self.Y2) == (
+            10.0,
+            20.0,
+        )
+        assert utils.ass_anchor_point(10, self.X1, self.Y1, self.X2, self.Y2) == (
+            10.0,
+            20.0,
+        )
+
+
+class TestDhash:
+    @staticmethod
+    def _band(seed: int) -> np.ndarray:
+        rng = np.random.default_rng(seed)
+        return rng.integers(0, 255, (48, 192, 3), dtype=np.uint8)
+
+    def test_deterministic(self):
+        img = self._band(42)
+        assert utils.dhash64(img) == utils.dhash64(img)
+
+    def test_identical_images_distance_zero(self):
+        img = np.full((32, 96, 3), 40, dtype=np.uint8)
+        assert utils.hamming_distance(utils.dhash64(img), utils.dhash64(img)) == 0
+
+    def test_brightness_shift_stays_close(self):
+        # dHash is gradient-based: a global fade must stay within threshold.
+        # Use smooth content (a horizontal ramp) — the gradient signs survive
+        # the shift, so the hash barely moves.
+        ramp = np.arange(192, dtype=np.uint8)[None, :].repeat(48, axis=0)
+        base = np.stack([ramp] * 3, axis=-1)
+        brighter = (base.astype(np.int16) + 50).astype(np.uint8)  # max 241
+        d = utils.hamming_distance(utils.dhash64(base), utils.dhash64(brighter))
+        assert d <= 4
+
+    def test_text_appearance_exceeds_threshold(self):
+        # Safety: a label appearing in an otherwise static band must move the
+        # hash past the default threshold, or real labels would be skipped.
+        blank = np.full((32, 384, 3), 30, dtype=np.uint8)
+        with_text = blank.copy()
+        with_text[8:24, 40:200] = 255  # bright "label" rectangle
+        d = utils.hamming_distance(utils.dhash64(blank), utils.dhash64(with_text))
+        assert d > 4
+
+    @pytest.mark.parametrize(
+        ("a", "b", "expected"),
+        [(0, 0, 0), (0b1010, 0b0110, 2), (0, 2**64 - 1, 64), (0b1, 0b0, 1)],
+    )
+    def test_hamming_distance(self, a, b, expected):
+        assert utils.hamming_distance(a, b) == expected
+
+
+class TestLabelFrameDedup:
+    @staticmethod
+    def _band(seed: int) -> np.ndarray:
+        rng = np.random.default_rng(seed)
+        return rng.integers(0, 255, (48, 192, 3), dtype=np.uint8)
+
+    def test_static_band_skips_and_weights_run(self):
+        dedup = utils.LabelFrameDedup(threshold=4, max_run=20)
+        img = self._band(1)
+        assert dedup.consider(2, 0, img) is True  # first frame always kept
+        for i in range(1, 15):
+            assert dedup.consider(2, i, img) is False
+        dedup.finish()
+        assert dedup.weights == {0: 15}  # rep 0 stands for all 15 frames
+        assert dedup.skipped == 14
+
+    def test_force_keep_after_max_run(self):
+        dedup = utils.LabelFrameDedup(threshold=4, max_run=5)
+        img = self._band(2)
+        kept = [dedup.consider(2, i, img) for i in range(12)]
+        assert kept == [
+            True, False, False, False, True,
+            False, False, False, True, False, False, False,
+        ]
+        dedup.finish()
+        assert dedup.weights == {0: 5, 4: 5, 8: 4}
+        assert dedup.skipped == 9  # 12 frames - 3 kept
+
+    def test_changed_frame_breaks_run(self):
+        dedup = utils.LabelFrameDedup(threshold=4, max_run=20)
+        a, b = self._band(3), self._band(99)
+        assert dedup.consider(2, 0, a) is True
+        assert dedup.consider(2, 1, a) is False
+        assert dedup.consider(2, 2, b) is True  # dissimilar → keep
+        dedup.finish()
+        assert dedup.weights == {0: 2, 2: 1}
+
+    def test_bands_are_independent(self):
+        dedup = utils.LabelFrameDedup(threshold=4)
+        img = self._band(4)
+        assert dedup.consider(2, 0, img) is True
+        assert dedup.consider(3, 1, img) is True  # other band starts fresh
+        dedup.finish()
+        assert dedup.weights == {0: 1, 1: 1}
+
+
+class TestProcessSsimGroupWeights:
+    @staticmethod
+    def _group():
+        rng = np.random.default_rng(11)
+        grid = rng.integers(0, 255, (50, 100, 3), dtype=np.uint8)
+        loaded = {"g.png": grid}
+        m0 = {
+            "grid_file": "g.png",
+            "x": 0,
+            "y": 0,
+            "w": 100,
+            "h": 50,
+            "frame_idx": 10,
+        }
+        m1 = dict(m0)
+        m1["frame_idx"] = 11
+        group = [
+            (10, [[0.0, 0.0, 100.0, 50.0]], 0.9, m0),
+            (11, [[0.0, 0.0, 100.0, 50.0]], 0.8, m1),
+        ]
+        rects = [[0.0, 0.0, 100.0, 50.0]]
+        return rects, group, loaded
+
+    def test_weight_defaults_to_batch_length(self):
+        rects, group, loaded = self._group()
+        items, deleted = utils.process_ssim_group(rects, group, loaded, 0.85)
+        assert deleted == 1
+        assert items[0]["frame_idx"] == 10
+        assert items[0]["weight"] == 2
+
+    def test_frame_weights_compose_hash_runs(self):
+        # Frame 10 represents 6 sampled frames, frame 11 represents 3 →
+        # the surviving SSIM representative must stand for all 9.
+        rects, group, loaded = self._group()
+        items, deleted = utils.process_ssim_group(
+            rects, group, loaded, 0.85, frame_weights={10: 6, 11: 3}
+        )
+        assert deleted == 1
+        assert items[0]["frame_idx"] == 10
+        assert items[0]["weight"] == 9
+
+
+class TestResolveLabelOverlaps:
+    @staticmethod
+    def _item(start, end, x1, y1, x2, y2):
+        return {
+            "start_ms": start,
+            "end_ms": end,
+            "fx1": float(x1),
+            "fy1": float(y1),
+            "fx2": float(x2),
+            "fy2": float(y2),
+        }
+
+    def test_disjoint_items_untouched(self):
+        a = self._item(0, 1000, 0, 0, 100, 40)
+        b = self._item(0, 1000, 200, 0, 300, 40)   # horizontal gap
+        c = self._item(2000, 3000, 0, 0, 100, 40)  # temporal gap
+        d = self._item(0, 1000, 0, 100, 100, 140)  # vertical gap
+        utils.resolve_label_overlaps([a, b, c, d], 600)
+        assert [x["fy1"] for x in (a, b, c, d)] == [0.0, 0.0, 0.0, 100.0]
+
+    def test_overlap_shifts_down_and_keeps_height(self):
+        a = self._item(0, 1000, 0, 0, 100, 40)
+        b = self._item(500, 1500, 10, 10, 110, 50)  # overlaps a
+        utils.resolve_label_overlaps([a, b], 600)
+        assert a["fy1"] == 0.0
+        assert b["fy1"] == a["fy2"] + 4.0  # pushed below a + margin
+        assert b["fy2"] - b["fy1"] == 40.0  # height preserved
+
+    def test_horizontal_disjoint_simultaneous_untouched(self):
+        # Two simultaneous labels side by side must NOT be stacked.
+        a = self._item(0, 1000, 0, 0, 100, 40)
+        b = self._item(0, 1000, 150, 0, 250, 40)
+        utils.resolve_label_overlaps([a, b], 600)
+        assert b["fy1"] == 0.0
+
+    def test_clamped_to_frame_bottom(self):
+        # b extends past the frame bottom with no collision → clamp in place.
+        b = self._item(0, 1000, 0, 575, 100, 620)  # height 45
+        utils.resolve_label_overlaps([b], 600)
+        assert b["fy2"] == 600.0
+        assert b["fy1"] == 555.0
+
+    def test_clamp_accepts_remaining_overlap(self):
+        # Shifting would push past the bottom; the overlap is accepted.
+        a = self._item(0, 1000, 0, 560, 100, 600)
+        b = self._item(0, 1000, 10, 565, 110, 605)
+        utils.resolve_label_overlaps([a, b], 600)
+        assert b["fy2"] == 600.0
+        assert b["fy1"] == 560.0  # height 40 kept; overlaps a by design
 
 
 class TestRtlAndLanguages:

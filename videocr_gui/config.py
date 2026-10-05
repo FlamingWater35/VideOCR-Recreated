@@ -198,6 +198,14 @@ def get_default_settings() -> dict[str, Any]:
         "--label_close_pos_distance": "40",
         "--label_close_pos_length_ratio": "0.5",
         "--label_ssim_dedup": True,
+        "--label_hash_threshold": "4",
+        "--label_min_zone_height": "32",
+        "--label_font": "Arial",
+        "--label_fontsize": "22",
+        "--label_primary_color": "&H00FFFFFF",
+        "--label_outline_color": "&H00000000",
+        "--label_alignment": "top-left",
+        "--label_lang": "",
     }
 
 

@@ -58,6 +58,17 @@ class TestRestrictedInt:
         with pytest.raises(argparse.ArgumentTypeError, match=">= 0"):
             videocr_cli.restricted_int(min_val=0)("-1")
 
+
+class TestValidAssColor:
+    def test_valid_normalized_uppercase(self):
+        assert videocr_cli.valid_ass_color("&H00FFFFFF") == "&H00FFFFFF"
+        assert videocr_cli.valid_ass_color("&h00ffffff") == "&H00FFFFFF"
+
+    @pytest.mark.parametrize("value", ["#FFFFFF", "&H00FFF", "&H00GGGGGG", "red", ""])
+    def test_invalid_raises(self, value):
+        with pytest.raises(argparse.ArgumentTypeError, match="ASS color"):
+            videocr_cli.valid_ass_color(value)
+
     def test_max_violation(self):
         with pytest.raises(argparse.ArgumentTypeError, match="<= 100"):
             videocr_cli.restricted_int(0, 100)("101")
@@ -280,6 +291,39 @@ class TestMainFlagMapping:
         assert kwargs["label_time_end"] == "0:10"
         assert kwargs["label_conf_threshold"] == 50
 
+    def test_label_style_flags(self, monkeypatch, video_file, fake_save):
+        run_main(monkeypatch, "--video_path", str(video_file),
+                 "--enable_label_detection", "true",
+                 "--label_font", "Verdana",
+                 "--label_fontsize", "30",
+                 "--label_primary_color", "&h0000ff00",
+                 "--label_outline_color", "&H000000FF",
+                 "--label_alignment", "top-right",
+                 "--label_min_zone_height", "48",
+                 "--label_hash_threshold", "6",
+                 "--allow_system_sleep", "true")
+        kwargs = fake_save[0]
+        assert kwargs["label_font"] == "Verdana"
+        assert kwargs["label_fontsize"] == 30
+        assert kwargs["label_primary_color"] == "&H0000FF00"  # normalized upper
+        assert kwargs["label_outline_color"] == "&H000000FF"
+        assert kwargs["label_alignment"] == "an9"
+        assert kwargs["label_min_zone_height"] == 48
+        assert kwargs["label_hash_threshold"] == 6
+
+    def test_label_lang_flag(self, monkeypatch, video_file, fake_save):
+        run_main(monkeypatch, "--video_path", str(video_file),
+                 "--enable_label_detection", "true",
+                 "--label_lang", "japan",
+                 "--allow_system_sleep", "true")
+        assert fake_save[0]["label_lang"] == "japan"
+
+    def test_label_lang_empty_by_default(self, monkeypatch, video_file, fake_save):
+        run_main(monkeypatch, "--video_path", str(video_file),
+                 "--enable_label_detection", "true",
+                 "--allow_system_sleep", "true")
+        assert fake_save[0]["label_lang"] == ""
+
 
 class TestMainValidationErrors:
     def _expect_exit(self, monkeypatch, video_file, capsys, *extra):
@@ -294,6 +338,27 @@ class TestMainValidationErrors:
                                 "--ocr_engine", "paddleocr", "--lang", "zzzz")
         assert "Unsupported language code 'zzzz' for PaddleOCR." in out
         assert not fake_save
+
+    def test_unsupported_paddle_label_lang(self, monkeypatch, video_file, capsys, fake_save):
+        out = self._expect_exit(monkeypatch, video_file, capsys,
+                                "--ocr_engine", "paddleocr", "--label_lang", "zzzz")
+        assert "Unsupported label language code 'zzzz' for PaddleOCR." in out
+        assert not fake_save
+
+    def test_unsupported_lens_label_lang(self, monkeypatch, video_file, capsys, fake_save):
+        out = self._expect_exit(monkeypatch, video_file, capsys,
+                                "--ocr_engine", "google_lens", "--label_lang", "zzzz")
+        assert "Unsupported label language code 'zzzz' for Google Lens." in out
+        assert not fake_save
+
+    def test_onnx_label_lang_prints_note(self, monkeypatch, video_file, capsys, fake_save):
+        run_main(monkeypatch, "--video_path", str(video_file),
+                 "--ocr_engine", "onnx_directml",
+                 "--enable_label_detection", "true",
+                 "--label_lang", "japan",
+                 "--allow_system_sleep", "true")
+        assert "--label_lang has no effect for onnx_directml" in capsys.readouterr().out
+        assert fake_save[0]["label_lang"] == "japan"
 
     def test_unsupported_lens_lang(self, monkeypatch, video_file, capsys, fake_save):
         out = self._expect_exit(monkeypatch, video_file, capsys,

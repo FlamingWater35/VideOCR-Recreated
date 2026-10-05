@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import re
 import sys
 from contextlib import nullcontext
 from typing import Callable
@@ -129,6 +130,14 @@ def valid_alignment_name(arg: str) -> str | None:
     allowed_values = ", ".join(sorted(list(utils.VALID_ALIGNMENT_NAMES)))
     raise argparse.ArgumentTypeError(
         f"Invalid alignment '{arg}'. Allowed values are: {allowed_values}"
+    )
+
+
+def valid_ass_color(arg: str) -> str:
+    if arg and re.fullmatch(r"&[Hh][0-9A-Fa-f]{8}", arg):
+        return arg.upper()
+    raise argparse.ArgumentTypeError(
+        f"Invalid ASS color '{arg}'. Use &HAABBGGRR (e.g. &H00FFFFFF)."
     )
 
 
@@ -437,7 +446,55 @@ def main() -> None:
         "--label_ssim_dedup",
         type=lambda x: x.lower() == "true",
         default=True,
-        help="Enable tight-box SSIM deduplication for labels in Step 2 (reduces redundant recognition calls, default: true)",
+        help="Enable label frame deduplication: pre-OCR dHash on label bands plus tight-box SSIM in Step 2 (redundant frames are counted via weights, default: true)",
+    )
+    parser.add_argument(
+        "--label_hash_threshold",
+        type=restricted_int(0, 64),
+        default=4,
+        help="Hamming-distance threshold (0-64) for the pre-OCR label dHash dedup; lower is stricter (default: 4)",
+    )
+    parser.add_argument(
+        "--label_min_zone_height",
+        type=restricted_int(min_val=8),
+        default=32,
+        help="Minimum free-band height (px) outside the subtitle crop to scan for labels (default: 32)",
+    )
+    parser.add_argument(
+        "--label_font",
+        type=str,
+        default="Arial",
+        help="Font name for the ASS Label style (default: Arial)",
+    )
+    parser.add_argument(
+        "--label_fontsize",
+        type=restricted_int(min_val=1),
+        default=22,
+        help="Font size for the ASS Label style (default: 22)",
+    )
+    parser.add_argument(
+        "--label_primary_color",
+        type=valid_ass_color,
+        default="&H00FFFFFF",
+        help="Primary text color for the ASS Label style in &HAABBGGRR form (default: &H00FFFFFF)",
+    )
+    parser.add_argument(
+        "--label_outline_color",
+        type=valid_ass_color,
+        default="&H00000000",
+        help="Outline color for the ASS Label style in &HAABBGGRR form (default: &H00000000)",
+    )
+    parser.add_argument(
+        "--label_alignment",
+        type=valid_alignment_name,
+        default="top-left",
+        help="Alignment anchor for label events, e.g. 'top-left' (default: top-left)",
+    )
+    parser.add_argument(
+        "--label_lang",
+        type=str,
+        default="",
+        help="OCR language for label detection; empty = use --lang (label recognition runs separately when set)",
     )
     parser.add_argument(
         "--allow_system_sleep",
@@ -456,6 +513,26 @@ def main() -> None:
             raise ValueError(
                 f"Unsupported language code '{args.lang}' for Google Lens."
             )
+        if args.label_lang:
+            if args.ocr_engine == "paddleocr" and args.label_lang.lower() not in (
+                set().union(*PADDLEOCR_LANGS.values())
+            ):
+                raise ValueError(
+                    f"Unsupported label language code '{args.label_lang}' for PaddleOCR."
+                )
+            if (
+                args.ocr_engine == "google_lens"
+                and args.label_lang not in GOOGLE_LENS_LANGS
+            ):
+                raise ValueError(
+                    f"Unsupported label language code '{args.label_lang}' for Google Lens."
+                )
+            if args.ocr_engine == "onnx_directml":
+                print(
+                    "Note: --label_lang has no effect for onnx_directml "
+                    "(PP-OCRv6 unified model); labels use the subtitle language.",
+                    flush=True,
+                )
         if args.ocr_engine in ("easyocr_directml", "onnx_directml"):
             # DirectML backend language support is checked inside the backend so
             # custom mappings can be added without changing the CLI validator.
@@ -596,6 +673,14 @@ def main() -> None:
                 label_close_pos_length_ratio=args.label_close_pos_length_ratio,
                 label_conf_threshold=args.label_conf_threshold,
                 label_ssim_dedup=args.label_ssim_dedup,
+                label_hash_threshold=args.label_hash_threshold,
+                label_min_zone_height=args.label_min_zone_height,
+                label_font=args.label_font,
+                label_fontsize=args.label_fontsize,
+                label_primary_color=args.label_primary_color,
+                label_outline_color=args.label_outline_color,
+                label_alignment=args.label_alignment,
+                label_lang=args.label_lang,
             )
     except ValueError as e:
         print(f"Error: {e}")

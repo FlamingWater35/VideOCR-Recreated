@@ -7,7 +7,7 @@ asserted against the fake ``get_subtitles`` return value.
 
 from __future__ import annotations
 
-import runpy
+import sys
 
 import pytest
 
@@ -238,9 +238,44 @@ class TestErrorPaths:
 
 
 class TestLabelDetectionOutput:
+    @staticmethod
+    def _fake_qafix_load(seen: dict):
+        """Fake api._load_qafix returning a stub module with the qafix API."""
+
+        def fake_load(script_path):
+            seen["script"] = script_path
+
+            class FakeConsole:
+                def print(self, *args, **kwargs):
+                    seen.setdefault("printed", []).append(args)
+
+            class FakeModule:
+                Console = FakeConsole
+
+                @staticmethod
+                def generate_results_table(reports, stats):
+                    return f"table:{reports[0]}"
+
+                @staticmethod
+                def process_ass(
+                    path,
+                    inplace,
+                    keep_empty_text,
+                    dry_run,
+                    canonical_styles_block,
+                    have_canonical,
+                ):
+                    seen["path"] = path
+                    seen["inplace"] = inplace
+                    return path, object(), "report", None, False
+
+            return FakeModule()
+
+        return fake_load
+
     def test_srt_rewritten_to_ass(self, out_path, capsys, monkeypatch):
         ass_out = out_path.with_suffix(".ass")
-        monkeypatch.setattr(runpy, "run_path", lambda *a, **k: None)
+        monkeypatch.setattr(api, "_load_qafix", self._fake_qafix_load({}))
         api.save_subtitles_to_file(
             "v.mp4", file_path=str(out_path), enable_label_detection=True
         )
@@ -253,7 +288,7 @@ class TestLabelDetectionOutput:
     def test_existing_ass_output_untouched_suffix(self, tmp_path, capsys, monkeypatch):
         target = tmp_path / "already.ass"
         target.write_text("old content", encoding="utf-8")  # pre-existing output
-        monkeypatch.setattr(runpy, "run_path", lambda *a, **k: None)
+        monkeypatch.setattr(api, "_run_qafix", lambda p: None)
         api.save_subtitles_to_file(
             "v.mp4", file_path=str(target), enable_label_detection=True
         )
@@ -263,39 +298,44 @@ class TestLabelDetectionOutput:
     def test_qafix_receives_ass_path(self, tmp_path, monkeypatch):
         target = tmp_path / "out.srt"
         seen: dict = {}
-
-        def fake_run_path(script, run_name=None):
-            seen["script"] = script
-            seen["run_name"] = run_name
-            seen["argv"] = list(__import__("sys").argv)
-
-        monkeypatch.setattr(runpy, "run_path", fake_run_path)
-        api.save_subtitles_to_file("v.mp4", file_path=str(target), enable_label_detection=True)
-        assert seen["run_name"] == "__main__"
-        assert seen["argv"][:2] == ["ass_qafix", "--inplace"]
-        assert seen["argv"][2] == str(tmp_path / "out.ass")
+        monkeypatch.setattr(api, "_load_qafix", self._fake_qafix_load(seen))
+        argv_before = list(sys.argv)
+        api.save_subtitles_to_file(
+            "v.mp4", file_path=str(target), enable_label_detection=True
+        )
+        assert seen["path"] == str(tmp_path / "out.ass")
+        assert seen["inplace"] is True
         assert seen["script"].endswith("ass_qafix.py")
+        # The callable API must not mutate sys.argv (the old runpy path did).
+        assert list(sys.argv) == argv_before
 
-    def test_qafix_nonzero_exit_warns(self, tmp_path, capsys, monkeypatch):
+    def test_qafix_failure_warns(self, tmp_path, capsys, monkeypatch):
         target = tmp_path / "out.srt"
 
-        def fake_run_path(script, run_name=None):
-            raise SystemExit(3)
+        def failing_load(script_path):
+            class FakeModule:
+                @staticmethod
+                def process_ass(*args, **kwargs):
+                    raise RuntimeError("parse blew up")
 
-        monkeypatch.setattr(runpy, "run_path", fake_run_path)
-        api.save_subtitles_to_file("v.mp4", file_path=str(target), enable_label_detection=True)
-        assert "Warning: ass-qafix exited with code 3" in capsys.readouterr().out
+            return FakeModule()
+
+        monkeypatch.setattr(api, "_load_qafix", failing_load)
+        api.save_subtitles_to_file(
+            "v.mp4", file_path=str(target), enable_label_detection=True
+        )
+        out = capsys.readouterr().out
+        assert "Warning: ASS post-processing (ass-qafix) failed: parse blew up" in out
         assert target.with_suffix(".ass").exists()  # output still written
 
     def test_qafix_missing_script_skips(self, tmp_path, capsys, monkeypatch):
         target = tmp_path / "out.srt"
 
-        def no_script(*a, **k):  # pragma: no cover - guard
-            raise AssertionError("run_path must not be called")
+        def no_load(*a, **k):  # pragma: no cover - guard
+            raise AssertionError("_load_qafix must not be called")
 
-        monkeypatch.setattr(runpy, "run_path", no_script)
-        # Point __file__ resolution at a temp tree without tools/ by patching
-        # the script-existence check via os.path.isfile on ass_qafix only.
+        monkeypatch.setattr(api, "_load_qafix", no_load)
+        # Point script-path resolution at a tree without the qafix script.
         real_isfile = __import__("os").path.isfile
 
         def fake_isfile(p):
@@ -304,5 +344,7 @@ class TestLabelDetectionOutput:
             return real_isfile(p)
 
         monkeypatch.setattr("os.path.isfile", fake_isfile)
-        api.save_subtitles_to_file("v.mp4", file_path=str(target), enable_label_detection=True)
+        api.save_subtitles_to_file(
+            "v.mp4", file_path=str(target), enable_label_detection=True
+        )
         assert "ass-qafix script not found; skipping" in capsys.readouterr().out

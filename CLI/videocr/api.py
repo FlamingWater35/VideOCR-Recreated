@@ -1,12 +1,76 @@
 from __future__ import annotations
 
+import importlib.util
 import os
 import sys
 import time
 from pathlib import Path
+from types import ModuleType
 
 from . import utils
 from .video import Video
+
+
+def _qafix_script_path() -> str:
+    """Locate the bundled ass_qafix script (source tree and frozen builds)."""
+    if getattr(sys, "frozen", False) or "__compiled__" in globals():
+        base_dir = os.path.dirname(sys.executable)
+        return os.path.join(base_dir, "tools", "ass_qafix", "ass_qafix.py")
+    return os.path.join(
+        os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+        "tools",
+        "ass_qafix",
+        "ass_qafix.py",
+    )
+
+
+def _load_qafix(script_path: str) -> ModuleType | None:
+    """Load ass_qafix.py as a module via file-based importlib.
+
+    Works in source trees and Nuitka frozen builds (the script ships as a
+    data file, so a normal import will not resolve). The script's
+    ``__main__`` guard keeps ``main()`` from self-executing.
+    """
+    spec = importlib.util.spec_from_file_location("videocr_ass_qafix", script_path)
+    if spec is None or spec.loader is None:
+        return None
+    mod = importlib.util.module_from_spec(spec)
+    # Must be in sys.modules before exec: dataclasses resolves string
+    # annotations (e.g. QAStats fields) through sys.modules[cls.__module__].
+    sys.modules[spec.name] = mod
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def _run_qafix(file_path: str) -> None:
+    """Post-process a generated .ass file in place via ass_qafix's callable API."""
+    script = _qafix_script_path()
+    if not os.path.isfile(script):
+        print(
+            "Warning: ass-qafix script not found; skipping ASS post-processing.",
+            flush=True,
+        )
+        return
+    mod = _load_qafix(script)
+    if mod is None:
+        print(
+            "Warning: ass-qafix script not found; skipping ASS post-processing.",
+            flush=True,
+        )
+        return
+    _out_path, stats, report, _canon, _have = mod.process_ass(
+        file_path,
+        inplace=True,
+        keep_empty_text=False,
+        dry_run=False,
+        canonical_styles_block=None,
+        have_canonical=False,
+    )
+    mod.Console().print(mod.generate_results_table([report], stats))
+    print(
+        "ASS post-processing (ass-qafix) completed successfully.",
+        flush=True,
+    )
 
 
 def save_subtitles_to_file(
@@ -55,6 +119,15 @@ def save_subtitles_to_file(
     label_close_pos_length_ratio: float = 0.5,
     label_conf_threshold: int = 60,
     label_ssim_dedup: bool = True,
+    label_hash_threshold: int = 4,
+    label_min_zone_height: int = 32,
+    label_font: str = "Arial",
+    label_fontsize: int = 22,
+    label_primary_color: str = "&H00FFFFFF",
+    label_outline_color: str = "&H00000000",
+    label_alignment: str = "an7",
+    label_lang: str = "",
+    label_model_dirs: dict[str, str] | None = None,
 ) -> None:
     total_start = time.perf_counter()
     if crop_zones is None:
@@ -120,6 +193,18 @@ def save_subtitles_to_file(
             det_model_dir, rec_model_dir, cls_model_dir = utils.resolve_model_dirs(
                 lang, use_server_model
             )
+            label_lang_code = (label_lang or "").strip()
+            if label_lang_code and label_lang_code != lang:
+                # Labels OCR'd in a different language need their own
+                # recognition model set for the second PaddleOCR pass.
+                label_det, label_rec, label_cls = utils.resolve_model_dirs(
+                    label_lang_code, use_server_model
+                )
+                label_model_dirs = {
+                    "det": label_det,
+                    "rec": label_rec,
+                    "cls": label_cls,
+                }
         else:
             # For the Text-Detection-Only Pass just the default detection model is needed
             det_model_dir, rec_model_dir, cls_model_dir = utils.resolve_model_dirs(
@@ -187,6 +272,15 @@ def save_subtitles_to_file(
             label_close_pos_length_ratio,
             label_conf_threshold,
             label_ssim_dedup,
+            label_hash_threshold,
+            label_min_zone_height,
+            label_font,
+            label_fontsize,
+            label_primary_color,
+            label_outline_color,
+            label_alignment,
+            label_lang,
+            label_model_dirs,
         )
         ocr_end = time.perf_counter()
     except Exception as e:
@@ -210,49 +304,7 @@ def save_subtitles_to_file(
     if label_detection:
         qafix_errors: list[str] = []
         try:
-            import runpy
-
-            # Determine script path (works for both source and Nuitka frozen builds)
-            if getattr(sys, "frozen", False) or "__compiled__" in globals():
-                base_dir = os.path.dirname(sys.executable)
-                script = os.path.join(base_dir, "tools", "ass_qafix", "ass_qafix.py")
-            else:
-                script = os.path.join(
-                    os.path.dirname(
-                        os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-                    ),
-                    "tools",
-                    "ass_qafix",
-                    "ass_qafix.py",
-                )
-            if os.path.isfile(script):
-                old_argv = sys.argv
-                os.environ["PYTHONIOENCODING"] = "utf-8"
-                os.environ["PYTHONUNBUFFERED"] = "1"
-                sys.argv = ["ass_qafix", "--inplace", file_path]
-                try:
-                    runpy.run_path(script, run_name="__main__")
-                    print(
-                        "ASS post-processing (ass-qafix) completed successfully.",
-                        flush=True,
-                    )
-                except SystemExit as e:
-                    if e.code == 0 or e.code is None:
-                        print(
-                            "ASS post-processing (ass-qafix) completed successfully.",
-                            flush=True,
-                        )
-                    else:
-                        print(
-                            f"Warning: ass-qafix exited with code {e.code}.", flush=True
-                        )
-                finally:
-                    sys.argv = old_argv
-            else:
-                print(
-                    "Warning: ass-qafix script not found; skipping ASS post-processing.",
-                    flush=True,
-                )
+            _run_qafix(file_path)
         except Exception as e:
             qafix_errors.append(str(e))
             print(f"Warning: ASS post-processing (ass-qafix) failed: {e}", flush=True)
