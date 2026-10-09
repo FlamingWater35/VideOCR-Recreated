@@ -15,7 +15,7 @@ from PySide6.QtCore import QRect, Qt
 from PySide6.QtWidgets import QApplication
 
 from videocr_gui import app as app_module
-from videocr_gui import config, i18n
+from videocr_gui import config, i18n, update_check
 from videocr_gui.app import MainWindow
 
 
@@ -385,3 +385,99 @@ class TestTaskbarIntegration:
         win._update_taskbar(state="paused", progress=42)
         win._update_taskbar(progress=100)
         win.close()
+
+
+class TestUpdateCheck:
+    """Boot scheduling, the dynamic Update tab, and the settings toggle."""
+
+    def test_boot_check_scheduled_after_3_seconds(self, qtbot, settings):
+        win = MainWindow(settings=settings)
+        qtbot.addWidget(win)
+        assert win._update_timer.isActive()
+        assert win._update_timer.interval() == update_check.BOOT_CHECK_DELAY_MS
+        assert update_check.BOOT_CHECK_DELAY_MS == 3000
+
+    def test_boot_check_skipped_when_disabled(self, qtbot, settings):
+        settings["check_updates"] = False
+        win = MainWindow(settings=settings)
+        qtbot.addWidget(win)
+        assert not win._update_timer.isActive()
+
+    def test_start_check_respects_disabled_setting(
+        self, qtbot, settings, monkeypatch
+    ):
+        settings["check_updates"] = False
+        calls: list[int] = []
+
+        def fake_fetch(*args, **kwargs):
+            calls.append(1)
+            return None
+
+        monkeypatch.setattr(update_check, "fetch_latest_version", fake_fetch)
+        win = MainWindow(settings=settings)
+        qtbot.addWidget(win)
+        win._start_update_check()
+        assert not win._update_check_started
+        assert calls == []
+
+    def test_start_check_runs_once_off_thread(self, qtbot, settings, monkeypatch):
+        calls: list[int] = []
+
+        def fake_fetch(*args, **kwargs):
+            calls.append(1)
+            return None
+
+        monkeypatch.setattr(update_check, "fetch_latest_version", fake_fetch)
+        win = MainWindow(settings=settings)
+        qtbot.addWidget(win)
+        win._start_update_check()
+        win._start_update_check()  # guarded: one check per session
+        assert win._update_check_started
+        qtbot.waitUntil(lambda: len(calls) >= 1, timeout=3000)
+        qtbot.wait(50)
+        assert calls == [1]
+        assert win.tabs.count() == 4  # no update info → no Update tab
+
+    def test_no_update_tab_without_newer_version(self, qtbot, settings):
+        win = MainWindow(settings=settings)
+        qtbot.addWidget(win)
+        assert win.tabs.count() == 4
+        for latest in (None, "", "0.9.0", win._version()):
+            win._on_update_check_finished(latest)
+            assert win.tabs.count() == 4
+        assert win._update_tab is None
+
+    def test_update_tab_appears_only_for_newer_version(self, qtbot, settings):
+        win = MainWindow(settings=settings)
+        qtbot.addWidget(win)
+        assert win.tabs.count() == 4
+        win._on_update_check_finished("999.0.0")
+        assert win.tabs.count() == 5
+        assert win.tabs.tabText(4) == "Update Available"
+        # Re-reporting a newer version refreshes the existing tab, not a second one.
+        win._on_update_check_finished("999.0.1")
+        assert win.tabs.count() == 5
+
+    def test_update_tab_content_links_to_latest_release(self, qtbot, settings):
+        win = MainWindow(settings=settings)
+        qtbot.addWidget(win)
+        win._on_update_check_finished("999.0.0")
+        tab = win._update_tab
+        assert tab is not None
+        assert "999.0.0" in tab.available_lbl.text()
+        assert win._version() in tab.current_lbl.text()
+        assert tab.download_lbl.text()
+        assert tab.link_lbl.text() == update_check.LATEST_RELEASE_URL
+
+    def test_disabling_check_removes_update_tab(self, qtbot, settings):
+        win = MainWindow(settings=settings)
+        qtbot.addWidget(win)
+        win._on_update_check_finished("999.0.0")
+        assert win.tabs.count() == 5
+
+        win.settings_tab._widgets["check_updates"].setChecked(False)
+
+        assert win.tabs.count() == 4
+        assert win._update_tab is None
+        assert not win._update_timer.isActive()
+        assert config.load_settings()["check_updates"] is False

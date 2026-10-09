@@ -104,6 +104,16 @@ def _tmp_build_variant(monkeypatch, tmp_path):
 
 
 @pytest.fixture(autouse=True)
+def _no_update_check_network(monkeypatch):
+    """The 3 s boot update check must never hit GitHub from tests."""
+    from videocr_gui import update_check
+
+    monkeypatch.setattr(
+        update_check, "fetch_latest_version", lambda *args, **kwargs: None
+    )
+
+
+@pytest.fixture(autouse=True)
 def _fresh_i18n():
     """Reset i18n module state before and after every test."""
     import videocr_gui.i18n as i18n

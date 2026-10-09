@@ -662,6 +662,14 @@ class SettingsTab(QWidget):
             "tip_prevent_sleep",
             True,
         )
+        self._add_check(
+            vo_form,
+            "check_updates",
+            "chk_check_updates",
+            "Check for Updates On Startup",
+            "tip_check_updates",
+            True,
+        )
 
         self.reset_btn = QPushButton(
             i18n.tr("btn_reset_settings", "Reset to Defaults")

@@ -5,7 +5,7 @@ It lives next to the app when ``portable_mode.txt`` exists, otherwise in the
 platform config dir (``%APPDATA%/VideOCR`` on Windows, XDG on Linux).
 
 This is a port of the legacy ``VideOCR.py`` settings handling, minus the
-update-check and benchmarking keys, with one behavior change: the DirectML
+benchmarking keys, with one behavior change: the DirectML
 device index defaults to ``0`` and is persisted/restored reliably.
 """
 
@@ -138,7 +138,8 @@ def get_default_settings() -> dict[str, Any]:
     """Returns a dictionary of default settings (config keys -> default values).
 
     ``--directml_device_index`` defaults to ``0`` (first GPU) and is persisted.
-    Update-check and benchmarking keys are intentionally absent.
+    ``check_updates`` is the single update-check key; benchmarking keys and
+    the legacy update-dialog keys are intentionally absent.
     """
     return {
         "--language": "en",
@@ -182,6 +183,8 @@ def get_default_settings() -> dict[str, Any]:
         "prevent_system_sleep": True,
         "--normalize_to_simplified_chinese": True,
         "gui_scaling": C.DEFAULT_GUI_SCALING,
+        # Check GitHub for a newer release shortly after startup
+        "check_updates": True,
         # Window state: "normal" | "maximized" | "fullscreen"
         "window_state": "normal",
         # Label detection (text outside the subtitle crop, e.g. names)
@@ -229,6 +232,7 @@ _BOOL_KEYS = {
     "--save_crop_box",
     "prevent_system_sleep",
     "--normalize_to_simplified_chinese",
+    "check_updates",
 }
 
 

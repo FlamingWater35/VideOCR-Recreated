@@ -35,8 +35,11 @@ class TestDefaults:
     def test_no_update_or_benchmark_keys(self):
         defaults = config.get_default_settings()
         for key in defaults:
-            assert "update" not in key.lower()
             assert "benchmark" not in key.lower()
+            # check_updates is the one intentional update key; the legacy
+            # update-check dialog keys must not come back.
+            if "update" in key.lower():
+                assert key == "check_updates", key
 
     def test_directml_index_default_is_zero(self):
         assert config.get_default_settings()["--directml_device_index"] == "0"

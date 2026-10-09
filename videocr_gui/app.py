@@ -2,13 +2,15 @@
 
 from __future__ import annotations
 
+import contextlib
 import datetime
 import os
 import subprocess
 import sys
+import threading
 from typing import Any
 
-from PySide6.QtCore import QSize, Qt, QTimer
+from PySide6.QtCore import QSize, Qt, QTimer, Signal
 from PySide6.QtGui import QAction, QIcon, QKeySequence, QStandardItemModel
 from PySide6.QtWidgets import (
     QFileDialog,
@@ -23,7 +25,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from . import __version__, config, i18n, resources
+from . import __version__, config, i18n, resources, update_check
 from . import args as argsmod
 from . import constants as C
 from .about_tab import AboutTab
@@ -31,6 +33,7 @@ from .dialogs import CountdownDialog, ask_yes_no, info
 from .progress import ProgressUpdate
 from .queue_tab import QueueTab
 from .settings_tab import SettingsTab
+from .update_tab import UpdateTab
 from .video_preview import VideoPreview
 from .widgets import ClickableSlider, OutlinedProgressBar, WheelGuardComboBox
 from .workers import VIDEOCR_PATH, CLIWorker
@@ -92,6 +95,10 @@ OUTPUT
 
 
 class MainWindow(QMainWindow):
+    #: Emitted by the update-check worker thread with the latest release
+    #: version (or None); delivered on the UI thread via a queued connection.
+    update_check_finished = Signal(object)
+
     def __init__(self, settings: dict[str, Any] | None = None) -> None:
         super().__init__()
         self.setWindowTitle("VideOCR Recreated")
@@ -113,11 +120,20 @@ class MainWindow(QMainWindow):
         self._wake_lock: Any = None
         self._taskbar: Any = None
         self._graph_size = (720, 405)
+        self._update_tab: UpdateTab | None = None
+        self._update_check_started = False
 
         self._crop_save_timer = QTimer(self)
         self._crop_save_timer.setSingleShot(True)
         self._crop_save_timer.setInterval(300)
         self._crop_save_timer.timeout.connect(self._flush_crop_boxes)
+
+        # Boot update check: fires once, 3 s after startup, unless the setting
+        # is off. Parented to the window so it dies with it.
+        self._update_timer = QTimer(self)
+        self._update_timer.setSingleShot(True)
+        self._update_timer.setInterval(update_check.BOOT_CHECK_DELAY_MS)
+        self._update_timer.timeout.connect(self._start_update_check)
 
         # Load the saved UI language BEFORE building widgets so the initial
         # render is localized (i18n.tr() falls back to English defaults while
@@ -129,6 +145,9 @@ class MainWindow(QMainWindow):
         self._apply_settings_to_ui()
         self._resize_to_work_area()
         self._restore_window_state()
+        self.update_check_finished.connect(self._on_update_check_finished)
+        if self._settings.get("check_updates", True):
+            self._update_timer.start()
 
     # --- UI construction ----------------------------------------------------
     def _build_ui(self) -> None:
@@ -566,6 +585,12 @@ class MainWindow(QMainWindow):
         self.queue_tab.retranslate()
         self.about_tab.retranslate(self._version())
         self.settings_tab.retranslate()
+        if self._update_tab is not None:
+            self.tabs.setTabText(
+                self.tabs.indexOf(self._update_tab),
+                i18n.tr("update_title", "Update Available"),
+            )
+            self._update_tab.retranslate()
         self._refresh_post_action_combo()
         self._translate_process_tab()
 
@@ -881,6 +906,14 @@ class MainWindow(QMainWindow):
             self.preview.set_dual_zone(
                 bool(self._settings.get("--use_dual_zone", False))
             )
+        # The Update tab only exists while the startup check is enabled.
+        if "check_updates" in keys:
+            if self._settings.get("check_updates", True):
+                if not self._update_check_started:
+                    self._update_timer.start()
+            else:
+                self._update_timer.stop()
+                self._hide_update_tab()
         config.save_settings(self._settings)
 
     def _on_directml_gpu(self, index: str) -> None:
@@ -1684,6 +1717,52 @@ class MainWindow(QMainWindow):
         if boxes:
             self.preview.restore_crop_boxes(boxes)
             self.crop_label.setText(self.preview.crop_coords_text())
+
+    # --- update check -------------------------------------------------------
+    def _start_update_check(self) -> None:
+        """Checks GitHub for a newer release once per session, off the UI thread."""
+        if self._update_check_started:
+            return
+        if not self._settings.get("check_updates", True):
+            return
+        self._update_check_started = True
+
+        def worker() -> None:
+            latest = update_check.fetch_latest_version()
+            # RuntimeError: the window was destroyed while the request was
+            # still in flight.
+            with contextlib.suppress(RuntimeError):
+                self.update_check_finished.emit(latest)
+
+        threading.Thread(target=worker, name="update-check", daemon=True).start()
+
+    def _on_update_check_finished(self, latest: object) -> None:
+        """Shows the Update tab only when the fetched release is newer."""
+        if not isinstance(latest, str) or not latest:
+            return
+        if not self._settings.get("check_updates", True):
+            return
+        if not update_check.is_newer(latest, self._version()):
+            return
+        self._show_update_tab(latest)
+
+    def _show_update_tab(self, latest: str) -> None:
+        if self._update_tab is None:
+            self._update_tab = UpdateTab(latest, self._version())
+            self.tabs.addTab(
+                self._update_tab, i18n.tr("update_title", "Update Available")
+            )
+        else:
+            self._update_tab.set_versions(latest, self._version())
+
+    def _hide_update_tab(self) -> None:
+        if self._update_tab is None:
+            return
+        index = self.tabs.indexOf(self._update_tab)
+        if index != -1:
+            self.tabs.removeTab(index)
+        self._update_tab.deleteLater()
+        self._update_tab = None
 
     # --- misc --------------------------------------------------------------------
     def _append_log(self, text: str) -> None:
