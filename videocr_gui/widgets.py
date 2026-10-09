@@ -17,6 +17,7 @@ from PySide6.QtWidgets import (
     QSlider,
     QStyle,
     QStyleOptionProgressBar,
+    QWidget,
 )
 
 from .style import PALETTE
@@ -29,7 +30,17 @@ class WheelGuardComboBox(QComboBox):
     the mouse wheel over it. That is easy to trigger accidentally while
     scrolling a settings page, so this subclass swallows wheel events while
     keeping normal mouse/keyboard interaction intact.
+
+    It also drops Qt's default WheelFocus policy: with WheelFocus, scrolling
+    the wheel over a combo gives it focus, so the gold ``:focus`` ring lights
+    up on whichever combo the cursor happens to hover during a scroll.
+    StrongFocus (Tab + click, as line edits use) keeps keyboard/click focus
+    without wheel-induced focus.
     """
+
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
     def wheelEvent(self, event) -> None:  # noqa: N802 - Qt API name
         event.ignore()

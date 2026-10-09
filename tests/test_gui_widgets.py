@@ -464,6 +464,49 @@ class TestResources:
 
 
 class TestWidgets:
+    def test_wheel_guard_combo_drops_wheel_focus(self):
+        """Scrolling the wheel over a combo must not focus it.
+
+        Qt's default combo policy includes WheelFocus, so scrolling a
+        settings page focused whichever combo the cursor hovered and lit
+        the gold :focus ring. Line edits (StrongFocus) never did this.
+        """
+        from PySide6.QtCore import Qt
+        from PySide6.QtWidgets import QComboBox
+
+        from videocr_gui.widgets import WheelGuardComboBox
+
+        assert QComboBox().focusPolicy() == Qt.FocusPolicy.WheelFocus
+        combo = WheelGuardComboBox()
+        assert combo.focusPolicy() == Qt.FocusPolicy.StrongFocus
+        combo.deleteLater()
+
+    def test_wheel_event_over_combo_is_ignored_and_harmless(self):
+        from PySide6.QtCore import QPoint, QPointF, Qt
+        from PySide6.QtGui import QWheelEvent
+
+        from videocr_gui.widgets import WheelGuardComboBox
+
+        combo = WheelGuardComboBox()
+        combo.addItems(["a", "b", "c"])
+        combo.show()
+        combo.clearFocus()
+        ev = QWheelEvent(
+            QPointF(10, 10),
+            QPointF(10, 10),
+            QPoint(0, 0),
+            QPoint(0, -120),
+            Qt.MouseButton.NoButton,
+            Qt.KeyboardModifier.NoModifier,
+            Qt.ScrollPhase.NoScrollPhase,
+            False,
+        )
+        combo.event(ev)
+        assert not ev.isAccepted()  # propagates so the page still scrolls
+        assert combo.currentIndex() == 0  # value untouched
+        assert not combo.hasFocus()  # no wheel-induced focus
+        combo.deleteLater()
+
     def test_clickable_slider_handle_width(self):
         from videocr_gui.widgets import ClickableSlider
 
