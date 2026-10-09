@@ -106,7 +106,7 @@ def save_subtitles_to_file(
     benchmark_compare_engine: bool = False,
     benchmark_compare_sample_grids: int = 3,
     enable_label_detection: bool = False,
-    label_ocr_image_max_width: int = 720,
+    label_ocr_image_max_width: int = 1080,
     label_time_start: str = "",
     label_time_end: str = "",
     label_min_display_duration_sec: float = 1.0,

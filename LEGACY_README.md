@@ -688,7 +688,7 @@ dedup) so label appearances are not lost.
 ### `label_ocr_image_max_width`
 
 Maximum image width used for OCR inside the label detection area (default:
-`720`). Lower values are faster; higher values may improve accuracy for small
+`1080`). Lower values are faster; higher values may improve accuracy for small
 name text.
 
 ### `label_min_display_duration`

@@ -962,7 +962,7 @@ class Video:
         benchmark_compare_engine: bool = False,
         benchmark_compare_sample_grids: int = 3,
         enable_label_detection: bool = False,
-        label_ocr_image_max_width: int = 720,
+        label_ocr_image_max_width: int = 1080,
         label_min_display_duration_sec: float = 1.0,
         label_min_confirmation_frames: int = 2,
         label_reappear_merge_gap_sec: float = 2.0,

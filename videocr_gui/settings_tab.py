@@ -442,7 +442,7 @@ class SettingsTab(QWidget):
             "--label_ocr_image_max_width",
             "lbl_label_ocr_width",
             "Label Max OCR Image Width (pixel):",
-            "720",
+            "1080",
             "tip_label_ocr_width",
         )
         self._add_line(
@@ -921,6 +921,19 @@ class SettingsTab(QWidget):
             if isinstance(widget, (QComboBox, QLineEdit, QCheckBox, QPushButton)):
                 widget.setEnabled(labels_enabled)
 
+        # The output directory is ignored while "save in video directory" is on,
+        # so grey out the field and its browse button (see tip_save_in_video_dir).
+        save_check = self._widgets.get("--save_in_video_dir")
+        out_dir_enabled = not (
+            isinstance(save_check, QCheckBox) and save_check.isChecked()
+        )
+        out_dir_edit = self._widgets.get("--default_output_dir")
+        if isinstance(out_dir_edit, QLineEdit):
+            out_dir_edit.setEnabled(out_dir_enabled)
+        out_browse_btn = getattr(self, "browse_output_btn", None)
+        if isinstance(out_browse_btn, QPushButton):
+            out_browse_btn.setEnabled(out_dir_enabled)
+
     def read_settings(self) -> dict[str, Any]:
         """Reads current widget values back into a settings dict.
 
@@ -1098,6 +1111,10 @@ class SettingsTab(QWidget):
         elif key == "enable_label_detection":
             # Re-evaluate label-detection controls' enabled state when the
             # master toggle flips, then emit the change.
+            self._update_dependent_states()
+        elif key == "--save_in_video_dir":
+            # Re-evaluate the output-directory field/browse button enabled
+            # state when the save-in-video-dir toggle flips, then emit.
             self._update_dependent_states()
         self.settings_changed.emit(keys)
 

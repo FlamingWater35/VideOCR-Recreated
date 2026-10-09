@@ -385,8 +385,8 @@ def main() -> None:
     parser.add_argument(
         "--label_ocr_image_max_width",
         type=restricted_int(min_val=1),
-        default=720,
-        help="Maximum image width used for OCR in the label detection zone (default: 720)",
+        default=1080,
+        help="Maximum image width used for OCR in the label detection zone (default: 1080)",
     )
     parser.add_argument(
         "--label_min_display_duration",

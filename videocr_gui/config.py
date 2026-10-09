@@ -186,7 +186,7 @@ def get_default_settings() -> dict[str, Any]:
         "enable_label_detection": False,
         "--label_time_start": "",
         "--label_time_end": "",
-        "--label_ocr_image_max_width": "720",
+        "--label_ocr_image_max_width": "1080",
         "--label_min_display_duration": "1.0",
         "--label_min_confirmation_frames": "2",
         "--label_reappear_merge_gap": "2.0",

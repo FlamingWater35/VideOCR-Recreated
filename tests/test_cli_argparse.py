@@ -216,6 +216,7 @@ class TestMainFlagMapping:
         assert kwargs["crop_zones"] == []
         assert kwargs["subtitle_alignments"] == [None, None]
         assert kwargs["use_gpu"] is False
+        assert kwargs["label_ocr_image_max_width"] == 1080
 
     @pytest.mark.parametrize(
         "engine", ["paddleocr", "google_lens", "easyocr_directml", "onnx_directml"]

@@ -291,6 +291,21 @@ class TestSettingsTab:
         tab._update_dependent_states()
         assert tab._widgets["--directml_performance_preset"].isEnabled()
 
+    def test_output_dir_disabled_when_saving_in_video_dir(self, tab, languages):
+        settings = get_default_settings()
+        settings["--save_in_video_dir"] = True
+        tab.populate(settings, languages)
+        out_dir = tab._widgets["--default_output_dir"]
+        assert not out_dir.isEnabled()
+        assert not tab.browse_output_btn.isEnabled()
+
+        save_check = tab._widgets["--save_in_video_dir"]
+        assert isinstance(save_check, QCheckBox)
+        save_check.setChecked(False)
+        tab._update_dependent_states()
+        assert out_dir.isEnabled()
+        assert tab.browse_output_btn.isEnabled()
+
     @pytest.mark.parametrize(
         ("variant", "cuda_ok", "dml_ok"),
         [
