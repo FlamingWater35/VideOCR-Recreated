@@ -6,14 +6,13 @@ almost verbatim; the PySimpleGUI ``Graph`` is replaced by a QGraphicsView scene.
 
 from __future__ import annotations
 
-import io
-import time
+import threading
+from concurrent.futures import Future, ThreadPoolExecutor
 from typing import Any, cast
 
 import av
 import numpy as np
-from PIL import Image
-from PySide6.QtCore import QPointF, QRectF, Qt, QTimer, Signal
+from PySide6.QtCore import QPointF, QRectF, Qt, Signal
 from PySide6.QtGui import QBrush, QColor, QImage, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import (
     QGraphicsItem,
@@ -54,6 +53,10 @@ class VideoHandler:
 
         self._supports_threads = True
 
+        # Guards container/stream state: frames are decoded on the preview's
+        # background worker while open()/close() are called from the UI thread.
+        self._lock = threading.RLock()
+
     def _frame_to_array(self, frame: av.VideoFrame, fmt: str) -> np.ndarray[Any, Any]:
         if self._supports_threads:
             try:
@@ -90,138 +93,154 @@ class VideoHandler:
         self.last_display_size = display_size
 
     def open(self, path: str) -> dict[str, int]:
-        if self.path == path and self.container:
-            return self._get_cached_properties()
+        with self._lock:
+            if self.path == path and self.container:
+                return self._get_cached_properties()
 
-        self.close()
-        try:
-            self.container = av.open(path)
-            self.stream = self.container.streams.video[0]
-            self.stream.thread_type = "FRAME"
-            self.path = path
-            self.width = int(self.stream.width)
-            self.height = int(self.stream.height)
-            self.newly_opened = True
-
-            if self.container.duration is not None:
-                self.duration_ms = int(self.container.duration / 1000.0)
-            elif self.stream.duration is not None and self.stream.time_base is not None:
-                self.duration_ms = int(
-                    self.stream.duration * float(self.stream.time_base) * 1000.0
-                )
-
-            return self._get_cached_properties()
-        except Exception as e:
-            log_error(f"VideoHandler Open Error: {e}")
             self.close()
-            return {"width": 0, "height": 0, "duration_ms": 0}
+            try:
+                self.container = av.open(path)
+                self.stream = self.container.streams.video[0]
+                self.stream.thread_type = "FRAME"
+                self.path = path
+                self.width = int(self.stream.width)
+                self.height = int(self.stream.height)
+                self.newly_opened = True
+
+                if self.container.duration is not None:
+                    self.duration_ms = int(self.container.duration / 1000.0)
+                elif self.stream.duration is not None and self.stream.time_base is not None:
+                    self.duration_ms = int(
+                        self.stream.duration * float(self.stream.time_base) * 1000.0
+                    )
+
+                return self._get_cached_properties()
+            except Exception as e:
+                log_error(f"VideoHandler Open Error: {e}")
+                self.close()
+                return {"width": 0, "height": 0, "duration_ms": 0}
 
     def get_frame(
         self,
         timestamp_ms: float,
         display_size: tuple[int, int],
         brightness_threshold: int | None = None,
-    ) -> tuple[io.BytesIO | None, int, int, int, int]:
-        """Seeks or decodes forward to provide a frame at the requested timestamp."""
-        if not self.container or not self.stream:
-            return None, 0, 0, 0, 0
+    ) -> tuple[QImage | None, int, int, int, int]:
+        """Seeks or decodes forward to provide a frame at the requested timestamp.
 
-        try:
-            if self.stream.time_base is None:
-                raise ValueError("Stream time_base is None")
-
-            tb = float(self.stream.time_base)
-            container_start_ms = (
-                (self.container.start_time / 1000.0)
-                if self.container.start_time is not None
-                else 0.0
-            )
-            target_ms = timestamp_ms + container_start_ms
-            target_pts = int(target_ms / 1000.0 / tb)
-            seek_threshold = int(1.5 / tb)
-
-            should_seek = True
-            if self.newly_opened and timestamp_ms == 0:
-                should_seek = False
-            elif self.last_pts is not None:
-                if self.last_pts <= target_pts <= (self.last_pts + seek_threshold):
-                    should_seek = False
-
-            self.newly_opened = False
-
-            if should_seek:
-                try:
-                    self.container.seek(target_pts, stream=self.stream)
-                    self.last_pts = None
-                except Exception as e:
-                    if target_pts <= 0 and getattr(e, "errno", None) == 1:
-                        saved_path = self.path
-                        self.close()
-                        if saved_path:
-                            self.open(saved_path)
-                        self.newly_opened = False
-                    else:
-                        raise
-
-            frame: av.VideoFrame | None = None
-            for f in self.container.decode(self.stream):
-                if f.pts is not None and f.pts >= target_pts:
-                    frame = f
-                    self.last_pts = f.pts
-                    break
-
-            if not frame:
+        Returns ``(image, resized_w, resized_h, off_x, off_y)``. The frame is
+        returned as a QImage (safe off the UI thread; only QPixmap is not), so
+        callers skip a PNG encode/decode roundtrip per seek.
+        """
+        with self._lock:
+            if not self.container or not self.stream:
                 return None, 0, 0, 0, 0
 
-            if self.graph is None or self.last_display_size != display_size:
-                self._setup_filter_graph(frame, display_size)
+            try:
+                if self.stream.time_base is None:
+                    raise ValueError("Stream time_base is None")
 
-            off_x = (display_size[0] - self.current_new_w) // 2
-            off_y = (display_size[1] - self.current_new_h) // 2
+                tb = float(self.stream.time_base)
+                container_start_ms = (
+                    (self.container.start_time / 1000.0)
+                    if self.container.start_time is not None
+                    else 0.0
+                )
+                target_ms = timestamp_ms + container_start_ms
+                target_pts = int(target_ms / 1000.0 / tb)
+                seek_threshold = int(1.5 / tb)
 
-            self.buffer_node.push(frame)
-            processed_frame: av.VideoFrame = self.sink_node.pull()
+                should_seek = True
+                if self.newly_opened and timestamp_ms == 0:
+                    should_seek = False
+                elif self.last_pts is not None:
+                    if self.last_pts <= target_pts <= (self.last_pts + seek_threshold):
+                        should_seek = False
 
-            img_np = self._frame_to_array(processed_frame, fmt="rgb24")
+                self.newly_opened = False
 
-            if brightness_threshold is not None:
-                gray = (
-                    (
-                        img_np[..., 0].astype(np.uint16) * 77
-                        + img_np[..., 1].astype(np.uint16) * 150
-                        + img_np[..., 2].astype(np.uint16) * 29
-                    )
-                    >> 8
-                ).astype(np.uint8)
-                mask = gray > brightness_threshold
-                img_np *= mask[..., None]
+                if should_seek:
+                    try:
+                        self.container.seek(target_pts, stream=self.stream)
+                        self.last_pts = None
+                    except Exception as e:
+                        if target_pts <= 0 and getattr(e, "errno", None) == 1:
+                            saved_path = self.path
+                            self.close()
+                            if saved_path:
+                                self.open(saved_path)
+                            self.newly_opened = False
+                        else:
+                            raise
 
-            pil_img = Image.fromarray(img_np)
-            img_byte_arr = io.BytesIO()
-            pil_img.save(img_byte_arr, format="PNG")
+                frame: av.VideoFrame | None = None
+                for f in self.container.decode(self.stream):
+                    if f.pts is not None and f.pts >= target_pts:
+                        frame = f
+                        self.last_pts = f.pts
+                        break
 
-            return (
-                io.BytesIO(img_byte_arr.getvalue()),
-                self.current_new_w,
-                self.current_new_h,
-                off_x,
-                off_y,
-            )
-        except Exception as e:
-            log_error(f"VideoHandler Seek Error: {e}")
-            return None, 0, 0, 0, 0
+                if not frame:
+                    return None, 0, 0, 0, 0
+
+                if self.graph is None or self.last_display_size != display_size:
+                    self._setup_filter_graph(frame, display_size)
+
+                off_x = (display_size[0] - self.current_new_w) // 2
+                off_y = (display_size[1] - self.current_new_h) // 2
+
+                self.buffer_node.push(frame)
+                processed_frame: av.VideoFrame = self.sink_node.pull()
+
+                img_np = self._frame_to_array(processed_frame, fmt="rgb24")
+
+                if brightness_threshold is not None:
+                    gray = (
+                        (
+                            img_np[..., 0].astype(np.uint16) * 77
+                            + img_np[..., 1].astype(np.uint16) * 150
+                            + img_np[..., 2].astype(np.uint16) * 29
+                        )
+                        >> 8
+                    ).astype(np.uint8)
+                    mask = gray > brightness_threshold
+                    img_np *= mask[..., None]
+
+                # rgb24 → QImage; the ndarray can carry padded (non-contiguous)
+                # scanlines, which QImage's buffer constructor rejects —
+                # ascontiguousarray copies only in that case.
+                img_np = np.ascontiguousarray(img_np)
+                image = QImage(
+                    img_np.data,
+                    img_np.shape[1],
+                    img_np.shape[0],
+                    int(img_np.strides[0]),
+                    QImage.Format.Format_RGB888,
+                ).copy()
+
+                return (
+                    image,
+                    self.current_new_w,
+                    self.current_new_h,
+                    off_x,
+                    off_y,
+                )
+            except Exception as e:
+                log_error(f"VideoHandler Seek Error: {e}")
+                return None, 0, 0, 0, 0
 
     def close(self) -> None:
-        if self.container:
-            self.container.close()
-        self.container = self.stream = self.path = self.graph = self.buffer_node = (
-            self.sink_node
-        ) = None
-        self.width = self.height = 0
-        self.duration_ms = 0
-        self.last_pts = None
-        self.last_display_size = (0, 0)
-        self.current_new_w = self.current_new_h = 0
+        with self._lock:
+            if self.container:
+                self.container.close()
+            self.container = self.stream = self.path = self.graph = (
+                self.buffer_node
+            ) = self.sink_node = None
+            self.width = self.height = 0
+            self.duration_ms = 0
+            self.last_pts = None
+            self.last_display_size = (0, 0)
+            self.current_new_w = self.current_new_h = 0
 
 
 # --- Crop box overlay -----------------------------------------------------------
@@ -500,6 +519,9 @@ class VideoPreview(QWidget):
     crop_changed = Signal(list)
     frame_loaded = Signal(str, int)
     video_error = Signal(str)
+    # Internal: (video_gen, display_size, image, w, h, off_x, off_y) emitted
+    # from the decode worker and delivered on the UI thread (queued).
+    frame_decoded = Signal(object)
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
@@ -507,7 +529,6 @@ class VideoPreview(QWidget):
         self._display_size = (720, 405)
         self._current_pixmap: QPixmap | None = None
         self._pixmap_item: QGraphicsPixmapItem | None = None
-        self._image_bytes: bytes | None = None
         self._offset_x = 0
         self._offset_y = 0
         self._resized_w = 0
@@ -522,16 +543,21 @@ class VideoPreview(QWidget):
         self._dual_zone = False
         self._max_boxes = 1
 
-        # Interactive-seek throttling: coalesce rapid seeks (slider drags) so
-        # only the latest target is decoded, at most once per interval. Keeps
-        # seeking responsive on long videos instead of decoding every pixel.
-        self._seek_interval_s = 0.04
+        # Interactive seeking: decode on a background worker with latest-wins
+        # coalescing. Fast seeks (slider drags / key repeat) on long videos
+        # used to decode synchronously on the UI thread, freezing the whole
+        # window; now at most one decode runs at a time and only the newest
+        # pending target is decoded when it finishes.
+        self._decode_pool = ThreadPoolExecutor(
+            max_workers=1, thread_name_prefix="preview-decode"
+        )
+        self._decode_busy = False
         self._pending_seek_ms: float | None = None
-        self._last_seek_mono = 0.0
-        self._seek_timer = QTimer(self)
-        self._seek_timer.setSingleShot(True)
-        self._seek_timer.setInterval(int(self._seek_interval_s * 1000))
-        self._seek_timer.timeout.connect(self._flush_pending_seek)
+        # Bumped when the video changes so results from an in-flight decode of
+        # the previous video are dropped instead of displayed.
+        self._video_gen = 0
+        # Cross-thread: emitted from the worker, delivered on the UI thread.
+        self.frame_decoded.connect(self._on_frame_ready)
 
         self._scene = QGraphicsScene(self)
         self._view = PreviewView(self, self._scene)
@@ -582,6 +608,7 @@ class VideoPreview(QWidget):
         if props["width"] == 0 or props["height"] == 0 or props["duration_ms"] <= 0:
             self.video_error.emit(path)
             return False
+        self._video_gen += 1
         self._orig_w = props["width"]
         self._orig_h = props["height"]
         self._duration_ms = props["duration_ms"]
@@ -593,34 +620,109 @@ class VideoPreview(QWidget):
         return True
 
     def show_frame(self, timestamp_ms: float) -> None:
+        """Requests a frame at ``timestamp_ms``; decoding is asynchronous.
+
+        The decode runs on a background worker so seeking never blocks the UI
+        thread. Rapid requests (slider drags) coalesce: while a decode is in
+        flight only the newest target is kept, and it starts as soon as the
+        current decode finishes.
+        """
         self._current_ms = float(timestamp_ms)
         size = self._view.viewport().size()
         if size.width() > 20 and size.height() > 20:
             self._display_size = (size.width(), size.height())
-        img_bytes, w, h, off_x, off_y = self.handler.get_frame(
-            self._current_ms, self._display_size, brightness_threshold=self._brightness
-        )
-        if img_bytes is None:
+        # Apply the display geometry right away so crop-box mapping works
+        # before the first frame lands (app._on_frame_loaded restores boxes
+        # as soon as frame_loaded fires).
+        self._apply_display_geometry(self._display_size)
+        self._pending_seek_ms = float(timestamp_ms)
+        if not self._decode_busy:
+            self._start_decode()
+
+    def _apply_display_geometry(self, display_size: tuple[int, int]) -> None:
+        """Sets resized/offset geometry for ``display_size``.
+
+        Mirrors ``VideoHandler._setup_filter_graph``'s scaling so callers can
+        rely on valid geometry before an async frame is displayed.
+        """
+        if self._orig_w <= 0 or self._orig_h <= 0:
             return
-        self._image_bytes = img_bytes.getvalue()
+        scale = min(display_size[0] / self._orig_w, display_size[1] / self._orig_h)
+        self._resized_w = int(self._orig_w * scale) & ~1
+        self._resized_h = int(self._orig_h * scale) & ~1
+        self._offset_x = (display_size[0] - self._resized_w) // 2
+        self._offset_y = (display_size[1] - self._resized_h) // 2
+
+    def _start_decode(self) -> None:
+        """Submits the pending target to the decode worker (single-flight)."""
+        if self._pending_seek_ms is None:
+            return
+        ms = self._pending_seek_ms
+        self._pending_seek_ms = None
+        self._decode_busy = True
+        gen = self._video_gen
+        display_size = self._display_size
+        brightness = self._brightness
+
+        def job() -> tuple[Any, ...]:
+            result = self.handler.get_frame(
+                ms, display_size, brightness_threshold=brightness
+            )
+            return (gen, display_size) + result
+
+        self._decode_pool.submit(job).add_done_callback(self._decode_finished)
+
+    def _decode_finished(self, future: Future[tuple[Any, ...]]) -> None:
+        # Worker thread: hand the result to the UI thread for display.
+        try:
+            payload = future.result()
+        except Exception as exc:
+            log_error(f"VideoPreview decode error: {exc}")
+            payload = (self._video_gen, self._display_size, None, 0, 0, 0, 0)
+        self.frame_decoded.emit(payload)
+
+    def _on_frame_ready(self, payload: Any) -> None:
+        gen, display_size, image, w, h, off_x, off_y = payload
+        self._decode_busy = False
+        if gen == self._video_gen and isinstance(image, QImage):
+            self._display_frame(image, w, h, off_x, off_y, display_size)
+        if self._pending_seek_ms is not None:
+            self._start_decode()
+
+    def _display_frame(
+        self,
+        image: QImage,
+        w: int,
+        h: int,
+        off_x: int,
+        off_y: int,
+        display_size: tuple[int, int],
+    ) -> None:
         self._resized_w, self._resized_h = w, h
         self._offset_x, self._offset_y = off_x, off_y
-
-        image = QImage.fromData(self._image_bytes, "PNG")
         self._current_pixmap = QPixmap.fromImage(image)
-        self._scene.clear()
-        self._pixmap_item = self._scene.addPixmap(self._current_pixmap)
-        self._pixmap_item.setPos(self._offset_x, self._offset_y)
-        self._scene.setSceneRect(0, 0, self._display_size[0], self._display_size[1])
-        self._view.setScene(self._scene)
+        item = self._pixmap_item
+        if item is None:
+            item = self._scene.addPixmap(self._current_pixmap)
+            self._pixmap_item = item
+        else:
+            # Reuse the item: clear()/re-add churned the whole scene
+            # (pixmap + crop boxes) on every decoded frame.
+            item.setPixmap(self._current_pixmap)
+        item.setPos(off_x, off_y)
+        self._scene.setSceneRect(0, 0, display_size[0], display_size[1])
         self._redraw_boxes()
 
     def resizeEvent(self, event) -> None:  # noqa: N802
         super().resizeEvent(event)
-        if self._current_pixmap is not None:
+        # Re-render at the new size; also fires while the first frame is still
+        # decoding, so the pending request picks up the fresh display size.
+        if self._orig_w > 0:
             self.show_frame(self._current_ms)
 
     def clear(self) -> None:
+        self._video_gen += 1
+        self._pending_seek_ms = None
         self.handler.close()
         self._scene.clear()
         self._pixmap_item = None
@@ -628,6 +730,13 @@ class VideoPreview(QWidget):
         self._crop_boxes = []
         self._orig_w = self._orig_h = self._duration_ms = 0
         self._current_ms = 0.0
+
+    def shutdown(self) -> None:
+        """Releases the video and decode worker (called on app exit)."""
+        self._video_gen += 1
+        self._pending_seek_ms = None
+        self._decode_pool.shutdown(wait=False)
+        self.handler.close()
 
     # --- crop boxes ----------------------------------------------------------
 
@@ -867,28 +976,7 @@ class VideoPreview(QWidget):
         self._center_last_crop_box(horizontal=False, vertical=True)
 
     def seek_to(self, ms: float) -> None:
-        """Seeks to a timestamp, throttled for responsiveness on long videos.
-
-        The first seek in a burst decodes immediately (snappy keyboard/click
-        navigation). Rapid subsequent seeks (slider drags) are coalesced: only
-        the latest target is decoded, at most once per ``_seek_interval_s``,
-        so intermediate positions are dropped instead of queued one-by-one.
-        """
-        self._current_ms = float(ms)
-        self._pending_seek_ms = float(ms)
-        now = time.monotonic()
-        if now - self._last_seek_mono >= self._seek_interval_s:
-            self._flush_pending_seek()
-        elif not self._seek_timer.isActive():
-            self._seek_timer.start()
-
-    def _flush_pending_seek(self) -> None:
-        self._seek_timer.stop()
-        if self._pending_seek_ms is None:
-            return
-        ms = self._pending_seek_ms
-        self._pending_seek_ms = None
-        self._last_seek_mono = time.monotonic()
+        """Seeks to a timestamp (async; see ``show_frame`` for coalescing)."""
         self.show_frame(ms)
 
     def _video_bounds(self) -> QRectF:

@@ -149,6 +149,24 @@ QSS theme.
   *replaces* the selection, so restoring a multi-row selection after
   reorder/edit used to keep only the last row.
 
+## Preview seek responsiveness (new behavior)
+
+- Frame decoding runs on a single background worker (`ThreadPoolExecutor`,
+  `VideoPreview._decode_pool`) with latest-wins coalescing: at most one decode
+  is in flight and only the newest pending target runs next. Fast seeks (slider
+  drags, key repeat) on long videos no longer block the UI thread per target —
+  `seek_to()` only records the target (~0.1 ms) and the frame arrives async via
+  the `frame_decoded` signal (queued worker → UI thread).
+- `VideoHandler` returns a `QImage` straight from the rgb24 ndarray instead of
+  a PIL PNG roundtrip, and the pixmap item is updated in place instead of
+  `scene.clear()`/re-add per frame.
+- `VideoHandler` methods are lock-guarded (decode on the worker vs.
+  `open()`/`close()` on the UI thread); a generation counter drops frames of a
+  video that has since been switched or cleared.
+- Display geometry (scaled size + offsets) is applied at request time so
+  crop-box restore in `app._on_frame_loaded` works before the first async frame
+  lands.
+
 ## GUI↔CLI testing contract
 
 - The suite lives in `tests/` (repo root) and runs Qt offscreen
@@ -225,6 +243,7 @@ videocr_gui/
   progress.py      CLI progress/ETA parsing (ported handle_progress logic)
   dialogs.py       centered modal dialogs + post-action countdown
   video_preview.py PyAV VideoHandler port + QGraphicsView crop canvas
+                        + async single-flight seek/decode worker
   workers.py       videocr-cli subprocess worker (QThread) + kill/pause helpers
   settings_tab.py  Advanced Settings tab widget
   queue_tab.py     Queue tab widget

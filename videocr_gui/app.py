@@ -1661,6 +1661,6 @@ class MainWindow(QMainWindow):
         if self._crop_save_timer.isActive():
             self._crop_save_timer.stop()
             self._flush_crop_boxes()
-        self.preview.handler.close()
+        self.preview.shutdown()
         config.save_settings(self._settings)
         super().closeEvent(event)

@@ -93,6 +93,38 @@ class TestVideoDecoding:
         assert info["height"] == 1608
         handler.close()
 
+    def test_gui_video_handler_get_frame(self, qtbot, test_video):
+        from PySide6.QtGui import QImage
+
+        from videocr_gui.video_preview import VideoHandler
+
+        handler = VideoHandler()
+        try:
+            handler.open(str(test_video))
+            image, w, h, off_x, off_y = handler.get_frame(0.0, (720, 405))
+            assert isinstance(image, QImage)
+            assert not image.isNull()
+            assert (image.width(), image.height()) == (w, h)
+            assert off_x >= 0 and off_y >= 0
+        finally:
+            handler.close()
+
+    def test_gui_preview_displays_first_frame(self, qtbot, test_video):
+        from videocr_gui.video_preview import VideoPreview
+
+        preview = VideoPreview()
+        try:
+            assert preview.load_video(str(test_video))
+            # First frame decodes on the background worker and must land on
+            # the scene via the async display path.
+            qtbot.waitUntil(
+                lambda: preview._current_pixmap is not None, timeout=5000
+            )
+            assert preview._pixmap_item is not None
+            assert preview.duration_ms > 0
+        finally:
+            preview.shutdown()
+
 
 class TestCliHelp:
     def test_cli_help_via_source_script(self, test_video):
