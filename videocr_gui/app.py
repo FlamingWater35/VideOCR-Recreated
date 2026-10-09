@@ -128,6 +128,7 @@ class MainWindow(QMainWindow):
         self._init_taskbar()
         self._apply_settings_to_ui()
         self._resize_to_work_area()
+        self._restore_window_state()
 
     # --- UI construction ----------------------------------------------------
     def _build_ui(self) -> None:
@@ -267,7 +268,9 @@ class MainWindow(QMainWindow):
         self.center_h_btn.setIcon(resources.center_horizontal_icon())
         self.center_h_btn.setIconSize(QSize(16, 16))
         self.center_h_btn.setFixedSize(30, 30)
-        self.center_h_btn.setToolTip(i18n.tr("btn_center_crop_h", "Center Horizontally"))
+        self.center_h_btn.setToolTip(
+            i18n.tr("btn_center_crop_h", "Center Horizontally")
+        )
         self.center_h_btn.setEnabled(False)
         self.center_h_btn.clicked.connect(self.preview.center_last_crop_box_horizontal)
         self.center_v_btn = QPushButton()
@@ -585,7 +588,9 @@ class MainWindow(QMainWindow):
         self.info_btn.setText(i18n.tr("btn_info", "Info"))
         self.help_btn.setText(i18n.tr("btn_how_to_use", "How to Use"))
         self.center_crop_btn.setToolTip(i18n.tr("btn_center_crop", "Center Crop Box"))
-        self.center_h_btn.setToolTip(i18n.tr("btn_center_crop_h", "Center Horizontally"))
+        self.center_h_btn.setToolTip(
+            i18n.tr("btn_center_crop_h", "Center Horizontally")
+        )
         self.center_v_btn.setToolTip(i18n.tr("btn_center_crop_v", "Center Vertically"))
         self.clear_crop_btn.setText(i18n.tr("btn_clear_crop", "Clear Crop"))
         self.run_btn.setText(i18n.tr("btn_run", "Run"))
@@ -601,10 +606,23 @@ class MainWindow(QMainWindow):
     def _resize_to_work_area(self) -> None:
         screen = self.screen()
         if screen is None:
-            self.resize(1000, 720)
+            self.resize(1000, 850)
             return
         avail = screen.availableGeometry()
-        self.resize(min(1000, avail.width() - 40), min(760, avail.height() - 40))
+        self.resize(min(1000, avail.width() - 40), min(850, avail.height() - 40))
+
+    def _restore_window_state(self) -> None:
+        """Re-applies the window state saved at the previous exit."""
+        state = str(self._settings.get("window_state", "normal"))
+        if state == "fullscreen":
+            flags = self.windowState() | Qt.WindowState.WindowFullScreen
+        elif state == "maximized":
+            flags = self.windowState() | Qt.WindowState.WindowMaximized
+        else:
+            return
+        # setWindowState() (unlike showFullScreen()) does not show the widget,
+        # so the window still only appears when the caller calls show().
+        self.setWindowState(flags)
 
     # --- source / output ------------------------------------------------------
     def _open_file(self) -> None:
@@ -1686,6 +1704,14 @@ class MainWindow(QMainWindow):
         if self._crop_save_timer.isActive():
             self._crop_save_timer.stop()
             self._flush_crop_boxes()
+        # record the window state so fullscreen/maximized survives a restart
+        window_state = self.windowState()
+        if window_state & Qt.WindowState.WindowFullScreen:
+            self._settings["window_state"] = "fullscreen"
+        elif window_state & Qt.WindowState.WindowMaximized:
+            self._settings["window_state"] = "maximized"
+        else:
+            self._settings["window_state"] = "normal"
         self.preview.shutdown()
         config.save_settings(self._settings)
         super().closeEvent(event)

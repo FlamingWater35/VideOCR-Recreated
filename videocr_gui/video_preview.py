@@ -755,6 +755,13 @@ class VideoPreview(QWidget):
         video_bounds = self._video_bounds()
 
         for box in self._crop_boxes:
+            coords = box.get("coords")
+            if coords:
+                # img_points are in resized-display space and go stale whenever
+                # the preview is resized (window resize / fullscreen toggle).
+                # Re-derive them from the absolute video coords, which are the
+                # stable source of truth, so the box stays put over the video.
+                box["img_points"] = self._make_box(coords)["img_points"]
             (x1, y1), (x2, y2) = box["img_points"]
             rect = QRectF(
                 min(x1, x2) + self._offset_x,

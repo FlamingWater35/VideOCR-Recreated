@@ -182,6 +182,8 @@ def get_default_settings() -> dict[str, Any]:
         "prevent_system_sleep": True,
         "--normalize_to_simplified_chinese": True,
         "gui_scaling": C.DEFAULT_GUI_SCALING,
+        # Window state: "normal" | "maximized" | "fullscreen"
+        "window_state": "normal",
         # Label detection (text outside the subtitle crop, e.g. names)
         "enable_label_detection": False,
         "--label_time_start": "",

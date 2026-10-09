@@ -11,6 +11,7 @@ import sys
 from typing import Any
 
 import pytest
+from PySide6.QtCore import QRect, Qt
 from PySide6.QtWidgets import QApplication
 
 from videocr_gui import app as app_module
@@ -68,6 +69,69 @@ class TestMainWindowConstruction:
         win.show()
         win.close()
         assert not win.isVisible()
+
+    def test_default_size_is_1000x850_on_large_screen(self, qtbot, settings):
+        win = MainWindow(settings=settings)
+        qtbot.addWidget(win)
+
+        class _LargeScreen:
+            def availableGeometry(self):
+                return QRect(0, 0, 2560, 1440)
+
+        win.screen = lambda: _LargeScreen()  # type: ignore[method-assign]
+        win._resize_to_work_area()
+        assert (win.width(), win.height()) == (1000, 850)
+
+
+class TestWindowStatePersistence:
+    """Fullscreen/maximized status is saved at exit and restored at start.
+
+    The offscreen test platform has an 800x800 screen — smaller than the
+    window's ~1136 px minimum width — so Qt drops a pre-show fullscreen
+    request there (a real screen honors it). Fullscreen is therefore asserted
+    on the state applied while hidden, and entered *after* show() for the
+    save path.
+    """
+
+    @pytest.mark.parametrize("state", ["maximized", "normal"])
+    def test_state_saved_on_close(self, qtbot, settings, state):
+        settings["window_state"] = state
+        win = MainWindow(settings=settings)
+        qtbot.addWidget(win)
+        win.show()
+        win.close()
+        assert config.load_settings()["window_state"] == state
+
+    def test_fullscreen_survives_restart(self, qtbot, settings):
+        # Session 1: the user closes the window while fullscreen.
+        win = MainWindow(settings=settings)
+        qtbot.addWidget(win)
+        win.show()
+        win.setWindowState(win.windowState() | Qt.WindowState.WindowFullScreen)
+        win.close()
+        assert config.load_settings()["window_state"] == "fullscreen"
+
+        # Session 2: a fresh window built from the saved config is put back
+        # into fullscreen before it is shown.
+        win2 = MainWindow(settings=config.load_settings())
+        qtbot.addWidget(win2)
+        assert win2.windowState() & Qt.WindowState.WindowFullScreen
+        win2.close()
+
+    def test_maximized_restored_on_start(self, qtbot, settings):
+        settings["window_state"] = "maximized"
+        win = MainWindow(settings=settings)
+        qtbot.addWidget(win)
+        win.show()
+        assert win.isMaximized()
+
+    def test_normal_start_leaves_window_unmaximized(self, qtbot, settings):
+        settings["window_state"] = "normal"
+        win = MainWindow(settings=settings)
+        qtbot.addWidget(win)
+        win.show()
+        assert not win.isMaximized()
+        assert not win.isFullScreen()
 
 
 class TestStaticHelpers:
