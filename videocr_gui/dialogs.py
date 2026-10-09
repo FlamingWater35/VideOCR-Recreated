@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QPushButton,
+    QScrollArea,
     QVBoxLayout,
 )
 
@@ -22,7 +23,15 @@ def _setup_dialog(dialog: QDialog, parent: object | None = None) -> None:
 
 
 class InfoDialog(QDialog):
-    """Simple centered info dialog with an OK button."""
+    """Centered info dialog with an OK button.
+
+    Long messages (e.g. the How to Use guide) are capped in height and put in
+    a scroll area so the dialog never grows taller than the screen.
+    """
+
+    #: Messages longer than this get a scrollable, height-capped body.
+    SCROLL_THRESHOLD = 800
+    MAX_BODY_HEIGHT = 520
 
     def __init__(self, title: str, message: str, parent=None) -> None:
         super().__init__(parent)
@@ -32,8 +41,23 @@ class InfoDialog(QDialog):
         layout.setSpacing(16)
         label = QLabel(message)
         label.setWordWrap(True)
+        # Cap the preferred width so wrapped lines actually wrap instead of
+        # stretching the dialog to the unwrapped single-line width.
+        label.setMaximumWidth(660)
         label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
-        layout.addWidget(label)
+        if len(message) > self.SCROLL_THRESHOLD:
+            scroll = QScrollArea()
+            scroll.setWidgetResizable(True)
+            scroll.setFrameShape(QScrollArea.Shape.NoFrame)
+            scroll.setWidget(label)
+            # QScrollArea's own sizeHint is tiny; size it to the wrapped
+            # content (capped) so the dialog grows to a readable height.
+            content_height = label.sizeHint().height()
+            scroll.setMinimumHeight(min(self.MAX_BODY_HEIGHT, content_height))
+            scroll.setMaximumHeight(self.MAX_BODY_HEIGHT)
+            layout.addWidget(scroll)
+        else:
+            layout.addWidget(label)
 
         box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok)
         box.accepted.connect(self.accept)

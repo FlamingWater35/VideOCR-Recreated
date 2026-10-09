@@ -441,6 +441,17 @@ class TestDialogs:
         assert dlg.isModal()
         dlg.close()
 
+    def test_info_dialog_scrolls_long_messages(self):
+        from PySide6.QtWidgets import QScrollArea
+
+        long_dlg = dialogs.InfoDialog("How to Use", "x" * 3000)
+        assert long_dlg.findChild(QScrollArea) is not None
+        long_dlg.close()
+
+        short_dlg = dialogs.InfoDialog("t", "short message")
+        assert short_dlg.findChild(QScrollArea) is None
+        short_dlg.close()
+
 
 class TestResources:
     def test_icon_path_is_string(self):

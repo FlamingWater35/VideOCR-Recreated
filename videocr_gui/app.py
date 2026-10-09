@@ -58,6 +58,38 @@ else:
     except Exception:  # pragma: no cover
         notification = None
 
+#: English source of the "How to Use" guide; languages/*.json provide
+#: translations (keep help_message in en.json identical to this string).
+_HELP_MESSAGE = """\
+BASICS
+- Open a video with "Open File..."; "Open Folder..." loads every video in a folder so you can switch in the Source box.
+- The preview does not play video or audio - it shows the frame you seek to, so use it to find where subtitles appear.
+- Pick the OCR engine (the "Info" button explains each one), subtitle language and position, draw a crop box (below), then press Run.
+
+KEYBOARD & SEEK
+- Left / Right arrow keys: step backward / forward by the "Keyboard Seek Step" amount (Advanced Settings tab; default 1 second).
+- Seek bar: click or drag anywhere on it to jump to that position.
+- "Time" shows the current position / total duration.
+
+CROPPING
+- Click + drag on the preview to draw a crop box over the subtitle region; drag inside it to move, drag its handles to resize.
+- The icon buttons next to the coordinates center the box horizontally, vertically or both; "Clear Crop" removes it.
+- Tick "Enable Dual Zone OCR" (Advanced Settings) to draw two boxes, e.g. for top and bottom subtitles.
+- With no crop box, the bottom third of the video is OCR'd by default.
+- With "Save Crop Box Selection" enabled (Advanced Settings), boxes are remembered for the next video and session.
+
+RUNNING & QUEUE
+- While a job runs you can Pause / Resume or Cancel; progress and ETA show below the preview.
+- When jobs are queued, Run becomes "Start Queue" and processes them in order; add jobs with "Add to Queue" / "Add All to Queue" and manage them in the Queue tab.
+- "When ready" runs a chosen action (sleep, shutdown, ...) after completion, with a 60-second countdown you can cancel.
+
+OUTPUT
+- "Save As..." picks the output file for this run; otherwise the path follows the output settings.
+- While "Save Subtitle File in Video Directory" is enabled, subtitles are written next to the video and the Output Directory setting is ignored.
+- File name: <video name>.<language code>.srt - existing files are never overwritten; " (1)", " (2)" ... is appended instead.
+- With Label Detection enabled (Advanced Settings) the output becomes .ass so detected labels keep their on-screen positions.\
+"""
+
 
 class MainWindow(QMainWindow):
     def __init__(self, settings: dict[str, Any] | None = None) -> None:
@@ -964,15 +996,8 @@ class MainWindow(QMainWindow):
     def _show_help(self) -> None:
         info(
             self,
-            i18n.tr("help_title", "Cropping Info"),
-            i18n.tr(
-                "help_message",
-                "Draw a crop box over the subtitle region in the video.\n"
-                "Use click+drag to select.\n"
-                "In 'Dual Zone' mode, you can draw two crop boxes.\n"
-                "If no crop box is selected, the bottom third of the video\n"
-                "will be used for OCR by default.",
-            ),
+            i18n.tr("help_title", "How to Use"),
+            i18n.tr("help_message", _HELP_MESSAGE),
         )
 
     # --- queue ----------------------------------------------------------------

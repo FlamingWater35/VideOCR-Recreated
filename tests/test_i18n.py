@@ -96,6 +96,43 @@ class TestLoadLanguage:
         assert any("Syntax error in language file" in m for m in _error_log)
 
 
+class TestHelpMessage:
+    """The How to Use guide: present in every language, keybinds documented."""
+
+    @staticmethod
+    def _load(code: str) -> dict:
+        return json.loads(
+            (LANGUAGES_DIR / f"{code}.json").read_text(encoding="utf-8")
+        )
+
+    @pytest.mark.parametrize("code", sorted(EXPECTED_LANGUAGES))
+    def test_help_keys_present_and_substantial(self, code):
+        data = self._load(code)
+        assert data.get("help_title", "").strip()
+        # The guide is a full quick-start (sections + keybinds), not a stub.
+        assert len(data.get("help_message", "")) > 500
+
+    @pytest.mark.parametrize("code", sorted(EXPECTED_LANGUAGES))
+    def test_no_unsubstituted_placeholders(self, code):
+        # help_message is built from {ui_label} templates; a leftover brace
+        # means a template key was not substituted for this language.
+        message = self._load(code)["help_message"]
+        assert "{" not in message and "}" not in message
+
+    def test_english_help_matches_app_fallback(self):
+        from videocr_gui.app import _HELP_MESSAGE
+
+        data = self._load("en")
+        assert data["help_message"] == _HELP_MESSAGE
+        assert data["help_title"] == "How to Use"
+
+    def test_english_help_documents_keybinds_and_seeking(self):
+        message = self._load("en")["help_message"]
+        assert "Left / Right arrow keys" in message
+        assert "Keyboard Seek Step" in message
+        assert "Seek bar: click or drag" in message
+
+
 class TestTranslate:
     def test_key_from_loaded_language(self):
         i18n.load_language("en")
