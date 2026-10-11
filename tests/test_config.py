@@ -50,6 +50,8 @@ class TestDefaults:
             "--label_ssim_dedup": True,
             "--label_hash_threshold": "4",
             "--label_min_zone_height": "32",
+            "--label_conf_threshold": "70",
+            "--label_min_confirmation_frames": "4",
             "--label_font": "Arial",
             "--label_fontsize": "22",
             "--label_primary_color": "&H00FFFFFF",
@@ -62,6 +64,18 @@ class TestDefaults:
         # Style/lang keys are not booleans.
         assert "--label_fontsize" not in config._BOOL_KEYS
         assert "--label_lang" not in config._BOOL_KEYS
+
+    def test_subtitle_style_defaults_present(self):
+        defaults = config.get_default_settings()
+        expected = {
+            "--subtitle_font": "Arial",
+            "--subtitle_fontsize": "28",
+            "--subtitle_primary_color": "&H00FFFFFF",
+            "--subtitle_outline_color": "&H00000000",
+        }
+        for key, value in expected.items():
+            assert defaults[key] == value, key
+            assert key not in config._BOOL_KEYS, key
 
 
 class TestNormalizeValue:

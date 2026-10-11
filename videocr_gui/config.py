@@ -193,11 +193,11 @@ def get_default_settings() -> dict[str, Any]:
         "--label_time_end": "",
         "--label_ocr_image_max_width": "1080",
         "--label_min_display_duration": "1.0",
-        "--label_min_confirmation_frames": "2",
+        "--label_min_confirmation_frames": "4",
         "--label_reappear_merge_gap": "2.0",
         "--label_filter_single_char": True,
         # New configurable label-detection thresholds (fix 3 + fix 7)
-        "--label_conf_threshold": "60",
+        "--label_conf_threshold": "70",
         "--label_text_similarity": "55",
         "--label_pos_drift": "160",
         "--label_close_pos_distance": "40",
@@ -211,6 +211,11 @@ def get_default_settings() -> dict[str, Any]:
         "--label_outline_color": "&H00000000",
         "--label_alignment": "top-left",
         "--label_lang": "",
+        # ASS Default (subtitle) style — used for .ass output (label detection)
+        "--subtitle_font": "Arial",
+        "--subtitle_fontsize": "28",
+        "--subtitle_primary_color": "&H00FFFFFF",
+        "--subtitle_outline_color": "&H00000000",
     }
 
 

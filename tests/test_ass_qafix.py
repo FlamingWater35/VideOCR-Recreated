@@ -106,3 +106,41 @@ class TestOverlapFixRespectsLayer:
         assert count == 0
         assert fixed[0] == lines[0]
         assert fixed[1] == lines[1]
+
+
+class TestFakeTextSeesThroughOverrideBlocks:
+    """Label events wrap their text in a {\\pos(...)} override block (and
+    subtitle lines may carry {\\anN} alignment tags). The fake-text checks are
+    fullmatch-based, so classification must run on the visible text —
+    otherwise digit/short-letter OCR noise behind a tag is never removed."""
+
+    @staticmethod
+    def _process(qafix, text: str):
+        stats = qafix.QAStats()
+        return qafix.process_dialogue_line(
+            _dlg(2, "0:00:01.00", "0:00:02.00", text),
+            FIELDS,
+            {"Label"},
+            stats,
+            False,
+        )
+
+    def test_pure_digits_behind_pos_removed(self, qafix):
+        assert self._process(qafix, "{\\pos(10,20)}00000") is None
+
+    def test_alignment_tagged_digits_removed(self, qafix):
+        assert self._process(qafix, "{\\an8}28") is None
+
+    def test_single_letter_behind_pos_removed(self, qafix):
+        assert self._process(qafix, "{\\pos(10,20)}M") is None
+
+    def test_real_text_behind_pos_kept(self, qafix):
+        out = self._process(qafix, "{\\pos(10,20)}Hello world")
+        assert out is not None
+        assert "{\\pos(10,20)}" in out
+        assert "Hello world" in out
+
+    def test_cjk_text_behind_pos_kept(self, qafix):
+        out = self._process(qafix, "{\\pos(801,356)}乔羽")
+        assert out is not None
+        assert "乔羽" in out

@@ -325,5 +325,16 @@
   "tip_label_outline_color": "Outline color of the ASS Label style.",
   "lbl_label_alignment": "Label Alignment:",
   "tip_label_alignment": "Anchor point of label events. The \\pos position maps to this alignment of the text bounding box.",
+  "lbl_style_section": "Style:",
+  "lbl_label_style_sub": "Label Style",
+  "lbl_subtitle_style_sub": "Subtitle Style",
+  "lbl_subtitle_font": "Subtitle Font:",
+  "tip_subtitle_font": "Font name used by the ASS Default (subtitle) style in .ass output.",
+  "lbl_subtitle_fontsize": "Subtitle Font Size:",
+  "tip_subtitle_fontsize": "Font size used by the ASS Default (subtitle) style in .ass output.",
+  "lbl_subtitle_primary_color": "Subtitle Text Color:",
+  "tip_subtitle_primary_color": "Text color of the ASS Default (subtitle) style in .ass output.",
+  "lbl_subtitle_outline_color": "Subtitle Outline Color:",
+  "tip_subtitle_outline_color": "Outline color of the ASS Default (subtitle) style in .ass output.",
   "save_as_ass_filter_name": "Advanced SubStation Alpha Subtitle"
 }

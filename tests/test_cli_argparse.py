@@ -217,6 +217,9 @@ class TestMainFlagMapping:
         assert kwargs["subtitle_alignments"] == [None, None]
         assert kwargs["use_gpu"] is False
         assert kwargs["label_ocr_image_max_width"] == 1080
+        # Tuned label-detection defaults (precision on clothes/prop patterns).
+        assert kwargs["label_conf_threshold"] == 70
+        assert kwargs["label_min_confirmation_frames"] == 4
 
     @pytest.mark.parametrize(
         "engine", ["paddleocr", "google_lens", "easyocr_directml", "onnx_directml"]
@@ -311,6 +314,29 @@ class TestMainFlagMapping:
         assert kwargs["label_alignment"] == "an9"
         assert kwargs["label_min_zone_height"] == 48
         assert kwargs["label_hash_threshold"] == 6
+
+    def test_subtitle_style_flags(self, monkeypatch, video_file, fake_save):
+        run_main(monkeypatch, "--video_path", str(video_file),
+                 "--enable_label_detection", "true",
+                 "--subtitle_font", "Verdana",
+                 "--subtitle_fontsize", "30",
+                 "--subtitle_primary_color", "&h0000ff00",
+                 "--subtitle_outline_color", "&H000000FF",
+                 "--allow_system_sleep", "true")
+        kwargs = fake_save[0]
+        assert kwargs["subtitle_font"] == "Verdana"
+        assert kwargs["subtitle_fontsize"] == 30
+        assert kwargs["subtitle_primary_color"] == "&H0000FF00"  # normalized upper
+        assert kwargs["subtitle_outline_color"] == "&H000000FF"
+
+    def test_subtitle_style_defaults_passed_through(self, monkeypatch, video_file, fake_save):
+        run_main(monkeypatch, "--video_path", str(video_file),
+                 "--allow_system_sleep", "true")
+        kwargs = fake_save[0]
+        assert kwargs["subtitle_font"] == "Arial"
+        assert kwargs["subtitle_fontsize"] == 28
+        assert kwargs["subtitle_primary_color"] == "&H00FFFFFF"
+        assert kwargs["subtitle_outline_color"] == "&H00000000"
 
     def test_label_lang_flag(self, monkeypatch, video_file, fake_save):
         run_main(monkeypatch, "--video_path", str(video_file),

@@ -699,8 +699,9 @@ Labels detected for shorter than this are extended to remain readable.
 ### `label_min_confirmation_frames`
 
 A label must appear in at least this many sampled frames before it is emitted
-(default: `2`). Higher values filter out single-frame OCR noise (stray letters
-or digits that flash by in one frame).
+(default: `4`). Higher values filter out short-lived OCR noise (stray letters
+or digits that flash by); lower values keep labels that are only briefly
+visible.
 
 ### `label_reappear_merge_gap`
 

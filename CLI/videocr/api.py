@@ -110,14 +110,14 @@ def save_subtitles_to_file(
     label_time_start: str = "",
     label_time_end: str = "",
     label_min_display_duration_sec: float = 1.0,
-    label_min_confirmation_frames: int = 2,
+    label_min_confirmation_frames: int = 4,
     label_reappear_merge_gap_sec: float = 2.0,
     label_filter_single_char: bool = True,
     label_text_similarity: int = 55,
     label_pos_drift: int = 160,
     label_close_pos_distance: int = 40,
     label_close_pos_length_ratio: float = 0.5,
-    label_conf_threshold: int = 60,
+    label_conf_threshold: int = 70,
     label_ssim_dedup: bool = True,
     label_hash_threshold: int = 4,
     label_min_zone_height: int = 32,
@@ -128,6 +128,10 @@ def save_subtitles_to_file(
     label_alignment: str = "an7",
     label_lang: str = "",
     label_model_dirs: dict[str, str] | None = None,
+    subtitle_font: str = "Arial",
+    subtitle_fontsize: int = 28,
+    subtitle_primary_color: str = "&H00FFFFFF",
+    subtitle_outline_color: str = "&H00000000",
 ) -> None:
     total_start = time.perf_counter()
     if crop_zones is None:
@@ -281,6 +285,10 @@ def save_subtitles_to_file(
             label_alignment,
             label_lang,
             label_model_dirs,
+            subtitle_font,
+            subtitle_fontsize,
+            subtitle_primary_color,
+            subtitle_outline_color,
         )
         ocr_end = time.perf_counter()
     except Exception as e:

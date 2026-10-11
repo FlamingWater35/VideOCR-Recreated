@@ -94,16 +94,32 @@ QSS theme.
   (see "Build-variant gating" below).
 - The label-detection controls (label OCR width, min duration, confirmation
   frames, reappear gap, single-char filter, label thresholds, hash threshold,
-  min free-band height, and the Label style row: font, size, text/outline
-  color, alignment) are **disabled** while the **Enable Label Detection**
-  checkbox is unchecked — this includes the label *checkboxes*
-  (`--label_filter_single_char`, `--label_ssim_dedup`), not just the
-  line/combo inputs. The color swatch buttons are `QPushButton`s carrying an
-  `assColor` dynamic property (ASS `&H00BBGGRR`), converted at the widget
-  boundary by `style.ass_color_to_html` / `html_to_ass_color`.
+  min free-band height) and the whole **Style** category are **disabled**
+  while the **Enable Label Detection** checkbox is unchecked — this includes
+  the label *checkboxes* (`--label_filter_single_char`, `--label_ssim_dedup`),
+  not just the line/combo inputs. The color swatch buttons are `QPushButton`s
+  carrying an `assColor` dynamic property (ASS `&H00BBGGRR`), converted at the
+  widget boundary by `style.ass_color_to_html` / `html_to_ass_color`.
 - Implemented in `settings_tab.py` (`DML_DEPENDENT_WIDGETS`,
   `LABEL_DEPENDENT_WIDGETS`, `_update_dependent_states()`), re-evaluated on
   toggle and on `populate()`.
+
+## Style category (new behavior)
+
+- Style settings are a **separate top-level section** ("Style:") split from
+  Label Detection, with two subcategories (nested `QGroupBox`es):
+  - **Label Style** — the ASS Label style row moved out of Label Detection
+    (`--label_font`, `--label_fontsize`, `--label_primary_color`,
+    `--label_outline_color`, `--label_alignment`).
+  - **Subtitle Style** — controls the ASS `Default` (subtitle) style that was
+    previously hardcoded in `video._render_ass`
+    (`--subtitle_font`, `--subtitle_fontsize`, `--subtitle_primary_color`,
+    `--subtitle_outline_color`; defaults Arial / 28 / `&H00FFFFFF` /
+    `&H00000000`).
+- The entire category is greyed out while **Enable Label Detection** is
+  unchecked: styles only apply to `.ass` output, which is produced only when
+  label detection is on. Subtitle alignment stays in OCR Mode (it also tags
+  plain `.srt` output).
 
 ## Build-variant gating (new behavior)
 
@@ -200,16 +216,22 @@ QSS theme.
   normalize-chinese.
 - Label detection section: `enable_label_detection`, label start/end time
   (independent of the subtitle extraction window; empty falls back to the main
-  window), label OCR width, min display duration, min confirmation frames,
-  reappear merge gap, single-char filter, frame dedup (`--label_ssim_dedup`
-  gates both the pre-OCR dHash skip and the Step-2 tight-box SSIM; threshold
-  in `--label_hash_threshold`), min free-band height (`--label_min_zone_height`
-  — every free band outside the subtitle crop above this height is scanned),
-  and the Label style row (`--label_font`, `--label_fontsize`,
-  `--label_primary_color`, `--label_outline_color`, `--label_alignment`;
-  `.ass` output with positioned Label events). `--label_lang` (label OCR
-  language, empty = subtitle language) has a config/CLI default but no widget
-  yet — set it in the INI or on the CLI.
+  window), label OCR width, min display duration, min confirmation frames
+  (default 4), reappear merge gap, single-char filter, frame dedup
+  (`--label_ssim_dedup` gates both the pre-OCR dHash skip and the Step-2
+  tight-box SSIM; threshold in `--label_hash_threshold`), min free-band height
+  (`--label_min_zone_height` — every free band outside the subtitle crop above
+  this height is scanned), label confidence threshold (default 70, tuned to
+  cut garment/prop OCR hallucinations while keeping small name text) and the
+  other merge thresholds (`.ass` output with positioned Label events).
+  `--label_lang` (label OCR language, empty = subtitle language) has a
+  config/CLI default but no widget yet — set it in the INI or on the CLI.
+- Style section (see "Style category" above): Label Style subcategory
+  (`--label_font`, `--label_fontsize`, `--label_primary_color`,
+  `--label_outline_color`, `--label_alignment`) and Subtitle Style
+  subcategory (`--subtitle_font`, `--subtitle_fontsize`,
+  `--subtitle_primary_color`, `--subtitle_outline_color` — the ASS `Default`
+  style); the whole section is disabled without label detection.
 - OCR engine list: **EasyOCR DirectML is not offered** as a selectable GUI
   engine. It remains the internal fallback backend for the ONNX Runtime
   DirectML engine (see `CLI/videocr/onnx_directml_ocr.py`). Old configs /

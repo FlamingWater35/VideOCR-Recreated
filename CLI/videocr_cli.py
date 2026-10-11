@@ -397,8 +397,8 @@ def main() -> None:
     parser.add_argument(
         "--label_min_confirmation_frames",
         type=restricted_int(min_val=1),
-        default=2,
-        help="Minimum number of sampled frames a label must appear in before it is emitted (filters OCR noise, default: 2)",
+        default=4,
+        help="Minimum number of sampled frames a label must appear in before it is emitted (filters OCR noise, default: 4)",
     )
     parser.add_argument(
         "--label_reappear_merge_gap",
@@ -415,8 +415,8 @@ def main() -> None:
     parser.add_argument(
         "--label_conf_threshold",
         type=restricted_int(0, 100),
-        default=60,
-        help="Confidence threshold for label text recognition; lower keeps smaller/harder name text (default: 60)",
+        default=70,
+        help="Confidence threshold for label text recognition; higher cuts OCR hallucinations on clothes/props, lower keeps smaller/harder name text (default: 70)",
     )
     parser.add_argument(
         "--label_text_similarity",
@@ -489,6 +489,30 @@ def main() -> None:
         type=valid_alignment_name,
         default="top-left",
         help="Alignment anchor for label events, e.g. 'top-left' (default: top-left)",
+    )
+    parser.add_argument(
+        "--subtitle_font",
+        type=str,
+        default="Arial",
+        help="Font name for the ASS Default (subtitle) style (default: Arial)",
+    )
+    parser.add_argument(
+        "--subtitle_fontsize",
+        type=restricted_int(min_val=1),
+        default=28,
+        help="Font size for the ASS Default (subtitle) style (default: 28)",
+    )
+    parser.add_argument(
+        "--subtitle_primary_color",
+        type=valid_ass_color,
+        default="&H00FFFFFF",
+        help="Primary text color for the ASS Default (subtitle) style in &HAABBGGRR form (default: &H00FFFFFF)",
+    )
+    parser.add_argument(
+        "--subtitle_outline_color",
+        type=valid_ass_color,
+        default="&H00000000",
+        help="Outline color for the ASS Default (subtitle) style in &HAABBGGRR form (default: &H00000000)",
     )
     parser.add_argument(
         "--label_lang",
@@ -681,6 +705,10 @@ def main() -> None:
                 label_outline_color=args.label_outline_color,
                 label_alignment=args.label_alignment,
                 label_lang=args.label_lang,
+                subtitle_font=args.subtitle_font,
+                subtitle_fontsize=args.subtitle_fontsize,
+                subtitle_primary_color=args.subtitle_primary_color,
+                subtitle_outline_color=args.subtitle_outline_color,
             )
     except ValueError as e:
         print(f"Error: {e}")

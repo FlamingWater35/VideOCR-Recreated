@@ -67,7 +67,9 @@ DML_DEPENDENT_WIDGETS = (
     "--directml_grid_max_height",
 )
 
-# Widgets disabled while label detection is disabled.
+# Widgets disabled while label detection is disabled. This includes the
+# whole Style category (Label Style + Subtitle Style rows): ASS styles only
+# apply to .ass output, which is produced only when label detection is on.
 LABEL_DEPENDENT_WIDGETS = (
     "--label_time_start",
     "--label_time_end",
@@ -89,6 +91,10 @@ LABEL_DEPENDENT_WIDGETS = (
     "--label_primary_color",
     "--label_outline_color",
     "--label_alignment",
+    "--subtitle_font",
+    "--subtitle_fontsize",
+    "--subtitle_primary_color",
+    "--subtitle_outline_color",
 )
 
 
@@ -121,6 +127,7 @@ class SettingsTab(QWidget):
         self._combo_internal: dict[str, list[str]] = {}
         self._block_signals = False
         self._settings: dict[str, Any] = {}
+        self._style_box: QGroupBox | None = None
         self._build_ui()
         self._retranslate()
 
@@ -458,7 +465,7 @@ class SettingsTab(QWidget):
             "--label_min_confirmation_frames",
             "lbl_label_conf_frames",
             "Label Minimum Confirmation Frames:",
-            "2",
+            "4",
             "tip_label_conf_frames",
         )
         self._add_line(
@@ -506,7 +513,7 @@ class SettingsTab(QWidget):
             "--label_conf_threshold",
             "lbl_label_conf_threshold",
             "Label Confidence Threshold (0-100):",
-            "60",
+            "70",
             "tip_label_conf_threshold",
         )
         self._add_line(
@@ -541,8 +548,29 @@ class SettingsTab(QWidget):
             "0.5",
             "tip_label_close_pos_length_ratio",
         )
+        root.addWidget(label_box)
+
+        # Style settings: ASS output styles. Split from the Label Detection
+        # section into its own category with two subcategories (Label Style /
+        # Subtitle Style); the whole category is greyed out while label
+        # detection is disabled because styles only apply to .ass output.
+        style_box = QGroupBox()
+        style_box.setObjectName("sectionBox")
+        self._section_boxes.append((style_box, "lbl_style_section", "Style:"))
+        style_root = QVBoxLayout(style_box)
+        style_root.setSpacing(8)
+
+        label_style_box = QGroupBox()
+        self._section_boxes.append(
+            (label_style_box, "lbl_label_style_sub", "Label Style")
+        )
+        label_style_form = QFormLayout(label_style_box)
+        label_style_form.setLabelAlignment(Qt.AlignmentFlag.AlignLeft)
+        label_style_form.setFieldGrowthPolicy(
+            QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow
+        )
         self._add_line(
-            label_form,
+            label_style_form,
             "--label_font",
             "lbl_label_font",
             "Label Font:",
@@ -550,7 +578,7 @@ class SettingsTab(QWidget):
             "tip_label_font",
         )
         self._add_line(
-            label_form,
+            label_style_form,
             "--label_fontsize",
             "lbl_label_fontsize",
             "Label Font Size:",
@@ -558,7 +586,7 @@ class SettingsTab(QWidget):
             "tip_label_fontsize",
         )
         self._add_color(
-            label_form,
+            label_style_form,
             "--label_primary_color",
             "lbl_label_primary_color",
             "Label Text Color:",
@@ -566,7 +594,7 @@ class SettingsTab(QWidget):
             "tip_label_primary_color",
         )
         self._add_color(
-            label_form,
+            label_style_form,
             "--label_outline_color",
             "lbl_label_outline_color",
             "Label Outline Color:",
@@ -574,7 +602,7 @@ class SettingsTab(QWidget):
             "tip_label_outline_color",
         )
         self._add_combo(
-            label_form,
+            label_style_form,
             "--label_alignment",
             "lbl_label_alignment",
             "Label Alignment:",
@@ -582,7 +610,52 @@ class SettingsTab(QWidget):
             "tip_label_alignment",
             internal_values=[v for _, v in C.SUBTITLE_ALIGNMENT_LIST],
         )
-        root.addWidget(label_box)
+        style_root.addWidget(label_style_box)
+
+        subtitle_style_box = QGroupBox()
+        self._section_boxes.append(
+            (subtitle_style_box, "lbl_subtitle_style_sub", "Subtitle Style")
+        )
+        subtitle_style_form = QFormLayout(subtitle_style_box)
+        subtitle_style_form.setLabelAlignment(Qt.AlignmentFlag.AlignLeft)
+        subtitle_style_form.setFieldGrowthPolicy(
+            QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow
+        )
+        self._add_line(
+            subtitle_style_form,
+            "--subtitle_font",
+            "lbl_subtitle_font",
+            "Subtitle Font:",
+            "Arial",
+            "tip_subtitle_font",
+        )
+        self._add_line(
+            subtitle_style_form,
+            "--subtitle_fontsize",
+            "lbl_subtitle_fontsize",
+            "Subtitle Font Size:",
+            "28",
+            "tip_subtitle_fontsize",
+        )
+        self._add_color(
+            subtitle_style_form,
+            "--subtitle_primary_color",
+            "lbl_subtitle_primary_color",
+            "Subtitle Text Color:",
+            "&H00FFFFFF",
+            "tip_subtitle_primary_color",
+        )
+        self._add_color(
+            subtitle_style_form,
+            "--subtitle_outline_color",
+            "lbl_subtitle_outline_color",
+            "Subtitle Outline Color:",
+            "&H00000000",
+            "tip_subtitle_outline_color",
+        )
+        style_root.addWidget(subtitle_style_box)
+        self._style_box = style_box
+        root.addWidget(style_box)
 
         # VideOCR Recreated settings
         vo_box = QGroupBox()
@@ -897,8 +970,8 @@ class SettingsTab(QWidget):
 
         The CUDA and DirectML toggles are greyed out when the running package
         does not ship that backend; DirectML controls additionally follow the
-        DirectML master toggle; label-detection controls are disabled while
-        label detection is disabled.
+        DirectML master toggle; label-detection controls and the whole Style
+        category are disabled while label detection is disabled.
         """
         cuda_ok = config.supports_cuda()
         dml_ok = config.supports_directml()
@@ -928,6 +1001,10 @@ class SettingsTab(QWidget):
             widget = self._widgets.get(key)
             if isinstance(widget, (QComboBox, QLineEdit, QCheckBox, QPushButton)):
                 widget.setEnabled(labels_enabled)
+        # The whole Style category (Label Style + Subtitle Style subcategories)
+        # follows the label-detection master toggle.
+        if isinstance(self._style_box, QGroupBox):
+            self._style_box.setEnabled(labels_enabled)
 
         # The output directory is ignored while "save in video directory" is on,
         # so grey out the field and its browse button (see tip_save_in_video_dir).

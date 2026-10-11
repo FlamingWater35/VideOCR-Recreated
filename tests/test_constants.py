@@ -66,11 +66,31 @@ class TestLanguageLists:
     def test_iso_maps_only_contain_known_codes(self):
         for code in C.EASY_TO_ISO_MAP:
             assert code in C.easyocr_abbr_lookup.values()
-        # Codes shared with the GUI paddle list must be known; a couple of
-        # legacy entries (e.g. 'mo') predate the trimmed GUI language list.
+        # Every PADDLE_TO_ISO_MAP key must be a code the GUI can actually send.
+        for code in C.PADDLE_TO_ISO_MAP:
+            assert code in C.paddle_abbr_lookup.values(), code
         for code in ("ch", "chinese_cht", "german", "japan", "korean", "rs_latin"):
             assert code in C.paddle_abbr_lookup.values()
             assert code in C.PADDLE_TO_ISO_MAP
+
+    def test_gui_codes_accepted_by_cli(self):
+        """Every language code the GUI offers must pass CLI validation."""
+        from videocr import lang_dictionaries as L
+
+        paddle_cli = set().union(*L.PADDLEOCR_LANGS.values())
+        for _, code in C.PADDLEOCR_LANGUAGES_LIST:
+            assert code in paddle_cli, code
+        # Google Lens: the lists must stay in lockstep (no dead GUI entries,
+        # no CLI-accepted language missing from the picker).
+        assert {code for _, code in C.GOOGLE_LENS_LANGUAGES_LIST} == L.GOOGLE_LENS_LANGS
+
+    def test_gui_easyocr_codes_accepted_by_backends(self):
+        from videocr.easyocr_directml import EASYOCR_LANG_MAP
+        from videocr.onnx_directml_ocr import RAPIDOCR_LANG_MAP
+
+        for _, code in C.EASYOCR_LANGUAGES_LIST:
+            assert code in EASYOCR_LANG_MAP, code
+            assert code in RAPIDOCR_LANG_MAP, code
 
     def test_subtitle_lists(self):
         internals = [internal for _, internal in C.SUBTITLE_POSITIONS_LIST]

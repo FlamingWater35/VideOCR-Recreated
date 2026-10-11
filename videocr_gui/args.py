@@ -160,6 +160,7 @@ def build_args(
         "--label_hash_threshold": (int, 0, 64, "Label Hash Threshold"),
         "--label_min_zone_height": (int, 8, None, "Label Min Zone Height"),
         "--label_fontsize": (int, 1, None, "Label Font Size"),
+        "--subtitle_fontsize": (int, 1, None, "Subtitle Font Size"),
     }
     for key, (cast_type, min_val, max_val, name) in numeric_params.items():
         value_str = str(settings.get(key, "")).strip()

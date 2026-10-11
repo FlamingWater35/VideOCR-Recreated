@@ -9,7 +9,7 @@ from __future__ import annotations
 import re
 
 import pytest
-from PySide6.QtWidgets import QCheckBox, QComboBox, QLineEdit
+from PySide6.QtWidgets import QCheckBox, QComboBox, QGroupBox, QLineEdit
 
 from videocr_gui import dialogs, i18n, resources, style
 from videocr_gui.config import get_default_settings
@@ -279,6 +279,47 @@ class TestSettingsTab:
         for key in LABEL_DEPENDENT_WIDGETS:
             widget = tab._widgets[key]
             assert widget.isEnabled(), key
+
+    def test_style_category_disabled_without_label_detection(self, tab, languages):
+        settings = get_default_settings()
+        settings["enable_label_detection"] = False
+        tab.populate(settings, languages)
+        assert not tab._style_box.isEnabled()
+        # Both subcategories exist: Label Style + Subtitle Style.
+        assert len(tab._style_box.findChildren(QGroupBox)) == 2
+
+    def test_style_category_enabled_with_label_detection(self, tab, languages):
+        settings = get_default_settings()
+        settings["enable_label_detection"] = True
+        tab.populate(settings, languages)
+        assert tab._style_box.isEnabled()
+
+    def test_toggling_label_detection_updates_style_category(self, tab, languages):
+        tab.populate(get_default_settings(), languages)
+        check = tab._widgets["enable_label_detection"]
+        assert isinstance(check, QCheckBox)
+        check.setChecked(True)
+        tab._update_dependent_states()
+        assert tab._style_box.isEnabled()
+        check.setChecked(False)
+        tab._update_dependent_states()
+        assert not tab._style_box.isEnabled()
+
+    def test_subtitle_style_round_trip(self, tab, languages):
+        settings = get_default_settings()
+        settings.update({
+            "enable_label_detection": True,
+            "--subtitle_font": "Verdana",
+            "--subtitle_fontsize": "30",
+            "--subtitle_primary_color": "&H0000FF00",
+            "--subtitle_outline_color": "&H000000FF",
+        })
+        tab.populate(settings, languages)
+        read = tab.read_settings()
+        assert read["--subtitle_font"] == "Verdana"
+        assert read["--subtitle_fontsize"] == "30"
+        assert read["--subtitle_primary_color"] == "&H0000FF00"
+        assert read["--subtitle_outline_color"] == "&H000000FF"
 
     def test_toggling_gpu_checkbox_updates_dependents(self, tab, languages):
         tab.populate(get_default_settings(), languages)

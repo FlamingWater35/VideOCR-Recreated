@@ -1019,7 +1019,7 @@ class Video:
         enable_label_detection: bool = False,
         label_ocr_image_max_width: int = 1080,
         label_min_display_duration_sec: float = 1.0,
-        label_min_confirmation_frames: int = 2,
+        label_min_confirmation_frames: int = 4,
         label_reappear_merge_gap_sec: float = 2.0,
         label_filter_single_char: bool = True,
         label_time_start: str = "",
@@ -1028,7 +1028,7 @@ class Video:
         label_pos_drift: int = 160,
         label_close_pos_distance: int = 40,
         label_close_pos_length_ratio: float = 0.5,
-        label_conf_threshold: int = 60,
+        label_conf_threshold: int = 70,
         label_ssim_dedup: bool = True,
         label_hash_threshold: int = 4,
         label_min_zone_height: int = 32,
@@ -1039,15 +1039,20 @@ class Video:
         label_alignment: str = "an7",
         label_lang: str = "",
         label_model_dirs: dict[str, str] | None = None,
+        subtitle_font: str = "Arial",
+        subtitle_fontsize: int = 28,
+        subtitle_primary_color: str = "&H00FFFFFF",
+        subtitle_outline_color: str = "&H00000000",
     ) -> None:
         perf_total_start = time.perf_counter()
         step1_start = perf_total_start
         conf_threshold_ratio = conf_threshold / 100
         ssim_threshold_ratio = ssim_threshold / 100
-        # Fix 7: label-specific confidence threshold (defaults slightly lower
-        # than the subtitle threshold to keep smaller/harder name text).
+        # Fix 7: label-specific confidence threshold (above the old 60 default
+        # so hallucinated garment/prop text is dropped, but low enough to keep
+        # small/hard name text — empirically capped near 70 on 4K donghua).
         self._label_conf_threshold_ratio = (
-            float(label_conf_threshold if label_conf_threshold is not None else 60)
+            float(label_conf_threshold if label_conf_threshold is not None else 70)
             / 100
         )
         self.lang = lang
@@ -1074,6 +1079,14 @@ class Video:
             "primary": str(label_primary_color or "&H00FFFFFF"),
             "outline": str(label_outline_color or "&H00000000"),
             "alignment": align,
+        }
+        # ASS Default (subtitle) style used for the Dialogue events in
+        # _render_ass (mirrors the hardcoded defaults of that style line).
+        self._subtitle_style = {
+            "font": str(subtitle_font or "Arial").replace(",", ""),
+            "fontsize": max(1, int(subtitle_fontsize or 28)),
+            "primary": str(subtitle_primary_color or "&H00FFFFFF"),
+            "outline": str(subtitle_outline_color or "&H00000000"),
         }
         # Label-specific OCR language (empty = subtitle language). When it
         # differs, recognition runs a second pass for label images only.
@@ -2669,8 +2682,14 @@ class Video:
         lines.append(
             "Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding"
         )
+        sub_style = getattr(self, "_subtitle_style", {})
+        sub_font = str(sub_style.get("font", "Arial")).replace(",", "")
+        sub_fontsize = int(sub_style.get("fontsize", 28))
+        sub_primary = str(sub_style.get("primary", "&H00FFFFFF"))
+        sub_outline = str(sub_style.get("outline", "&H00000000"))
         lines.append(
-            "Style: Default,Arial,28,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,2,1,2,10,10,10,1"
+            f"Style: Default,{sub_font},{sub_fontsize},{sub_primary},"
+            f"&H000000FF,{sub_outline},&H80000000,0,0,0,0,100,100,0,0,1,2,1,2,10,10,10,1"
         )
         style = getattr(self, "_label_style", {})
         label_font = str(style.get("font", "Arial")).replace(",", "")
@@ -2964,7 +2983,7 @@ class Video:
 
         # Minimum confirmation frames: drop events that only appeared once
         # (or fewer than the configured threshold) — usually OCR noise.
-        min_conf = getattr(self, "_label_min_confirmation_frames", 2)
+        min_conf = getattr(self, "_label_min_confirmation_frames", 4)
         events = [ev for ev in events if ev.get("count", 1) >= min_conf]
 
         # Optional single-ASCII-character noise filter ("M", "3", "L", ...).

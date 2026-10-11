@@ -21,6 +21,9 @@ def _bare_video() -> Video:
     v.width = 640
     v.label_time_start_ms = 0.0
     v.label_time_end_ms = None
+    # Render tests build 1-2 frame events; don't filter them via the
+    # confirmation default (which is tuned for full OCR runs).
+    v._label_min_confirmation_frames = 1
     return v
 
 
@@ -188,3 +191,27 @@ class TestRenderAssPos:
         assert "{\\pos(10,20)}" in out   # Alpha untouched
         assert "{\\pos(60,70)}" in out   # Beta shifted by the scaled margin
         assert "{\\pos(60,20)}" not in out
+
+    def test_default_subtitle_style_matches_previous_hardcode(self):
+        """Without _subtitle_style the Default style stays Arial/28/white."""
+        v = _bare_video()
+        out = v._render_ass([None, None])
+        assert (
+            "Style: Default,Arial,28,&H00FFFFFF,&H000000FF,&H00000000,"
+            "&H80000000,0,0,0,0,100,100,0,0,1,2,1,2,10,10,10,1" in out
+        )
+
+    def test_custom_subtitle_style_rendered(self):
+        """The ASS Default style is driven by _subtitle_style (--subtitle_*)."""
+        v = _bare_video()
+        v._subtitle_style = {
+            "font": "Verdana",
+            "fontsize": 30,
+            "primary": "&H0000FF00",
+            "outline": "&H000000FF",
+        }
+        out = v._render_ass([None, None])
+        assert (
+            "Style: Default,Verdana,30,&H0000FF00,&H000000FF,&H000000FF,"
+            "&H80000000,0,0,0,0,100,100,0,0,1,2,1,2,10,10,10,1" in out
+        )

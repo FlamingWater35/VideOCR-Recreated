@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 
 """
 ASS QA & Auto-Fixer for professional subtitle workflows.
@@ -34,16 +33,16 @@ import re
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Tuple, Optional, Set
-from rapidfuzz.distance import Levenshtein
-from rich.console import Console
-from rich.table import Table
-from rich.panel import Panel
-from rich import box
+from typing import Dict, List, Optional, Set, Tuple
 
 # Dictionary-based OCR artifact detection
 # Note: enchant is imported lazily in _get_enchant_dict() to suppress libenchant warnings
 from jieba3.tok import BASE_MODEL_FREQ
+from rapidfuzz.distance import Levenshtein
+from rich import box
+from rich.console import Console
+from rich.panel import Panel
+from rich.table import Table
 
 DIALOGUE_PREFIX = "Dialogue:"
 FORMAT_PREFIX = "Format:"
@@ -246,7 +245,7 @@ def parse_events_format(doc: ASSDocument) -> None:
 
 
 def load_ass(path: str) -> ASSDocument:
-    with open(path, "r", encoding="utf-8-sig", errors="replace") as f:
+    with open(path, encoding="utf-8-sig", errors="replace") as f:
         lines = f.read().splitlines()
     doc = ASSDocument(lines=lines)
     parse_styles(doc)
@@ -559,7 +558,11 @@ def process_dialogue_line(
     if text in ARTIFACT_EMPTY_TEXT:
         text = ""
 
-    if is_fake_text(text):
+    # Classify on the visible text only: label events carry a {\pos(...)}
+    # override block and subtitle lines may carry {\anN} alignment tags —
+    # the fullmatch-based fake-text checks never fired on those wrapped texts.
+    visible_text = re.sub(r"\{[^{}]*\}", "", text).strip()
+    if is_fake_text(visible_text):
         stats.fake_text_removed += 1
         return None
 
