@@ -52,6 +52,7 @@ class TestDefaults:
             "--label_min_zone_height": "32",
             "--label_conf_threshold": "70",
             "--label_min_confirmation_frames": "4",
+            "--label_reappear_merge_gap": "5.0",
             "--label_font": "Arial",
             "--label_fontsize": "22",
             "--label_primary_color": "&H00FFFFFF",

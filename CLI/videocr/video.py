@@ -1020,7 +1020,7 @@ class Video:
         label_ocr_image_max_width: int = 1080,
         label_min_display_duration_sec: float = 1.0,
         label_min_confirmation_frames: int = 4,
-        label_reappear_merge_gap_sec: float = 2.0,
+        label_reappear_merge_gap_sec: float = 5.0,
         label_filter_single_char: bool = True,
         label_time_start: str = "",
         label_time_end: str = "",

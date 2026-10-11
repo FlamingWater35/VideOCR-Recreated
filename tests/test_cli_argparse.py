@@ -220,6 +220,8 @@ class TestMainFlagMapping:
         # Tuned label-detection defaults (precision on clothes/prop patterns).
         assert kwargs["label_conf_threshold"] == 70
         assert kwargs["label_min_confirmation_frames"] == 4
+        # 5.0: 2.0 split a long-running label into a duplicate event.
+        assert kwargs["label_reappear_merge_gap_sec"] == 5.0
 
     @pytest.mark.parametrize(
         "engine", ["paddleocr", "google_lens", "easyocr_directml", "onnx_directml"]

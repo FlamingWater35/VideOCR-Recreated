@@ -111,7 +111,7 @@ def save_subtitles_to_file(
     label_time_end: str = "",
     label_min_display_duration_sec: float = 1.0,
     label_min_confirmation_frames: int = 4,
-    label_reappear_merge_gap_sec: float = 2.0,
+    label_reappear_merge_gap_sec: float = 5.0,
     label_filter_single_char: bool = True,
     label_text_similarity: int = 55,
     label_pos_drift: int = 160,

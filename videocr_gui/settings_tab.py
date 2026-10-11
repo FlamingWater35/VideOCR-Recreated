@@ -473,7 +473,7 @@ class SettingsTab(QWidget):
             "--label_reappear_merge_gap",
             "lbl_label_reappear_gap",
             "Label Reappear Merge Gap (seconds):",
-            "2.0",
+            "5.0",
             "tip_label_reappear_gap",
         )
         self._add_check(

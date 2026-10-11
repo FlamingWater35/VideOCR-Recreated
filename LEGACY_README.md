@@ -706,7 +706,7 @@ visible.
 ### `label_reappear_merge_gap`
 
 Reappearances of the same label within this many seconds are merged into a
-single event (default: `2.0`). For example a character name that appears at
+single event (default: `5.0`). For example a character name that appears at
 `0:52`, `0:54` and `0:56` becomes one label spanning `0:52`–`0:56` instead of
 three short events. Set it lower (e.g. `0.5`) to keep separate appearances
 distinct.

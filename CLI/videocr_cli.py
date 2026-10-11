@@ -403,8 +403,8 @@ def main() -> None:
     parser.add_argument(
         "--label_reappear_merge_gap",
         type=restricted_float(min_val=0.0),
-        default=2.0,
-        help="Maximum gap in seconds between reappearances of the same label that are merged into one event (default: 2.0)",
+        default=5.0,
+        help="Maximum gap in seconds between reappearances of the same label that are merged into one event (default: 5.0)",
     )
     parser.add_argument(
         "--label_filter_single_char",
