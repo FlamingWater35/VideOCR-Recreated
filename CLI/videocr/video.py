@@ -23,6 +23,12 @@ from . import utils
 from .models import PredictedFrames, PredictedSubtitle
 from .pyav_adapter import Capture, get_video_properties
 
+# Label-zone frames are written by FFmpeg as segment-muxed raw-video chunks of
+# this many seconds; the scan consumes and deletes each chunk as soon as it is
+# superseded, so peak temp-disk usage stays bounded instead of growing with
+# video length (a full-run label_raw.rgb used to reach tens of GB on 4K).
+LABEL_CHUNK_SECONDS = 2
+
 
 def _label_text_norm(text: str) -> str:
     """Normalize a label OCR text for similarity comparison (spaces removed)."""
@@ -181,8 +187,10 @@ class Video:
         Supports the common single subtitle crop workflow plus the optional
         label-detection zone. When a label zone is present, FFmpeg emits a
         second output (via a ``split`` filter) with the cropped/scaled label
-        frames written to a temporary raw file, so label detection keeps
-        hardware decode instead of falling back to PyAV.
+        frames written as short raw-video segments that are consumed and
+        deleted during the scan, so label detection keeps hardware decode
+        instead of falling back to PyAV without buffering the whole video's
+        label frames on disk.
         """
         ffmpeg_path = shutil.which("ffmpeg")
         if not ffmpeg_path:
@@ -215,17 +223,26 @@ class Video:
         GRID_SPACING = 10
         FILENAME_ZERO_PADDING = 8
 
-        label_raw_path = ""
+        label_chunk_prefix = ""
         label_target_w = label_frame_bytes = 0
         label_batches: dict[int, list[Any]] = {}
         label_batch_limits: dict[int, int] = {}
+        band_heights: list[int] = []
+        row_strides: list[int] = []
+        row_offsets: list[int] = []
+        label_dedup: utils.LabelFrameDedup | None = None
+        label_frames_consumed = 0
+        label_next_chunk = 0
         if use_label:
             # All bands share target_w (built with one scale ratio), so the
             # FFmpeg label output is the bands vstacked into one composite.
             label_target_w = int(label_zones[0]["target_w"])
             total_label_h = sum(int(b["target_h"]) for b in label_zones)
             label_frame_bytes = label_target_w * total_label_h * 3
-            label_raw_path = os.path.join(temp_dir, "label_raw.rgb")
+            # FFmpeg writes the label stream as short raw-video segments that
+            # are consumed and deleted while the scan runs; a single file for
+            # the whole video can reach tens of GB for 4K sources.
+            label_chunk_prefix = os.path.join(temp_dir, "label_chunk_")
             for k, band in enumerate(label_zones):
                 label_batches[2 + k] = []
                 label_batch_limits[2 + k] = utils.get_batch_limit(
@@ -234,6 +251,16 @@ class Video:
                     max_stitch_width,
                     max_stitch_height,
                     GRID_SPACING,
+                )
+                band_heights.append(int(band["target_h"]))
+            row_strides = [label_target_w * th * 3 for th in band_heights]
+            acc = 0
+            for stride in row_strides:
+                row_offsets.append(acc)
+                acc += stride
+            if self._label_dedup_enabled:
+                label_dedup = utils.LabelFrameDedup(
+                    threshold=self._label_hash_threshold
                 )
 
         modulo = frames_to_skip + 1
@@ -297,6 +324,80 @@ class Video:
             Image.fromarray(canvas).save(frame_path, quality=80)
             return counter + 1
 
+        def drain_label_chunks(ffmpeg_finished: bool) -> None:
+            """Consume completed label chunks while FFmpeg is still running.
+
+            A chunk is complete once the next chunk exists (the segment muxer
+            closes a segment before opening the following one); the final chunk
+            is only readable after FFmpeg exits. Each chunk is deleted right
+            after processing so peak disk usage stays at roughly one in-flight
+            chunk instead of accumulating the whole video's label frames.
+
+            The output holds all bands vstacked; split each composite frame
+            back into per-band crops so every band stitches under its own zone
+            index. Frames are not SSIM-filtered, but the optional pre-OCR dHash
+            dedup (label_ssim_dedup) skips redundant frames per band while
+            keeping confirmation weights. Frame indices match the subtitle
+            sampled frames.
+            """
+            nonlocal det_counter, label_frames_consumed, label_next_chunk
+            if not use_label or label_frame_bytes <= 0:
+                return
+            while True:
+                chunk_path = f"{label_chunk_prefix}{label_next_chunk:06d}.rgb"
+                if not os.path.exists(chunk_path):
+                    return
+                next_exists = os.path.exists(
+                    f"{label_chunk_prefix}{label_next_chunk + 1:06d}.rgb"
+                )
+                if not next_exists and not ffmpeg_finished:
+                    return
+                with open(chunk_path, "rb") as cf:
+                    chunk_data = cf.read()
+                num_frames = len(chunk_data) // label_frame_bytes
+                remainder = len(chunk_data) % label_frame_bytes
+                if remainder:
+                    print(
+                        f"Warning: label chunk {label_next_chunk} ends with a partial "
+                        f"frame ({remainder} of {label_frame_bytes} bytes); dropping it.",
+                        flush=True,
+                    )
+                if ffmpeg_finished:
+                    num_frames = min(
+                        num_frames, max(0, ocr_end - label_frames_consumed)
+                    )
+                for i in range(num_frames):
+                    frame_base = i * label_frame_bytes
+                    frame_idx = label_frames_consumed
+                    for k, band_height in enumerate(band_heights):
+                        zidx = 2 + k
+                        off = frame_base + row_offsets[k]
+                        img = (
+                            np.frombuffer(
+                                chunk_data[off : off + row_strides[k]],
+                                dtype=np.uint8,
+                            )
+                            .reshape((band_height, label_target_w, 3))
+                            .copy()
+                        )
+                        if (
+                            label_dedup is not None
+                            and not label_dedup.consider(zidx, frame_idx, img)
+                        ):
+                            continue
+                        label_batches[zidx].append(
+                            {"img": img, "frame_idx": frame_idx}
+                        )
+                        if len(label_batches[zidx]) >= label_batch_limits[zidx]:
+                            det_counter = save_stitch_batch(
+                                label_batches[zidx], det_counter, zidx
+                            )
+                            label_batches[zidx] = []
+                    label_frames_consumed += 1
+                with contextlib.suppress(OSError):
+                    os.remove(chunk_path)
+                label_next_chunk += 1
+
         if use_label:
             select_part = f"select=not(mod(n\\,{modulo}))"
             if len(label_zones) == 1:
@@ -359,10 +460,14 @@ class Video:
                 "-fps_mode",
                 "vfr",
                 "-f",
+                "segment",
+                "-segment_time",
+                str(LABEL_CHUNK_SECONDS),
+                "-segment_format",
                 "rawvideo",
                 "-pix_fmt",
                 "rgb24",
-                label_raw_path,
+                f"{label_chunk_prefix}%06d.rgb",
             ]
             vf_note = fc
         else:
@@ -511,6 +616,8 @@ class Video:
                         f"\nStep {1}/3: Processing video... Current: {curr_str} / {target_end_str}, Frame: {frame_index + 1}",
                         flush=True,
                     )
+                if use_label:
+                    drain_label_chunks(False)
                 ocr_end += 1
         finally:
             if proc.stdout:
@@ -528,60 +635,10 @@ class Video:
             det_counter = save_stitch_batch(det_batch, det_counter, 0)
             det_batch = []
 
-        # Label zone (fix 6): read the second FFmpeg output and stitch the
-        # label frames. No SSIM here, but the optional pre-OCR dHash dedup
-        # (label_ssim_dedup) skips redundant frames per band while keeping
-        # confirmation weights. Frame indices match the subtitle sampled frames.
-        # The output holds all bands vstacked; split each composite frame back
-        # into per-band crops so every band stitches under its own zone index.
+        # Label zone: drain the last chunk (no successor to supersede it),
+        # stitch any leftover partial batch, and publish dedup weights.
         if use_label:
-            try:
-                with open(label_raw_path, "rb") as lf:
-                    label_data = lf.read()
-            except OSError as e:
-                print(
-                    f"Warning: could not read FFmpeg label-zone output: {e}", flush=True
-                )
-                label_data = b""
-            num_label_frames = (
-                len(label_data) // label_frame_bytes if label_frame_bytes > 0 else 0
-            )
-            label_frame_count = min(num_label_frames, ocr_end)
-            band_heights = [int(b["target_h"]) for b in label_zones]
-            row_strides = [label_target_w * th * 3 for th in band_heights]
-            row_offsets: list[int] = []
-            acc = 0
-            for stride in row_strides:
-                row_offsets.append(acc)
-                acc += stride
-            label_dedup: utils.LabelFrameDedup | None = None
-            if self._label_dedup_enabled:
-                label_dedup = utils.LabelFrameDedup(
-                    threshold=self._label_hash_threshold
-                )
-            for i in range(label_frame_count):
-                frame_base = i * label_frame_bytes
-                for k, band_height in enumerate(band_heights):
-                    zidx = 2 + k
-                    off = frame_base + row_offsets[k]
-                    img = (
-                        np.frombuffer(
-                            label_data[off : off + row_strides[k]], dtype=np.uint8
-                        )
-                        .reshape((band_height, label_target_w, 3))
-                        .copy()
-                    )
-                    if (
-                        label_dedup is not None
-                        and not label_dedup.consider(zidx, i, img)
-                    ):
-                        continue
-                    label_batches[zidx].append({"img": img, "frame_idx": i})
-                    if len(label_batches[zidx]) >= label_batch_limits[zidx]:
-                        det_counter = save_stitch_batch(
-                            label_batches[zidx], det_counter, zidx
-                        )
-                        label_batches[zidx] = []
+            drain_label_chunks(True)
             for k in range(len(label_zones)):
                 zidx = 2 + k
                 if label_batches[zidx]:
@@ -592,8 +649,6 @@ class Video:
             if label_dedup is not None:
                 label_dedup.finish()
                 self._publish_label_hash_weights(label_dedup)
-            with contextlib.suppress(OSError):
-                os.remove(label_raw_path)
 
         if ocr_end <= 0 or det_counter <= 0:
             print(
