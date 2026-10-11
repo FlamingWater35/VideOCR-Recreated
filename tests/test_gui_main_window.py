@@ -134,6 +134,174 @@ class TestWindowStatePersistence:
         assert not win.isFullScreen()
 
 
+class TestCropBoxPersistence:
+    """'Save Crop Box Selection' must persist a drawn box across restarts.
+
+    Regression for the setting silently doing nothing after the async
+    video-preview refactor: draw a box with the setting on, wait for the
+    debounced config write, restart the window, and expect the box back.
+    """
+
+    @staticmethod
+    def _load_and_draw(win, qtbot, video_path: str) -> None:
+        from PySide6.QtCore import QPointF
+
+        preview = win.preview
+        win._load_video(str(video_path))
+        qtbot.waitUntil(
+            lambda: preview._current_pixmap is not None, timeout=15_000
+        )
+        qtbot.waitUntil(
+            lambda: preview._resized_w > 0 and preview._resized_h > 0,
+            timeout=5_000,
+        )
+        ox, oy = preview._offset_x, preview._offset_y
+        w, h = preview._resized_w, preview._resized_h
+        p1 = QPointF(ox + w * 0.1, oy + h * 0.7)
+        p2 = QPointF(ox + w * 0.9, oy + h * 0.95)
+        assert preview.start_draw(p1), "start_draw refused inside the video area"
+        preview.update_draw(p2)
+        preview.end_draw(p2)
+        assert preview.crop_boxes, "end_draw produced no crop box"
+
+    def test_drawn_box_is_written_to_config(self, qtbot, settings, test_video):
+        settings["--save_crop_box"] = True
+        win = MainWindow(settings=settings)
+        qtbot.addWidget(win)
+        win.show()
+        qtbot.waitExposed(win, timeout=3000)
+
+        self._load_and_draw(win, qtbot, test_video)
+
+        # The save is debounced by 300 ms; the sandboxed config file must
+        # end up with a non-empty relative box list.
+        qtbot.waitUntil(
+            lambda: config.load_settings()["--saved_crop_boxes"] != "[]",
+            timeout=5_000,
+        )
+        saved = config.parse_saved_crop_boxes(
+            str(config.load_settings()["--saved_crop_boxes"])
+        )
+        assert saved and saved[0]["crop_width"] > 0
+        win.close()
+
+    def test_box_restored_after_restart(self, qtbot, settings, test_video):
+        settings["--save_crop_box"] = True
+        win = MainWindow(settings=settings)
+        qtbot.addWidget(win)
+        win.show()
+        qtbot.waitExposed(win, timeout=3000)
+        self._load_and_draw(win, qtbot, test_video)
+        qtbot.waitUntil(
+            lambda: config.load_settings()["--saved_crop_boxes"] != "[]",
+            timeout=5_000,
+        )
+        win.close()
+
+        # Session 2: a fresh window built from the persisted config.
+        win2 = MainWindow(settings=config.load_settings())
+        qtbot.addWidget(win2)
+        win2.show()
+        qtbot.waitExposed(win2, timeout=3000)
+        self._load_video_only(win2, qtbot, test_video)
+        qtbot.waitUntil(
+            lambda: len(win2.preview.crop_boxes) >= 1, timeout=15_000
+        )
+        coords = win2.preview.crop_boxes[0]["coords"]
+        assert coords["crop_width"] > 0 and coords["crop_height"] > 0
+        win2.close()
+
+    def test_settings_tab_change_keeps_saved_boxes(self, qtbot, settings, test_video):
+        """Tweaking any Advanced Settings option must not revert saved boxes.
+
+        The settings tab keeps a snapshot of the full settings dict taken at
+        populate() time; read_settings() starts from that snapshot, so the
+        boot-time ``--saved_crop_boxes`` would otherwise stamp itself back
+        over the freshly flushed value and persist that to the config file.
+        """
+        settings["--save_crop_box"] = True
+        win = MainWindow(settings=settings)
+        qtbot.addWidget(win)
+        win.show()
+        qtbot.waitExposed(win, timeout=3000)
+        self._load_and_draw(win, qtbot, test_video)
+        qtbot.waitUntil(
+            lambda: config.load_settings()["--saved_crop_boxes"] != "[]",
+            timeout=5_000,
+        )
+
+        # The user tweaks an unrelated Advanced Settings toggle afterwards.
+        win.settings_tab._widgets["--save_in_video_dir"].setChecked(False)
+        qtbot.wait(50)
+
+        assert config.load_settings()["--saved_crop_boxes"] != "[]", (
+            "a settings-tab change reverted the saved crop boxes "
+            "to the boot-time snapshot"
+        )
+        win.close()
+
+    def test_restore_waits_for_first_painted_frame(self, qtbot, settings, test_video):
+        """Saved boxes must appear only once real frame geometry exists.
+
+        Restoring against guessed display geometry (the async preview's
+        pre-frame state) made the boxes land at slightly wrong positions
+        and snap when the first frame was actually painted.
+        """
+        import threading
+
+        settings["--save_crop_box"] = True
+        settings["--saved_crop_boxes"] = repr(
+            [{"crop_x": 0.1, "crop_y": 0.7, "crop_width": 0.8, "crop_height": 0.2}]
+        )
+        win = MainWindow(settings=settings)
+        qtbot.addWidget(win)
+        win.show()
+        qtbot.waitExposed(win, timeout=3000)
+        preview = win.preview
+
+        release = threading.Event()
+        orig_get_frame = preview.handler.get_frame
+
+        def gated(ms, display_size, brightness_threshold=None):
+            release.wait(3.0)
+            return orig_get_frame(
+                ms, display_size, brightness_threshold=brightness_threshold
+            )
+
+        preview.handler.get_frame = gated  # type: ignore[method-assign]
+        try:
+            win._load_video(str(test_video))
+            qtbot.wait(150)
+            # Decode is blocked: nothing painted yet, nothing restored.
+            assert preview.crop_boxes == []
+
+            release.set()
+            qtbot.waitUntil(
+                lambda: len(preview.crop_boxes) >= 1, timeout=15_000
+            )
+            # The restored box sits exactly where the painted frame is:
+            # left = offset + crop_x * resized (relative 0.1 of the video).
+            box = preview.crop_boxes[0]
+            coords = box["coords"]
+            expected_left = preview._offset_x + (
+                coords["crop_x"] * preview._resized_w / preview._orig_w
+            )
+            item = preview.crop_rect_items()[0]
+            rect = item.mapRectToScene(item.rect())
+            assert rect.left() == pytest.approx(expected_left, abs=2)
+        finally:
+            release.set()
+            win.close()
+
+    @staticmethod
+    def _load_video_only(win, qtbot, video_path: str) -> None:
+        preview = win.preview
+        win._load_video(str(video_path))
+        qtbot.waitUntil(
+            lambda: preview._current_pixmap is not None, timeout=15_000
+        )
+
+
 class TestStaticHelpers:
     @pytest.mark.parametrize(
         ("name", "expected"),

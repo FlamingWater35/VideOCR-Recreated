@@ -514,6 +514,7 @@ class VideoPreview(QWidget):
     Emits:
         crop_changed(list[dict])  - crop boxes in image-space coords
         frame_loaded(str, int)    - video path, duration_ms
+        frame_shown()             - a frame was painted (real geometry exists)
     """
 
     crop_changed = Signal(list)
@@ -522,6 +523,9 @@ class VideoPreview(QWidget):
     # Internal: (video_gen, display_size, image, w, h, off_x, off_y) emitted
     # from the decode worker and delivered on the UI thread (queued).
     frame_decoded = Signal(object)
+    # Emitted (UI thread) whenever a frame is actually painted; used to run
+    # crop-box restore only once real frame geometry exists.
+    frame_shown = Signal()
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
@@ -631,9 +635,10 @@ class VideoPreview(QWidget):
         size = self._view.viewport().size()
         if size.width() > 20 and size.height() > 20:
             self._display_size = (size.width(), size.height())
-        # Apply the display geometry right away so crop-box mapping works
-        # before the first frame lands (app._on_frame_loaded restores boxes
-        # as soon as frame_loaded fires).
+        # Apply the display geometry right away so crop-box mapping (drawing,
+        # centering) works before the first frame lands. Saved-box restore
+        # waits for frame_shown instead — it must map against the geometry
+        # the frame is actually painted with, not this eager guess.
         self._apply_display_geometry(self._display_size)
         self._pending_seek_ms = float(timestamp_ms)
         if not self._decode_busy:
@@ -685,7 +690,13 @@ class VideoPreview(QWidget):
         gen, display_size, image, w, h, off_x, off_y = payload
         self._decode_busy = False
         if gen == self._video_gen and isinstance(image, QImage):
-            self._display_frame(image, w, h, off_x, off_y, display_size)
+            if display_size == self._display_size:
+                self._display_frame(image, w, h, off_x, off_y, display_size)
+            # else: rendered for a viewport size we have already left (resize
+            # while the decode was in flight). Displaying it would overwrite
+            # the geometry state with stale values and visibly yank the crop
+            # boxes away from their restored positions; the pending seek set
+            # by the resize re-decodes at the current size instead.
         if self._pending_seek_ms is not None:
             self._start_decode()
 
@@ -712,6 +723,7 @@ class VideoPreview(QWidget):
         item.setPos(off_x, off_y)
         self._scene.setSceneRect(0, 0, display_size[0], display_size[1])
         self._redraw_boxes()
+        self.frame_shown.emit()
 
     def resizeEvent(self, event) -> None:  # noqa: N802
         super().resizeEvent(event)

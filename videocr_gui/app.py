@@ -127,6 +127,9 @@ class MainWindow(QMainWindow):
         self._crop_save_timer.setSingleShot(True)
         self._crop_save_timer.setInterval(300)
         self._crop_save_timer.timeout.connect(self._flush_crop_boxes)
+        # Set when a video loads; consumed on the first painted frame so the
+        # saved crop boxes are restored against real frame geometry.
+        self._pending_crop_restore = False
 
         # Boot update check: fires once, 3 s after startup, unless the setting
         # is off. Parented to the window so it dies with it.
@@ -158,6 +161,7 @@ class MainWindow(QMainWindow):
         self.preview.frame_loaded.connect(self._on_frame_loaded)
         self.preview.video_error.connect(self._on_video_error)
         self.preview.crop_changed.connect(self._on_crop_changed)
+        self.preview.frame_shown.connect(self._on_frame_shown)
 
         self.tabs.addTab(
             self._build_process_tab(), i18n.tr("tab_video", "Process Video")
@@ -723,8 +727,15 @@ class MainWindow(QMainWindow):
         self._settings["_video_duration_ms"] = duration_ms
         self._update_output_path()
         # restore the saved crop box selection once the first frame has been
-        # rendered (the preview's resized dimensions are set by show_frame)
-        QTimer.singleShot(0, self._restore_crop_boxes)
+        # *rendered* — restoring earlier would map the boxes against guessed
+        # display geometry and make them snap when the real frame lands.
+        self._pending_crop_restore = True
+
+    def _on_frame_shown(self) -> None:
+        if not self._pending_crop_restore:
+            return
+        self._pending_crop_restore = False
+        self._restore_crop_boxes()
 
     def _restore_crop_boxes(self) -> None:
         """Restores the saved crop boxes (relative coords) for the current video."""
@@ -887,12 +898,16 @@ class MainWindow(QMainWindow):
         # engine / language / position selections live in self._settings and
         # must NOT be overwritten by the settings-tab snapshot (which is
         # taken at boot and would clobber a fresh engine selection back to
-        # the boot default).
+        # the boot default). Same for --saved_crop_boxes: it is flushed from
+        # the live preview, and the boot-time snapshot would stamp "[]" back
+        # over it (persisting the clobber), silently disabling
+        # "Save Crop Box Selection".
         tab_settings = self.settings_tab.read_settings()
         for key in (
             "ocr_engine",
             "subtitle_language",
             "subtitle_position",
+            "--saved_crop_boxes",
         ):
             tab_settings.pop(key, None)
         self._settings.update(tab_settings)

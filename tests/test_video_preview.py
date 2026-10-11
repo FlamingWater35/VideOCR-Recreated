@@ -51,12 +51,46 @@ class TestAsyncSeek:
 
             preview.handler.get_frame = gated_get_frame  # type: ignore[method-assign]
             preview.show_frame(500.0)
-            # Crop-box restore in the main window maps coordinates right after
-            # the first frame is *requested*, so geometry must be set eagerly.
+            # Crop-box drawing maps coordinates against eager geometry before
+            # the first frame is *requested*; restore waits for frame_shown.
             assert preview._resized_w > 0
             assert preview._resized_h > 0
         finally:
             release.set()
+            preview.shutdown()
+
+    def test_stale_size_frame_is_dropped(self):
+        """A frame decoded for an old viewport must not be painted.
+
+        If a resize lands while a decode is in flight, displaying the
+        stale-size result would overwrite the geometry state and visibly
+        yank the crop boxes; the pending re-decode covers it instead.
+        """
+        from PySide6.QtGui import QImage
+
+        preview = VideoPreview()
+        try:
+            preview._orig_w, preview._orig_h = 1920, 1080
+            preview._display_size = (720, 405)
+            preview._apply_display_geometry((720, 405))
+            eager = (preview._resized_w, preview._resized_h)
+            img = QImage(640, 360, QImage.Format.Format_RGB32)
+            img.fill(0)
+
+            # Payload rendered for a viewport size we have already left.
+            preview._on_frame_ready(
+                (preview._video_gen, (999, 600), img, 640, 360, 11, 5)
+            )
+            assert preview._current_pixmap is None
+            assert (preview._resized_w, preview._resized_h) == eager
+
+            # A payload for the current size is painted normally.
+            preview._on_frame_ready(
+                (preview._video_gen, (720, 405), img, 720, 404, 0, 0)
+            )
+            assert preview._current_pixmap is not None
+            assert preview._resized_w == eager[0]
+        finally:
             preview.shutdown()
 
 
