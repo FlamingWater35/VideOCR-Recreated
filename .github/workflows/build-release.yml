@@ -238,6 +238,8 @@ jobs:
             libgl1 libegl1 libopengl0 libxkbcommon0 libdbus-1-3 libfontconfig1 libglib2.0-0 \
             || sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
                libgl1 libegl1 libopengl0 libxkbcommon0 libdbus-1-3 libfontconfig1 libglib2.0-0t64
+          # appimagetool shells out to mksquashfs to build the AppImage payload.
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y squashfs-tools
 
       - name: Install Python dependencies
         run: |
@@ -264,11 +266,12 @@ jobs:
           key: nuitka-linux-${{ hashFiles('VideOCR_qt.py', '_version.py', 'videocr_gui/**', 'CLI/**') }}
           restore-keys: nuitka-linux-
 
-      - name: Compile and package (Nuitka + 7-Zip)
+      - name: Compile and package (Nuitka + 7-Zip + AppImage)
         run: |
           python build.py \
             --target "$BUILD_TARGET" \
             --archive true \
+            --appimage true \
             --gui-only true
 
       - name: Split archives larger than the 2 GB release-asset limit
@@ -303,6 +306,7 @@ jobs:
           path: |
             Releases/*.7z
             Releases/*.7z.0*
+            Releases/*.AppImage
           if-no-files-found: error
 
   # ---------------------------------------------------------------------------

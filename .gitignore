@@ -28,3 +28,6 @@ ENV/
 
 /.ocrmgr/
 /build-artifacts/
+
+# appimagetool download cache (Linux AppImage builds)
+/.appimage-tools/

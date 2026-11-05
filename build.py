@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import importlib.util
 import os
+import platform
 import shutil
 import stat
 import subprocess
@@ -55,6 +56,21 @@ CHROME_LENS_URLS: dict[str, str] = {
     "Windows": "https://github.com/timminator/Chrome-Lens-OCR/releases/download/v{version}/Chrome-Lens-OCR-v{version}.7z",
     "Linux": "https://github.com/timminator/Chrome-Lens-OCR/releases/download/v{version}/Chrome-Lens-OCR-v{version}-Linux.7z",
 }
+
+# appimagetool turns an AppDir into a single-file AppImage. It is downloaded on
+# demand (it is a self-contained AppImage itself) and cached in .appimage-tools.
+APPIMAGETOOL_URL = (
+    "https://github.com/AppImage/appimagetool/releases/download/continuous/"
+    "appimagetool-x86_64.AppImage"
+)
+APPIMAGETOOL_CACHE_DIR = Path(".appimage-tools")
+
+# GitHub rejects release assets above 2 GiB (2 * 1024^3 bytes). Kept slightly
+# under the limit to leave room for HTTP overhead.
+MAX_RELEASE_ASSET_BYTES = 2 * 1024 * 1024 * 1024 - (16 * 1024 * 1024)
+
+# Icon size for the hicolor theme directory AppImage tooling expects.
+APPIMAGE_ICON_SIZE = 256
 
 
 # --- Helper Functions ---
@@ -258,13 +274,18 @@ def clean_pyside6_qml_artifacts() -> None:
         print("No PySide6 'objects-*' artifact folders found.")
 
 
-def run_command(command: list[str], cwd: str | Path | None = None) -> None:
+def run_command(
+    command: list[str],
+    cwd: str | Path | None = None,
+    env: dict[str, str] | None = None,
+) -> None:
     """Runs a command in the shell, streams its output, and exits if it fails."""
     try:
         print(
             f"\nRunning command: {' '.join(command)}" + (f" in '{cwd}'" if cwd else "")
         )
-        subprocess.run(command, check=True, cwd=cwd)
+        run_env = None if env is None else {**os.environ, **env}
+        subprocess.run(command, check=True, cwd=cwd, env=run_env)
     except subprocess.CalledProcessError as e:
         print(f"\nERROR: Command failed with exit code {e.returncode}")
         sys.exit(1)
@@ -412,6 +433,213 @@ def create_final_archive(folder_path: Path, build_target: str) -> None:
     except Exception as e:
         print(f"ERROR: Failed to create archive. Reason: {e}")
         sys.exit(1)
+
+
+def _download_appimagetool() -> Path:
+    """Return a cached, executable appimagetool, downloading it if needed.
+
+    appimagetool ships as an AppImage, so it must be run with
+    ``APPIMAGE_EXTRACT_AND_RUN=1`` where FUSE is unavailable (CI containers);
+    that is handled by :func:`create_linux_appimage`.
+    """
+    cached = APPIMAGETOOL_CACHE_DIR / "appimagetool-x86_64.AppImage"
+    if cached.is_file() and os.access(cached, os.X_OK):
+        print(f"Using cached appimagetool at '{cached}'")
+        return cached
+
+    print_header("Downloading appimagetool")
+    APPIMAGETOOL_CACHE_DIR.mkdir(exist_ok=True)
+    download_file(APPIMAGETOOL_URL, APPIMAGETOOL_CACHE_DIR)
+    if not cached.is_file():
+        print(f"ERROR: appimagetool download did not produce '{cached}'")
+        sys.exit(1)
+    os.chmod(cached, 0o755)
+    return cached
+
+
+def _appimage_arch() -> str:
+    """Map the host architecture to the AppImage ARCH value."""
+    machine = platform.machine().lower()
+    if machine in ("x86_64", "amd64"):
+        return "x86_64"
+    if machine in ("aarch64", "arm64"):
+        return "aarch64"
+    print(f"WARNING: Unsupported architecture for AppImage: {machine}")
+    return machine
+
+
+def _png_size(path: Path) -> int | None:
+    """Return the square pixel size of a PNG, or None if it cannot be read.
+
+    Only the IHDR header is parsed (bytes 16-24), so this needs no image library
+    and works on the build host regardless of Pillow being installed.
+    """
+    try:
+        with path.open("rb") as handle:
+            header = handle.read(24)
+    except OSError:
+        return None
+    if len(header) < 24 or header[:8] != b"\x89PNG\r\n\x1a\n":
+        return None
+    width = int.from_bytes(header[16:20], "big")
+    height = int.from_bytes(header[20:24], "big")
+    if width <= 0 or height <= 0:
+        return None
+    # hicolor directories are square; use the larger edge if the icon is not.
+    return max(width, height)
+
+
+def _build_appdir(final_app_path: Path, appdir: Path, target_label: str) -> None:
+    """Populate an AppDir from the packaged application folder.
+
+    Layout required by appimagetool:
+        AppDir/AppRun                       -> entry point (executable)
+        AppDir/VideOCR.desktop              -> desktop entry at the root
+        AppDir/videocr.png                  -> icon at the root
+        AppDir/usr/bin/...                  -> the actual payload
+        AppDir/usr/share/icons/hicolor/<size>x<size>/apps/videocr.png
+    """
+    print(f"Populating AppDir at '{appdir}'...")
+    if appdir.exists():
+        shutil.rmtree(appdir)
+    appdir.mkdir(parents=True)
+
+    payload_dir = appdir / "usr" / "bin"
+    payload_dir.parent.mkdir(parents=True, exist_ok=True)
+    # Copy the whole package. The GUI resolves its data relative to
+    # sys.executable, so the binary and its siblings must stay together.
+    shutil.copytree(final_app_path, payload_dir, symlinks=True)
+
+    # AppImage builds are portable by definition: their AppDir is mounted
+    # read-only at run time, so a portable_mode.txt next to the binary would
+    # make the app try to write its config into a read-only mount. Remove it so
+    # settings land in the XDG config dir instead.
+    portable_flag = payload_dir / "portable_mode.txt"
+    if portable_flag.exists():
+        portable_flag.unlink()
+
+    icon_src = final_app_path / "VideOCR.png"
+    if not icon_src.is_file():
+        print(f"WARNING: icon not found at '{icon_src}'; AppImage will be iconless.")
+    else:
+        shutil.copy2(icon_src, appdir / "videocr.png")
+        # hicolor lookup is by directory name, so the icon must live in the
+        # directory that matches its real pixel size.
+        icon_size = _png_size(icon_src) or APPIMAGE_ICON_SIZE
+        icon_dir = (
+            appdir
+            / "usr"
+            / "share"
+            / "icons"
+            / "hicolor"
+            / f"{icon_size}x{icon_size}"
+            / "apps"
+        )
+        icon_dir.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(icon_src, icon_dir / "videocr.png")
+
+    desktop_entry = f"""[Desktop Entry]
+Type=Application
+Name=VideOCR Recreated
+GenericName=Subtitle Extractor
+Comment=Extract hardcoded subtitles from video
+Exec=VideOCR.bin
+Icon=videocr
+Terminal=false
+Categories=AudioVideo;Video;
+StartupNotify=true
+X-AppImage-Version={APP_VERSION}
+X-AppImage-Build-Id={target_label}
+"""
+    (appdir / "VideOCR.desktop").write_text(desktop_entry, encoding="utf-8")
+
+    # AppRun: the AppImage entry point. $APPDIR is set by the AppImage runtime.
+    app_run = """#!/bin/bash
+# AppImage entry point for VideOCR Recreated.
+set -euo pipefail
+HERE="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
+export PATH="$HERE/usr/bin:$PATH"
+# The GUI spawns the bundled CLI from its own directory; keep the working
+# directory predictable so relative paths in the UI resolve consistently.
+cd "$HERE/usr/bin"
+exec "$HERE/usr/bin/VideOCR.bin" "$@"
+"""
+    app_run_path = appdir / "AppRun"
+    app_run_path.write_text(app_run, encoding="utf-8")
+
+    # appimagetool rejects an AppDir whose AppRun or .desktop file is not
+    # world-executable ("some users cannot execute it"), and a plain chmod +x
+    # only sets the owner bit under a 077 umask. Set 0755 explicitly.
+    os.chmod(app_run_path, 0o755)
+    os.chmod(appdir / "VideOCR.desktop", 0o755)
+
+
+def create_linux_appimage(
+    final_app_path: Path,
+    build_target: str,
+    base_target_name: str,
+    cuda_suffix: str,
+    release_tag: str,
+) -> Path | None:
+    """Build a single-file AppImage from the packaged GUI folder.
+
+    Runs on Linux only; returns the produced AppImage path (or None when
+    skipped). AppImages bundle everything except the base system, so the result
+    is directly executable on any glibc-compatible x86-64 distribution.
+    """
+    if sys.platform != "linux":
+        return None
+
+    print_header(f"Creating AppImage for {final_app_path.name}")
+
+    appimagetool = _download_appimagetool()
+    work_dir = final_app_path.parent / f"appimage_{build_target}"
+    appdir = work_dir / "VideOCR.AppDir"
+
+    target_label = f"{base_target_name}{cuda_suffix}"
+    try:
+        _build_appdir(final_app_path, appdir, target_label)
+
+        output_name = (
+            f"VideOCR-{base_target_name}-v{APP_VERSION}{cuda_suffix}"
+            f"{release_tag}-Linux-{_appimage_arch()}.AppImage"
+        )
+        output_path = final_app_path.parent / output_name
+
+        # In containers/CI there is no FUSE, so an AppImage cannot mount itself.
+        # APPIMAGE_EXTRACT_AND_RUN makes the appimagetool AppImage extract and
+        # run its payload instead of mounting it.
+        env = {"ARCH": _appimage_arch()}
+        if not Path("/dev/fuse").exists():
+            print("FUSE not available; running appimagetool in extract-and-run mode.")
+            env["APPIMAGE_EXTRACT_AND_RUN"] = "1"
+        command = [str(appimagetool), "--no-appstream", str(appdir), str(output_path)]
+
+        run_command(command, env=env)
+
+        if not output_path.is_file():
+            print(f"ERROR: appimagetool did not produce '{output_path}'")
+            sys.exit(1)
+        os.chmod(output_path, 0o755)
+        size_bytes = output_path.stat().st_size
+        size_mb = size_bytes / (1024 * 1024)
+        print(f"AppImage created: {output_path} ({size_mb:.1f} MB)")
+
+        # GitHub rejects any single release asset above 2 GiB, and an AppImage
+        # is one file that cannot be split into volumes the way a .7z can. A
+        # CUDA build can cross that line, so drop the AppImage rather than fail
+        # the whole release upload — the portable archive still ships.
+        if size_bytes > MAX_RELEASE_ASSET_BYTES:
+            print(
+                f"WARNING: AppImage is {size_mb:.1f} MB, above GitHub's "
+                f"{MAX_RELEASE_ASSET_BYTES // (1024 * 1024)} MB per-asset limit."
+            )
+            print("         Removing it; use the portable .7z archive for this build.")
+            output_path.unlink()
+            return None
+        return output_path
+    finally:
+        shutil.rmtree(work_dir, ignore_errors=True)
 
 
 def create_windows_installer(final_app_path: Path, args: argparse.Namespace) -> None:
@@ -603,7 +831,7 @@ def package_target(
         print(f"Creating standalone CLI at '{final_cli_path}'")
         shutil.copytree(temp_cli_dist, final_cli_path)
     else:
-        print(f"Skipping standalone CLI folder creation (--gui-only).")
+        print("Skipping standalone CLI folder creation (--gui-only).")
 
     if not is_cli_only and temp_gui_dist:
         final_app_folder_name = f"VideOCR-{base_target_name}-v{APP_VERSION}{cuda_suffix}{release_tag}{os_suffix}"
@@ -649,6 +877,22 @@ def package_target(
         print("Injecting portable_mode.txt for standalone GUI archive...")
         portable_flag_gui = final_app_path / "portable_mode.txt"
         portable_flag_gui.touch()
+
+        # Linux also ships a single-file AppImage. Build it AFTER the portable
+        # flag is written: _build_appdir removes that flag from its copy, since
+        # an AppDir is mounted read-only at run time.
+        if (
+            os_name == "Linux"
+            and args.appimage
+            and args.appimage.lower() == "true"
+        ):
+            create_linux_appimage(
+                final_app_path,
+                build_target,
+                base_target_name,
+                cuda_suffix,
+                release_tag,
+            )
     else:
         shutil.rmtree(work_dir)
 
@@ -706,6 +950,11 @@ def main() -> None:
         help="(Optional, Windows only) Set to 'true' to create an Inno Setup installer.",
     )
     parser.add_argument(
+        "--appimage",
+        default="false",
+        help="(Optional, Linux only) Set to 'true' to also build a single-file .AppImage alongside the portable archive.",
+    )
+    parser.add_argument(
         "--release-type",
         default=None,
         help="(Optional) Specify a release type (e.g., 'Beta', 'RC1') to append to the output artifact names.",
@@ -732,6 +981,7 @@ def main() -> None:
                 args.iscc is not None,
                 args.archive.lower() == "true",
                 args.windows_installer.lower() == "true",
+                args.appimage.lower() == "true",
                 args.release_type is not None,
             )
         )

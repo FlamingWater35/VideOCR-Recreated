@@ -79,10 +79,18 @@ python build.py --target gpu-directml        # AMD DirectML build
 python build.py --target gpu-cuda11.8        # CUDA 11.8 build
 python build.py --target gpu-cuda12.9        # CUDA 12.9 build
 python build.py --clean true --target cpu    # clean artifacts then build
+python build.py --target cpu --appimage true # Linux: also emit a .AppImage
 python build.py -h                           # all options
 ```
 
-Build requires: Nuitka, 7-Zip in PATH, PySide6, (Windows) C++ Build Tools + Inno Setup for installers.
+Build requires: Nuitka, 7-Zip in PATH, PySide6, (Windows) C++ Build Tools + Inno Setup for installers,
+(Linux) `squashfs-tools` for AppImages.
+
+On Linux, `--appimage true` additionally produces a single-file
+`Releases/VideOCR-*-Linux-x86_64.AppImage` next to the portable `.7z`. It needs
+`squashfs-tools` (`mksquashfs`) and downloads `appimagetool` once into
+`.appimage-tools/` (gitignored). The AppImage is deliberately built from a copy
+with `portable_mode.txt` removed, because an AppDir mounts read-only at run time.
 
 ### Install for development
 

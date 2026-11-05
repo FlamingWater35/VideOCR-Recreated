@@ -31,7 +31,6 @@ from __future__ import annotations
 import argparse
 import re
 import subprocess
-import sys
 from pathlib import Path
 
 DOWNLOAD_URL = "https://github.com/{repo}/releases/download/{tag}/{asset}"
@@ -73,8 +72,8 @@ def link(asset: str, repo: str, tag: str) -> str:
 def render_static_table(version: str, repo: str, tag: str) -> str:
     """Render the table from expected asset names (static/preview mode)."""
     lines = [
-        "| Operating system | Build | Portable | Installer |",
-        "| --- | --- | --- | --- |",
+        "| Operating system | Build | Portable | Installer | AppImage |",
+        "| --- | --- | --- | --- | --- |",
     ]
     for os_name, _suffix in OSES:
         for target, display, _seg in TARGETS:
@@ -93,7 +92,14 @@ def render_static_table(version: str, repo: str, tag: str) -> str:
                 if os_name == "Windows"
                 else "—"
             )
-            lines.append(f"| **{os_name}** | {display} | {portable} | {installer} |")
+            appimage = (
+                link(f"{base}-x86_64.AppImage", repo, tag)
+                if os_name == "Linux"
+                else "—"
+            )
+            lines.append(
+                f"| **{os_name}** | {display} | {portable} | {installer} | {appimage} |"
+            )
     return "\n".join(lines)
 
 
@@ -104,6 +110,9 @@ def parse_asset(name: str) -> tuple[str, str, str]:
     """Map an asset name to (os, build, base) using its filename only."""
     if name.endswith(".exe"):
         base = name[: -len(".exe")]
+    elif name.endswith(".AppImage"):
+        # VideOCR-CPU-v1.6.11-Linux-x86_64.AppImage -> ...-Linux
+        base = name[: -len(".AppImage")].rsplit("-", 1)[0]
     elif ".7z." in name:  # split volume, e.g. VideOCR-...-Linux.7z.001
         base = name.rsplit(".7z.", 1)[0]
     else:
@@ -140,8 +149,8 @@ def render_asset_table(assets: list[str], repo: str, tag: str) -> str:
         return (os_order, BUILD_ORDER.get(build, 99), build)
 
     lines = [
-        "| Operating system | Build | Portable | Installer |",
-        "| --- | --- | --- | --- |",
+        "| Operating system | Build | Portable | Installer | AppImage |",
+        "| --- | --- | --- | --- | --- |",
     ]
     for (os_name, build), names in sorted(rows.items(), key=sort_key):
         parts = sorted(
@@ -149,13 +158,23 @@ def render_asset_table(assets: list[str], repo: str, tag: str) -> str:
             key=lambda n: (volume_number(n) is not None, volume_number(n) or 0, n),
         )
         installers = [n for n in parts if n.endswith(".exe")]
-        archives = [n for n in parts if not n.endswith(".exe")]
+        appimages = [n for n in parts if n.endswith(".AppImage")]
+        archives = [
+            n
+            for n in parts
+            if not n.endswith(".exe") and not n.endswith(".AppImage")
+        ]
 
         portable = " + ".join(link(n, repo, tag) for n in archives)
         installer = (
             " · ".join(link(n, repo, tag) for n in installers) if installers else "—"
         )
-        lines.append(f"| **{os_name}** | {build} | {portable} | {installer} |")
+        appimage = (
+            " · ".join(link(n, repo, tag) for n in appimages) if appimages else "—"
+        )
+        lines.append(
+            f"| **{os_name}** | {build} | {portable} | {installer} | {appimage} |"
+        )
     return "\n".join(lines)
 
 
@@ -214,8 +233,10 @@ def main() -> None:
 
     if args.assets_file:
         assets = [
-            line.strip()
-            for line in Path(args.assets_file).read_text(encoding="utf-8").splitlines()
+            line.strip().lstrip("\ufeff")
+            for line in Path(args.assets_file)
+            .read_text(encoding="utf-8-sig")
+            .splitlines()
             if line.strip()
         ]
         table = render_asset_table(assets, args.repo, args.tag)

@@ -125,3 +125,158 @@ def test_build_script_forces_pyav_shared_utility_module():
     assert "--include-module=av._cyutil" in text
     guards = text.count("*av_cyutil_include_args()")
     assert guards >= 2, "expected the helper to be spliced into GUI and CLI builds"
+
+
+def _load_build_module():
+    """Import build.py from the repo root without executing a build."""
+    import importlib.util
+    import sys
+
+    spec = importlib.util.spec_from_file_location("_build_contract", BUILD_SCRIPT)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def _png_icon_size() -> int:
+    """Read the real pixel size of the repo icon (PNG IHDR bytes 16-24)."""
+    import struct
+
+    header = (REPO_ROOT / "Installer" / "VideOCR.png").read_bytes()[:24]
+    assert header[:8] == b"\x89PNG\r\n\x1a\n"
+    width, height = struct.unpack(">II", header[16:24])
+    return max(width, height)
+
+
+def _make_png(width: int, height: int) -> bytes:
+    """Build a minimal PNG header with a real IHDR (enough for size probing)."""
+    import struct
+
+    ihdr = struct.pack(">II", width, height) + b"\x08\x06\x00\x00\x00"
+    return (
+        b"\x89PNG\r\n\x1a\n"
+        + struct.pack(">I", 13)
+        + b"IHDR"
+        + ihdr
+        + b"\x00\x00\x00\x00"
+    )
+
+
+def test_appimage_appdir_drops_portable_flag_and_keeps_payload_siblings(tmp_path):
+    """An AppDir mounts read-only, so portable_mode.txt must not survive.
+
+    The GUI resolves its data next to sys.executable, so the binary and its
+    siblings have to stay in the same directory inside the AppDir.
+    """
+    build = _load_build_module()
+
+    package = tmp_path / "VideOCR-CPU-v1.6.11-Linux"
+    (package / "av").mkdir(parents=True)
+    (package / "VideOCR.bin").write_text("", encoding="utf-8")
+    (package / "videocr-cli.bin").write_text("", encoding="utf-8")
+    (package / "build_variant.txt").write_text("cpu", encoding="utf-8")
+    (package / "portable_mode.txt").write_text("", encoding="utf-8")
+    # A deliberately non-256 icon: the hicolor directory must follow the real
+    # pixel size instead of a hardcoded guess.
+    (package / "VideOCR.png").write_bytes(_make_png(512, 512))
+
+    appdir = tmp_path / "AppDir"
+    build._build_appdir(package, appdir, "CPU")
+
+    payload = appdir / "usr" / "bin"
+    assert not (payload / "portable_mode.txt").exists(), (
+        "portable_mode.txt must be removed: the AppDir is read-only at run time"
+    )
+    assert (payload / "VideOCR.bin").is_file()
+    assert (payload / "videocr-cli.bin").is_file()
+    assert (payload / "build_variant.txt").read_text(encoding="utf-8") == "cpu"
+    assert (payload / "av").is_dir()
+
+    # appimagetool requires these at the AppDir root, and AppRun must be
+    # executable or the AppImage will not start.
+    assert (appdir / "AppRun").is_file()
+    assert (appdir / "VideOCR.desktop").is_file()
+    assert (appdir / "videocr.png").is_file()
+    icon = (
+        appdir
+        / "usr"
+        / "share"
+        / "icons"
+        / "hicolor"
+        / "512x512"
+        / "apps"
+        / "videocr.png"
+    )
+    assert icon.is_file(), "hicolor directory must match the icon's pixel size"
+
+    import os
+    import stat as stat_module
+
+    assert os.stat(appdir / "AppRun").st_mode & stat_module.S_IXUSR
+    assert os.stat(appdir / "VideOCR.desktop").st_mode & stat_module.S_IXUSR
+
+    desktop = (appdir / "VideOCR.desktop").read_text(encoding="utf-8")
+    # The Exec target must match the Linux binary the build actually produces.
+    assert "Exec=VideOCR.bin" in desktop
+    assert "Exec=VideOCR.exe" not in desktop
+    assert "Icon=videocr" in desktop
+
+    app_run = (appdir / "AppRun").read_text(encoding="utf-8")
+    assert "VideOCR.bin" in app_run
+
+
+def test_appimage_naming_matches_release_assets():
+    """The AppImage name must follow the archive naming scheme.
+
+    tools/generate_release_notes.py derives the download link from the portable
+    archive name plus "-x86_64.AppImage", so the two must agree.
+    """
+    build = _load_build_module()
+    arch = build._appimage_arch()
+    assert arch in ("x86_64", "aarch64")
+
+    # Mirrors the f-string in create_linux_appimage().
+    produced = f"VideOCR-CPU-v{build.APP_VERSION}-Linux-{arch}.AppImage"
+    assert produced.startswith("VideOCR-CPU-v")
+    assert produced.endswith(f"-Linux-{arch}.AppImage")
+
+    notes = (REPO_ROOT / "tools" / "generate_release_notes.py").read_text(
+        encoding="utf-8"
+    )
+    assert ".AppImage" in notes, "release notes must list AppImage assets"
+    assert "AppImage |" in notes, "release notes table needs an AppImage column"
+
+
+def test_release_notes_parse_appimage_asset_names():
+    """parse_asset() must fold an AppImage back onto its portable base name."""
+    import importlib.util
+    import sys
+
+    notes_path = REPO_ROOT / "tools" / "generate_release_notes.py"
+    spec = importlib.util.spec_from_file_location("_release_notes", notes_path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+
+    os_name, build_name, base = module.parse_asset(
+        "VideOCR-CPU-v1.6.11-Linux-x86_64.AppImage"
+    )
+    assert (os_name, build_name) == ("Linux", "CPU")
+    assert base == "VideOCR-CPU-v1.6.11-Linux"
+
+    os_name, build_name, base = module.parse_asset(
+        "VideOCR-GPU-v1.6.11-CUDA-11.8-Linux-x86_64.AppImage"
+    )
+    assert (os_name, build_name) == ("Linux", "CUDA 11.8")
+    assert base == "VideOCR-GPU-v1.6.11-CUDA-11.8-Linux"
+
+
+def test_appimage_only_built_on_linux_and_opted_in():
+    text = BUILD_SCRIPT.read_text(encoding="utf-8")
+    # Linux-only guard plus the opt-in flag; building on Windows must be a no-op.
+    assert 'sys.platform != "linux"' in text
+    assert "args.appimage" in text
+    assert '"--appimage"' in text or "'--appimage'" in text
