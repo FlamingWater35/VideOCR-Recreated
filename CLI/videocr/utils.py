@@ -854,7 +854,9 @@ def process_ssim_group(
         for rect in union_rects:
             cx1, cy1 = max(0, int(rect[0])), max(0, int(rect[1]))
             cx2, cy2 = min(w, int(rect[2])), min(h, int(rect[3]))
-            current_crops.append(img[cy1:cy2, cx1:cx2])
+            # fast-ssim >=1.4 rejects non C-contiguous arrays, and a 2-D slice
+            # of a grid image is strided; copy so the SSIM call is safe.
+            current_crops.append(np.ascontiguousarray(img[cy1:cy2, cx1:cx2]))
 
         item_dict = {
             "img": img.copy(),

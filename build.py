@@ -128,6 +128,40 @@ def check_pyside6() -> None:
         sys.exit(1)
 
 
+def check_runtime_dependencies() -> None:
+    """Verifies the modules the compiled binaries import at startup exist.
+
+    Nuitka only bundles what it can see, and a module missing here produces a
+    *compiled* bundle that dies instantly with ``ModuleNotFoundError`` — after
+    a multi-hour compile and a published release. This turns that into a
+    seconds-long failure before compilation starts.
+    """
+    print_header("Checking runtime dependencies...")
+    # Actually importing (not find_spec) validates the whole startup chain,
+    # including C-extension shared utilities such as av._cyutil that only fail
+    # at import time.
+    required = [
+        ("av", "PyAV (video decode)"),
+        ("numpy", "NumPy (frame math)"),
+        ("PIL", "Pillow (image handling)"),
+        ("fast_ssim", "Fast-SSIM (frame dedup)"),
+    ]
+    missing: list[str] = []
+    for mod, why in required:
+        try:
+            importlib.import_module(mod)
+        except Exception as exc:  # noqa: BLE001 - report any import failure
+            missing.append(f"{mod} — {why} ({type(exc).__name__}: {exc})")
+    if missing:
+        print("ERROR: Missing runtime dependencies:")
+        for item in missing:
+            print(f"  - {item}")
+        print("\nInstall the project dependencies before building:")
+        print("  python -m pip install .")
+        sys.exit(1)
+    print("All required runtime modules are importable.")
+
+
 def check_dbus() -> None:
     """On Linux, checks if dbus is likely installed for better plyer support."""
     if sys.platform == "linux":
@@ -289,6 +323,25 @@ def extract_archive(file_path: Path, dest_folder: str | Path) -> None:
     else:
         raise ValueError(f"Unsupported archive format: {file_path.suffix}")
     print(f"Extracted to {dest_folder}")
+
+
+def av_cyutil_include_args() -> list[str]:
+    """Return the Nuitka flag that bundles PyAV's ``av._cyutil`` shared utility.
+
+    ``av/logging.py`` pulls ``av._cyutil`` in from Cython, so there is no
+    Python-level import statement for Nuitka's import analysis to follow. PyAV
+    wheels that ship it (the ``_cyutil.abi3.so`` / ``_cyutil.so`` shared
+    utility) therefore lose it silently in a standalone build, and every
+    compiled binary then dies at startup with::
+
+        ModuleNotFoundError: No module named 'av._cyutil'
+
+    Older PyAV releases have no such module, so only request it when the build
+    environment actually provides it.
+    """
+    if importlib.util.find_spec("av._cyutil") is None:
+        return []
+    return ["--include-module=av._cyutil"]
 
 
 def sign_file(
@@ -693,6 +746,7 @@ def main() -> None:
     check_dbus()
     check_7zip()
     check_lazy_loader()
+    check_runtime_dependencies()
 
     if args.target in ("gpu", "gpu-directml", "all") and sys.platform == "win32":
         print_header("Checking DirectML Python dependencies...")
@@ -746,6 +800,7 @@ def main() -> None:
                 "--assume-yes-for-downloads",
                 "--windows-console-mode=disable",
                 "--include-module=av.utils",
+                *av_cyutil_include_args(),
                 # The GUI only spawns the CLI. It does not run OCR itself.
                 # Exclude heavy AI/ML libraries to prevent MSVC C1002 "out of heap space"
                 # errors and to slash GUI compile times.
@@ -760,7 +815,7 @@ def main() -> None:
             )
             sys.exit(1)
 
-        gui_exe = gui_dist_folder / "VideOCR.exe"
+        gui_exe = gui_dist_folder / ("VideOCR.exe" if sys.platform == "win32" else "VideOCR.bin")
         if gui_exe.exists():
             sign_file(args.signtool, args.sign_cert_name, gui_exe)
     else:
@@ -779,6 +834,7 @@ def main() -> None:
         "nuitka",
         "--assume-yes-for-downloads",
         "--include-module=av.utils",
+        *av_cyutil_include_args(),
         # Bundle the ass_qafix script as raw data so runpy can execute it
         "--include-data-files=../tools/ass_qafix/ass_qafix.py=tools/ass_qafix/ass_qafix.py",
         # Ignore PyTorch's JIT C++ builder and setuptools to save compile time
@@ -834,7 +890,9 @@ def main() -> None:
         print(f"ERROR: Nuitka failed to create the CLI dist folder: {cli_dist_folder}")
         sys.exit(1)
 
-    cli_exe = cli_dist_folder / "videocr-cli.exe"
+    cli_exe = cli_dist_folder / (
+        "videocr-cli.exe" if sys.platform == "win32" else "videocr-cli.bin"
+    )
     if cli_exe.exists():
         sign_file(args.signtool, args.sign_cert_name, cli_exe)
 

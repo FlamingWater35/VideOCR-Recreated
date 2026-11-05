@@ -126,7 +126,8 @@ QSS theme.
 - `build.py` compiles the GUI and CLI **once** and only swaps the PaddleOCR
   helper bundle per target, so the shipped binaries are identical across
   targets. The only per-target signal is a `build_variant.txt` marker that
-  `package_target()` writes into the package root (next to `VideOCR.exe`, same
+  `package_target()` writes into the package root (next to the GUI executable —
+  `VideOCR.exe` on Windows, `VideOCR.bin` on Linux — same
   pattern as `portable_mode.txt`).
 - `config.get_build_variant()` reads it; a missing or unrecognised marker means
   `"unknown"`, which **enables everything** — that is the from-source case, and

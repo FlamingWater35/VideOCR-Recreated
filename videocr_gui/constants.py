@@ -438,6 +438,16 @@ GUI_SCALING_LIST = [('system_default', 'System Default'),
  ('scale_2_0', '2.0')]
 DEFAULT_GUI_SCALING = 'system_default'
 
+# Internal key -> QT_SCALE_FACTOR value. "system_default" is absent on purpose:
+# it means "let Qt follow the OS DPI" and must not set the variable at all.
+GUI_SCALING_FACTORS = {
+    'scale_1_0': '1.0',
+    'scale_1_25': '1.25',
+    'scale_1_5': '1.5',
+    'scale_1_75': '1.75',
+    'scale_2_0': '2.0',
+}
+
 # --- DirectML options ---
 DIRECTML_AUTO_OPTION = 'Auto (recommended)'
 DIRECTML_PERFORMANCE_PRESETS = [('Compatibility / Low VRAM', 'compatibility'),

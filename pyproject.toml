@@ -21,7 +21,18 @@ classifiers = [
 dependencies = [
     "av",
     "cpuid",
-    "Fast-SSIM",
+    # fast-ssim >=1.4 raises ValueError on non C-contiguous numpy arrays; the
+    # SSIM call sites now copy before calling, so both 1.3.x and 1.4.x work.
+    # Keep a floor so a build can't resolve to a version older than the API we
+    # use, and a ceiling so a future major can't silently break Linux builds
+    # again (the Windows env pins nothing and resolves 1.3.1).
+    "Fast-SSIM>=1.3.1,<2",
+    # Imported unconditionally by CLI/videocr/{utils,video}.py and
+    # videocr_gui/video_preview.py, so it must be a hard dependency on every
+    # platform. It used to live only in the Windows-only [directml] extra,
+    # which left Linux builds without it — Nuitka then compiled a bundle that
+    # died at startup with `ModuleNotFoundError: No module named 'numpy'`.
+    "numpy",
     "opencc",
     "Pillow",
     "psutil",

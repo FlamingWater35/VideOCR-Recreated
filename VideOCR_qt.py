@@ -7,7 +7,10 @@
 #     nuitka-project: --include-qt-plugins=platforms,platformthemes,xcbglintegrations,imageformats,iconengines,platforminputcontexts
 # nuitka-project: --windows-console-mode=disable
 # nuitka-project: --include-windows-runtime-dlls=yes
-# nuitka-project: --output-filename=VideOCR.exe
+# nuitka-project-if: {OS} == "Windows":
+#     nuitka-project: --output-filename=VideOCR.exe
+# nuitka-project-if: {OS} == "Linux":
+#     nuitka-project: --output-filename=VideOCR.bin
 # nuitka-project: --include-data-files=Installer/*.ico=VideOCR.ico
 # nuitka-project: --include-data-files=Installer/*.png=VideOCR.png
 # nuitka-project: --include-data-dir=languages=languages

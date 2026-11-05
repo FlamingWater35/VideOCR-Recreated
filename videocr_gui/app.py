@@ -509,6 +509,10 @@ class MainWindow(QMainWindow):
             self.engine_combo.blockSignals(False)
             self.lang_combo.blockSignals(False)
             self.pos_combo.blockSignals(False)
+        # The engine combo lives here, but the ONNX tuning preset on the
+        # settings tab needs to know which engine is selected before it may
+        # rewrite the DirectML grid size (see SettingsTab._apply_onnx_grid).
+        self.settings_tab.set_ocr_engine(engine)
 
     def _update_lang_list(self, engine: str, keep_selection: bool = False) -> None:
         """Refreshes the language combo for the given engine; preserves selection if possible."""
@@ -548,6 +552,7 @@ class MainWindow(QMainWindow):
             return
         engine = self.engine_combo.currentText()
         self._settings["ocr_engine"] = engine
+        self.settings_tab.set_ocr_engine(engine)
         self._update_lang_list(engine, keep_selection=True)
         self._settings["subtitle_language"] = self.lang_combo.currentText()
         config.save_settings(self._settings)

@@ -128,6 +128,10 @@ class SettingsTab(QWidget):
         self._block_signals = False
         self._settings: dict[str, Any] = {}
         self._style_box: QGroupBox | None = None
+        # Display name of the engine selected in the Process Video tab. That
+        # combo lives on the main window, not in this tab, so it is pushed in
+        # via set_ocr_engine() and consumed by _apply_onnx_grid().
+        self._ocr_engine_text = ""
         self._build_ui()
         self._retranslate()
 
@@ -1225,16 +1229,22 @@ class SettingsTab(QWidget):
             self._widgets["--onnx_directml_tuning"].currentIndex()
         ]
         cli = C.ONNX_DIRECTML_TUNING_TO_CLI.get(tuning, "balanced")
-        engine = self._widgets.get("ocr_engine", None)
-        engine_text = ""
-        if isinstance(engine, QComboBox):
-            engine_text = engine.currentText()
-        if "ONNX Runtime DirectML" not in engine_text:
+        # The engine combo lives on the Process Video tab (main window), so the
+        # selected display name is pushed in through set_ocr_engine().
+        if "ONNX Runtime DirectML" not in self._ocr_engine_text:
             return
         grid = {"low_vram": "1600", "balanced": "2048", "max": "3072"}.get(cli)
         if grid:
             self._widgets["--directml_grid_max_width"].setText(grid)
             self._widgets["--directml_grid_max_height"].setText(grid)
+
+    def set_ocr_engine(self, engine_text: str) -> None:
+        """Records the Process Video tab's engine selection.
+
+        The engine combo is owned by the main window, but the ONNX tuning preset
+        must only rewrite the DirectML grid size while that engine is selected.
+        """
+        self._ocr_engine_text = engine_text or ""
 
     def _refresh_directml(self) -> None:
         from . import directml

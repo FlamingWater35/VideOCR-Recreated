@@ -19,7 +19,17 @@ def main() -> int:
         QApplication.setAttribute(Qt.ApplicationAttribute.AA_UseHighDpiPixmaps, True)
 
     from videocr_gui import config
+    from videocr_gui import constants as C
     from videocr_gui.app import MainWindow
+
+    # QT_SCALE_FACTOR must be in the environment before QApplication exists, so
+    # the persisted GUI scaling is resolved here rather than in the settings tab.
+    # "system_default" leaves the variable unset so Qt follows the OS DPI.
+    _scale = C.GUI_SCALING_FACTORS.get(
+        str(config.load_settings().get("gui_scaling", C.DEFAULT_GUI_SCALING))
+    )
+    if _scale is not None:
+        os.environ["QT_SCALE_FACTOR"] = _scale
 
     # In source/dev mode, make the CLI package importable when the GUI is launched
     # from a different working directory.

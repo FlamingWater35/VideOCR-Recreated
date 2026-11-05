@@ -50,6 +50,15 @@ class TestFindVideocrProgram:
         exe.write_bytes(b"")
         assert workers.find_videocr_program() == str(exe)
 
+    def test_linux_app_dir_uses_bin_suffix(self, monkeypatch, tmp_path):
+        # The Linux package ships videocr-cli.bin (never .exe); the lookup must
+        # find it next to the GUI binary.
+        monkeypatch.setattr(workers, "APP_DIR", str(tmp_path))
+        monkeypatch.setattr(workers.sys, "platform", "linux")
+        exe = tmp_path / "videocr-cli.bin"
+        exe.write_bytes(b"")
+        assert workers.find_videocr_program() == str(exe)
+
     def test_path_lookup(self, monkeypatch, tmp_path):
         monkeypatch.setattr(workers, "APP_DIR", str(tmp_path / "empty"))
         monkeypatch.setattr(workers.sys, "platform", "linux")

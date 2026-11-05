@@ -577,6 +577,9 @@ class Video:
                         raise ValueError(
                             f"Invalid subtitle_position: {subtitle_position}"
                         )
+                    # fast-ssim >=1.4 rejects non C-contiguous arrays; a column
+                    # slice of an RGB frame is strided, so copy to contiguous.
+                    sample = np.ascontiguousarray(sample)
                     if prev_sample is not None:
                         if dml_frame_filter is not None:
                             keep_frame = not dml_frame_filter.is_similar(
@@ -1545,6 +1548,10 @@ class Video:
                                     raise ValueError(
                                         f"Invalid subtitle_position: {subtitle_position}"
                                     )
+                                # fast-ssim >=1.4 rejects non C-contiguous
+                                # arrays; column slices of an RGB frame are
+                                # strided, so copy to contiguous.
+                                sample = np.ascontiguousarray(sample)
                             images_to_process.append(
                                 {
                                     "zone_idx": zone_idx,
