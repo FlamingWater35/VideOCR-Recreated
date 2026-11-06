@@ -348,3 +348,66 @@ class TestLabelDetectionOutput:
             "v.mp4", file_path=str(target), enable_label_detection=True
         )
         assert "ass-qafix script not found; skipping" in capsys.readouterr().out
+
+
+class TestSeparateLabelFiles:
+    """--label_separate_files writes the labels to their own .ass file."""
+
+    @staticmethod
+    def _fake_video(label_text: str | None):
+        class SplitFakeVideo(FakeVideo):
+            def get_subtitles(self, *args):
+                self.sub_args = args
+                self.label_ass_text = label_text
+                return FakeVideo.next_subtitles
+
+        return SplitFakeVideo
+
+    def test_sidecar_path(self, tmp_path):
+        assert api.label_sidecar_path(str(tmp_path / "movie.en.ass")) == str(
+            tmp_path / "movie.en.labels.ass"
+        )
+        # No suffix: fall back to .ass instead of producing "movie.en.labels".
+        assert api.label_sidecar_path(str(tmp_path / "movie.en")) == str(
+            tmp_path / "movie.en.labels.ass"
+        )
+
+    def test_writes_two_files(self, tmp_path, capsys, monkeypatch):
+        seen: list[str] = []
+        monkeypatch.setattr(api, "Video", self._fake_video("label-doc"))
+        monkeypatch.setattr(api, "_run_qafix", lambda p: seen.append(p))
+        target = tmp_path / "out.srt"
+        api.save_subtitles_to_file(
+            "v.mp4",
+            file_path=str(target),
+            enable_label_detection=True,
+            label_separate_files=True,
+        )
+        sub_file = tmp_path / "out.ass"
+        label_file = tmp_path / "out.labels.ass"
+        assert sub_file.read_text(encoding="utf-8") == FakeVideo.next_subtitles
+        assert label_file.read_text(encoding="utf-8") == "label-doc"
+        # qafix runs on both documents.
+        assert seen == [str(sub_file), str(label_file)]
+        out = capsys.readouterr().out
+        assert "labels to the separate file" in out
+
+    def test_missing_label_document_warns(self, tmp_path, capsys, monkeypatch):
+        monkeypatch.setattr(api, "Video", self._fake_video(None))
+        monkeypatch.setattr(api, "_run_qafix", lambda p: None)
+        api.save_subtitles_to_file(
+            "v.mp4",
+            file_path=str(tmp_path / "out.srt"),
+            enable_label_detection=True,
+            label_separate_files=True,
+        )
+        assert not (tmp_path / "out.labels.ass").exists()
+        assert "no separate label document" in capsys.readouterr().out
+
+    def test_off_by_default_keeps_single_file(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(api, "_run_qafix", lambda p: None)
+        api.save_subtitles_to_file(
+            "v.mp4", file_path=str(tmp_path / "out.srt"), enable_label_detection=True
+        )
+        assert (tmp_path / "out.ass").exists()
+        assert not (tmp_path / "out.labels.ass").exists()

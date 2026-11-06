@@ -71,6 +71,7 @@ DML_DEPENDENT_WIDGETS = (
 # whole Style category (Label Style + Subtitle Style rows): ASS styles only
 # apply to .ass output, which is produced only when label detection is on.
 LABEL_DEPENDENT_WIDGETS = (
+    "label_separate_files",
     "--label_time_start",
     "--label_time_end",
     "--label_ocr_image_max_width",
@@ -430,6 +431,14 @@ class SettingsTab(QWidget):
             "chk_label_detection",
             "Enable Label Detection (detect text outside the subtitle crop)",
             "tip_label_detection",
+            False,
+        )
+        self._add_check(
+            label_form,
+            "label_separate_files",
+            "chk_label_separate_files",
+            "Save Subtitles and Labels as Separate .ass Files",
+            "tip_label_separate_files",
             False,
         )
         self._add_line(

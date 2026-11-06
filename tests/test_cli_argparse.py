@@ -347,6 +347,19 @@ class TestMainFlagMapping:
                  "--allow_system_sleep", "true")
         assert fake_save[0]["label_lang"] == "japan"
 
+    def test_label_separate_files_flag(self, monkeypatch, video_file, fake_save):
+        run_main(monkeypatch, "--video_path", str(video_file),
+                 "--enable_label_detection", "true",
+                 "--label_separate_files", "true",
+                 "--allow_system_sleep", "true")
+        assert fake_save[0]["label_separate_files"] is True
+
+    def test_label_separate_files_off_by_default(self, monkeypatch, video_file, fake_save):
+        run_main(monkeypatch, "--video_path", str(video_file),
+                 "--enable_label_detection", "true",
+                 "--allow_system_sleep", "true")
+        assert fake_save[0]["label_separate_files"] is False
+
     def test_label_lang_empty_by_default(self, monkeypatch, video_file, fake_save):
         run_main(monkeypatch, "--video_path", str(video_file),
                  "--enable_label_detection", "true",

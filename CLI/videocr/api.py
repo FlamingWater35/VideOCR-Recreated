@@ -10,6 +10,9 @@ from types import ModuleType
 from . import utils
 from .video import Video
 
+# Extensions we strip when deriving the label sidecar name.
+_SUBTITLE_SUFFIXES = frozenset({".ass", ".srt", ".vtt"})
+
 
 def _qafix_script_path() -> str:
     """Locate the bundled ass_qafix script (source tree and frozen builds)."""
@@ -73,6 +76,20 @@ def _run_qafix(file_path: str) -> None:
     )
 
 
+def label_sidecar_path(subtitle_path: str) -> str:
+    """Return the companion label-only .ass path for a subtitle output path.
+
+    ``movie.en.ass`` -> ``movie.en.labels.ass``. The sidecar is derived (not
+    user-editable) so the GUI preview and the CLI always agree on the name.
+    """
+    path = Path(subtitle_path)
+    # Only a real subtitle extension is stripped: "movie.en" is a name with a
+    # dot in it, not a file with an ".en" extension.
+    if path.suffix.lower() in _SUBTITLE_SUFFIXES:
+        return str(path.with_name(f"{path.stem}.labels.ass"))
+    return str(path.with_name(f"{path.name}.labels.ass"))
+
+
 def save_subtitles_to_file(
     video_path: str,
     file_path: str = "subtitle.srt",
@@ -132,6 +149,7 @@ def save_subtitles_to_file(
     subtitle_fontsize: int = 28,
     subtitle_primary_color: str = "&H00FFFFFF",
     subtitle_outline_color: str = "&H00000000",
+    label_separate_files: bool = False,
 ) -> None:
     total_start = time.perf_counter()
     if crop_zones is None:
@@ -145,17 +163,29 @@ def save_subtitles_to_file(
     # is an ASS-only feature: the final result is written as an .ass subtitle
     # file with proper ASS timestamps and \pos-positioned Label events.
     label_detection = bool(enable_label_detection)
+    label_output_path: str | None = None
     if label_detection:
         if file_path.lower().endswith(".srt"):
             # Fix 8.1: use pathlib so the extension swap is safe regardless of
             # the exact suffix length/case.
             file_path = str(Path(file_path).with_suffix(".ass"))
-        print(
-            f"Label detection enabled: output will be written as .ass subtitle file: {file_path}",
-            flush=True,
-        )
-        if os.path.isfile(file_path):
-            print(f"Warning: overwriting existing .ass file: {file_path}", flush=True)
+        if label_separate_files:
+            label_output_path = label_sidecar_path(file_path)
+            print(
+                f"Label detection enabled: subtitles will be written to {file_path} "
+                f"and labels to the separate file {label_output_path}",
+                flush=True,
+            )
+        else:
+            print(
+                f"Label detection enabled: output will be written as .ass subtitle file: {file_path}",
+                flush=True,
+            )
+        for existing in (file_path, label_output_path):
+            if existing and os.path.isfile(existing):
+                print(
+                    f"Warning: overwriting existing .ass file: {existing}", flush=True
+                )
 
     # PaddleOCR and Chrome Lens are standalone helper executables.
     # EasyOCR DirectML is a pure-Python backend, so it must not require the
@@ -289,6 +319,7 @@ def save_subtitles_to_file(
             subtitle_fontsize,
             subtitle_primary_color,
             subtitle_outline_color,
+            label_separate_files,
         )
         ocr_end = time.perf_counter()
     except Exception as e:
@@ -307,15 +338,35 @@ def save_subtitles_to_file(
     with open(file_path, "w+", encoding="utf-8") as f:
         f.write(subtitles)
 
+    # Separate label file: get_subtitles() left the label-only ASS document on
+    # the Video instance instead of inlining it into the subtitle file.
+    if label_output_path:
+        label_text = getattr(v, "label_ass_text", None)
+        if label_text is None:
+            print(
+                "Warning: label detection produced no separate label document; "
+                f"skipping {label_output_path}",
+                flush=True,
+            )
+            label_output_path = None
+        else:
+            with open(label_output_path, "w+", encoding="utf-8") as f:
+                f.write(label_text)
+
     # Run the bundled ASS QA auto-fixer (ass_qafix) on the generated .ass file
-    # as post-processing. Label detection always produces .ass output.
+    # as post-processing. Label detection always produces .ass output, and the
+    # separate label file is post-processed too (its own canonical styles).
     if label_detection:
+        qafix_targets = [file_path]
+        if label_output_path:
+            qafix_targets.append(label_output_path)
         qafix_errors: list[str] = []
-        try:
-            _run_qafix(file_path)
-        except Exception as e:
-            qafix_errors.append(str(e))
-            print(f"Warning: ASS post-processing (ass-qafix) failed: {e}", flush=True)
+        for target in qafix_targets:
+            try:
+                _run_qafix(target)
+            except Exception as e:
+                qafix_errors.append(str(e))
+                print(f"Warning: ASS post-processing (ass-qafix) failed: {e}", flush=True)
         if qafix_errors:
             print(f"ASS post-processing errors: {'; '.join(qafix_errors)}", flush=True)
 

@@ -58,6 +58,7 @@ A quick guide to the most important GUI and CLI parameters to help you balance s
 | **Crop Area** | Bounding box (X, Y, Width, Height) for OCR. | Keep it **tight** around the subtitles. Avoid full-frame OCR unless absolutely necessary. |
 | **Full Frame** | Forces OCR on the entire video frame instead of the crop. | Generally **unchecked**. Slower and less accurate; only use if subtitles move wildly. |
 | **Enable Label Detection** | Detects text outside the crop (e.g., names) and exports as `.ass`. | Adds valuable context but requires extra processing. Auto-runs `ass-qafix` post-processing. |
+| **Separate Label Files** | Writes subtitles and labels as two `.ass` files instead of one combined file. | Subtitles keep the output path you chose; labels go to a `<name>.labels.ass` companion file. Handy when you want to translate, restyle or toggle the labels independently of the dialogue. |
 | **DirectML Perf. Preset** | Controls the stitched grid target size for AMD GPUs. | `Compatibility` (1600x1600), `Balanced` (2400x2400, recommended), `Max` (4096x4096). |
 | **DirectML Rec. Mode** | How text recognition is handled on AMD GPUs. | **`Stable`** (GPU detection + CPU recognition, safest). `Auto`/`Experimental` may crash on some models. |
 | **DirectML Frame Scan** | How frames are pre-processed before OCR. | `CPU SSIM` (compatible), `AMD DirectML SSIM` (experimental), `FFmpeg D3D11VA` (prototype, fastest). |
@@ -179,3 +180,21 @@ This project is a **fork of a fork**, building upon the excellent work of:
 2. **[VideOCR-AMD-DirectML](https://github.com/BaseCrunch/VideOCR-AMD-DirectML)** by `BaseCrunch` (Added the AMD DirectML backend, GPU selection, performance presets, and D3D11VA frame-scan).
 
 This recreation adds the PySide6 GUI, Label Detection, ONNX DirectML support, and further refinements for a modern user experience.
+
+### 🌐 Translating the subtitles
+
+VideOCR extracts the subtitles; it does not translate them. If you're looking for translating subtitles (especially for donghua),
+**[Polygluttony](https://github.com/blyat-uk/polygluttony)** is recommended. It's a desktop app that translates `.ass` subtitle files with the AI model
+of your choice (Anthropic, OpenAI, Google, or a local model via Ollama / LM Studio).
+
+It is a particularly good match for files this tool produces:
+
+- **Your typesetting survives.** Override tags such as `{\pos(...)}` and `{\anN}` are
+  lifted out before translating and put back afterwards, so the positioned **Label**
+  events keep their on-screen placement and only the dialogue text changes.
+- **Names stay consistent.** A cross-episode glossary keeps character and place names
+  stable across a whole season.
+- **Nothing is silently lost.** Line markers and drift detection catch dropped, merged
+  or reordered lines instead of failing a whole batch.
+
+Thanks to `BuGiPoP` on Discord for building such a great tool.

@@ -521,6 +521,12 @@ def main() -> None:
         help="OCR language for label detection; empty = use --lang (label recognition runs separately when set)",
     )
     parser.add_argument(
+        "--label_separate_files",
+        type=lambda x: x.lower() == "true",
+        default=False,
+        help="Write subtitles and labels as two separate .ass files: the subtitle file at --output, labels in a '<name>.labels.ass' companion file (default: false, both in one file)",
+    )
+    parser.add_argument(
         "--allow_system_sleep",
         type=lambda x: x.lower() == "true",
         default=False,
@@ -709,6 +715,7 @@ def main() -> None:
                 subtitle_fontsize=args.subtitle_fontsize,
                 subtitle_primary_color=args.subtitle_primary_color,
                 subtitle_outline_color=args.subtitle_outline_color,
+                label_separate_files=args.label_separate_files,
             )
     except ValueError as e:
         print(f"Error: {e}")

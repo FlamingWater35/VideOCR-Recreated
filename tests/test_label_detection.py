@@ -215,3 +215,77 @@ class TestRenderAssPos:
             "Style: Default,Verdana,30,&H0000FF00,&H000000FF,&H000000FF,"
             "&H80000000,0,0,0,0,100,100,0,0,1,2,1,2,10,10,10,1" in out
         )
+
+
+class TestSeparateLabelFiles:
+    """render_subtitle_ass / render_label_ass split the combined document."""
+
+    @staticmethod
+    def _video_with_label() -> Video:
+        v = _bare_video()
+        band = {
+            "x": 0, "y": 0, "w": 640, "h": 100,
+            "crop_x": 0, "crop_y": 0,
+            "crop_w": 640, "crop_h": 100,
+            "target_w": 640, "target_h": 100,
+        }
+        v.label_zones = [band]
+        box = [[10.0, 20.0], [110.0, 20.0], [110.0, 60.0], [10.0, 60.0]]
+        v.label_frames = [
+            _label_frame(0, "Hunter", box, 0.95),
+            _label_frame(1, "Hunter", box, 0.95),
+        ]
+        v.frame_timestamps = {0: 0.0, 1: 40.0, 2: 80.0}
+        return v
+
+    def test_subtitle_document_has_no_label_events_or_style(self):
+        v = self._video_with_label()
+        out = v.render_subtitle_ass([None, None])
+        assert "[Events]" in out
+        assert "Dialogue: 2," not in out          # no label events
+        assert "Style: Label," not in out         # no Label style declared
+        assert "Style: Default," in out
+
+    def test_label_document_has_only_label_events(self):
+        v = self._video_with_label()
+        out = v.render_label_ass()
+        assert "[Events]" in out
+        assert "Dialogue: 2," in out
+        assert "Dialogue: 0," not in out          # no subtitle dialogue
+        # A complete standalone document: the Default style is still declared.
+        assert "Style: Default," in out
+        assert "Style: Label," in out
+
+    def test_combined_render_is_union_of_both(self):
+        v = self._video_with_label()
+        combined = v._render_ass([None, None])
+        assert "Dialogue: 2," in combined and "Style: Label," in combined
+
+    def test_get_subtitles_splits_when_enabled(self):
+        v = self._video_with_label()
+        v._generate_subtitles = lambda *a, **k: None  # OCR already done
+        v.pred_subs = []
+        v._label_separate_files = True
+        v.label_ass_text = None
+        out = v.get_subtitles(80, 0.1, "en", False, 0.2, [None, None])
+        assert "Dialogue: 2," not in out                  # subtitle file
+        assert v.label_ass_text is not None
+        assert "Dialogue: 2," in v.label_ass_text         # label file
+
+    def test_get_subtitles_keeps_one_file_when_disabled(self):
+        v = self._video_with_label()
+        v._generate_subtitles = lambda *a, **k: None  # OCR already done
+        v.pred_subs = []
+        v._label_separate_files = False
+        v.label_ass_text = None
+        out = v.get_subtitles(80, 0.1, "en", False, 0.2, [None, None])
+        assert "Dialogue: 2," in out
+        assert v.label_ass_text is None
+
+    def test_separate_render_escapes_override_chars(self):
+        v = self._video_with_label()
+        v.label_frames = []
+        out = v.render_label_ass()
+        # Header only: still a valid, parseable ASS document.
+        assert out.startswith("[Script Info]")
+        assert out.endswith("\n")

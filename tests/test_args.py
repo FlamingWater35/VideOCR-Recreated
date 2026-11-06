@@ -102,6 +102,14 @@ class TestGenerateOutputPath:
         out = args_mod.generate_output_path(str(video), s)
         assert out.suffix == ".ass"
 
+    def test_label_sidecar_path(self, tmp_path):
+        assert args_mod.label_sidecar_path(str(tmp_path / "movie.en.ass")) == (
+            tmp_path / "movie.en.labels.ass"
+        )
+        assert args_mod.label_sidecar_path(str(tmp_path / "movie.en")) == (
+            tmp_path / "movie.en.labels.ass"
+        )
+
     def test_language_in_filename(self, tmp_path):
         video = tmp_path / "movie.mp4"
         video.write_bytes(b"")
@@ -357,6 +365,23 @@ class TestBuildArgsMapping:
             "v.mp4", _default_settings(enable_label_detection=True), [], output_path="o.ass"
         )
         assert argd["enable_label_detection"] is True
+
+    def test_separate_label_files_flag(self):
+        s = _default_settings(enable_label_detection=True, label_separate_files=True)
+        argd, _ = args_mod.build_args("v.mp4", s, [], output_path="o.ass")
+        assert argd["label_separate_files"] is True
+
+    def test_separate_label_files_off_by_default(self):
+        s = _default_settings(enable_label_detection=True)
+        argd, _ = args_mod.build_args("v.mp4", s, [], output_path="o.ass")
+        assert "label_separate_files" not in argd
+
+    def test_separate_label_files_requires_label_detection(self):
+        # The sub-option is meaningless without label detection; don't forward it.
+        s = _default_settings(label_separate_files=True)
+        argd, _ = args_mod.build_args("v.mp4", s, [], output_path="o.srt")
+        assert "label_separate_files" not in argd
+        assert "enable_label_detection" not in argd
 
     def test_send_notification_and_sleep(self):
         argd, _ = args_mod.build_args("v.mp4", _default_settings(), [], output_path="o.srt")

@@ -211,6 +211,8 @@ def get_default_settings() -> dict[str, Any]:
         "--label_outline_color": "&H00000000",
         "--label_alignment": "top-left",
         "--label_lang": "",
+        # Write subtitles and labels as two separate .ass files
+        "label_separate_files": False,
         # ASS Default (subtitle) style — used for .ass output (label detection)
         "--subtitle_font": "Arial",
         "--subtitle_fontsize": "28",
@@ -230,6 +232,7 @@ _BOOL_KEYS = {
     "--use_dual_zone",
     "enable_subtitle_alignment",
     "enable_label_detection",
+    "label_separate_files",
     "--label_filter_single_char",
     "--label_ssim_dedup",
     "--save_in_video_dir",

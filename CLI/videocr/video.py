@@ -43,6 +43,27 @@ def _is_single_ascii_label(text: str) -> bool:
     return t.isascii() and (t.isalnum())
 
 
+def _ass_escape(text: str) -> str:
+    """Escape one ASS event text: single line, no stray override blocks.
+
+    Newlines are collapsed (an ASS event must be a single line) and the ASS
+    override-block / backslash characters are escaped. Backslash is escaped
+    first so the escapes introduced for { } % are not re-escaped.
+    """
+    text = re.sub(r"[\r\n]+", " ", text)
+    return (
+        text.replace("\\", "\\\\")
+        .replace("{", "\\{")
+        .replace("}", "\\}")
+        .replace("%", "\\%")
+    )
+
+
+def _ass_time(ms: float) -> str:
+    """Format milliseconds as an ASS timestamp (H:MM:SS.cc)."""
+    return utils.get_ass_timestamp_from_ms(max(0.0, ms))
+
+
 class _LabelLine(NamedTuple):
     """One OCR'd label line: text, centroid, mean confidence, bbox."""
 
@@ -1046,6 +1067,7 @@ class Video:
         subtitle_fontsize: int = 28,
         subtitle_primary_color: str = "&H00FFFFFF",
         subtitle_outline_color: str = "&H00000000",
+        label_separate_files: bool = False,
     ) -> None:
         perf_total_start = time.perf_counter()
         step1_start = perf_total_start
@@ -1126,6 +1148,11 @@ class Video:
             if label_close_pos_length_ratio is not None
             else 0.5
         )
+        # When true, get_subtitles() renders the subtitle-only .ass document
+        # and leaves the label-only document in ``label_ass_text`` so the
+        # caller can write it to a second file.
+        self._label_separate_files = bool(label_separate_files)
+        self.label_ass_text: str | None = None
 
         if ocr_engine == "onnx_directml":
             os.environ["VIDEOCR_ONNX_DIRECTML_TUNING"] = (
@@ -2645,6 +2672,11 @@ class Video:
         # Label detection always produces ASS output with proper ASS timestamps
         # and \pos-positioned label events.
         if self.label_zones:
+            if self._label_separate_files:
+                # Subtitles go to the main file; the label document is left in
+                # label_ass_text for the caller to write to its own file.
+                self.label_ass_text = self.render_label_ass()
+                return self.render_subtitle_ass(subtitle_alignments)
             return self._render_ass(subtitle_alignments)
         srt_lines: list[str] = []
         for i, sub in enumerate(self.pred_subs, 1):
@@ -2663,22 +2695,33 @@ class Video:
         detected text (mapped back from the label zone crop to the original
         frame coordinates) using ASS \\pos.
         """
+        lines = self._ass_header(include_label_style=True)
+        lines.extend(self._ass_dialogue_events(subtitle_alignments))
+        lines.extend(self._ass_label_events())
+        return "\n".join(lines) + "\n"
 
-        def _esc(text: str) -> str:
-            # Collapse newlines (an ASS event must be a single line) and escape
-            # ASS override-block / backslash characters. Backslash is escaped
-            # first so the escapes introduced for { } % are not re-escaped.
-            text = re.sub(r"[\r\n]+", " ", text)
-            return (
-                text.replace("\\", "\\\\")
-                .replace("{", "\\{")
-                .replace("}", "\\}")
-                .replace("%", "\\%")
-            )
+    def render_subtitle_ass(self, subtitle_alignments: list[str | None]) -> str:
+        """Render a subtitle-only .ass document (no Label events).
 
-        def _ass_time(ms: float) -> str:
-            return utils.get_ass_timestamp_from_ms(max(0.0, ms))
+        Used when labels are written to their own file: the subtitle file
+        keeps only the ``Default`` style and the Dialogue events.
+        """
+        lines = self._ass_header(include_label_style=False)
+        lines.extend(self._ass_dialogue_events(subtitle_alignments))
+        return "\n".join(lines) + "\n"
 
+    def render_label_ass(self) -> str:
+        """Render a label-only .ass document (Label events, no subtitles).
+
+        The subtitle ``Default`` style is still declared so the document is a
+        complete, standalone ASS file that any player can load.
+        """
+        lines = self._ass_header(include_label_style=True)
+        lines.extend(self._ass_label_events())
+        return "\n".join(lines) + "\n"
+
+    def _ass_header(self, include_label_style: bool) -> list[str]:
+        """Build the [Script Info] / [V4+ Styles] / [Events] header block."""
         lines: list[str] = []
         lines.append("[Script Info]")
         lines.append("ScriptType: v4.00+")
@@ -2698,24 +2741,30 @@ class Video:
             f"Style: Default,{sub_font},{sub_fontsize},{sub_primary},"
             f"&H000000FF,{sub_outline},&H80000000,0,0,0,0,100,100,0,0,1,2,1,2,10,10,10,1"
         )
-        style = getattr(self, "_label_style", {})
-        label_font = str(style.get("font", "Arial")).replace(",", "")
-        label_fontsize = int(style.get("fontsize", 22))
-        label_primary = str(style.get("primary", "&H00FFFFFF"))
-        label_outline = str(style.get("outline", "&H00000000"))
-        label_align = int(str(style.get("alignment", "an7")).removeprefix("an") or 7)
-        lines.append(
-            f"Style: Label,{label_font},{label_fontsize},{label_primary},"
-            f"&H000000FF,{label_outline},&H80000000,0,0,0,0,100,100,0,0,1,1.5,0.5,"
-            f"{label_align},10,10,10,1"
-        )
+        if include_label_style:
+            style = getattr(self, "_label_style", {})
+            label_font = str(style.get("font", "Arial")).replace(",", "")
+            label_fontsize = int(style.get("fontsize", 22))
+            label_primary = str(style.get("primary", "&H00FFFFFF"))
+            label_outline = str(style.get("outline", "&H00000000"))
+            label_align = int(str(style.get("alignment", "an7")).removeprefix("an") or 7)
+            lines.append(
+                f"Style: Label,{label_font},{label_fontsize},{label_primary},"
+                f"&H000000FF,{label_outline},&H80000000,0,0,0,0,100,100,0,0,1,1.5,0.5,"
+                f"{label_align},10,10,10,1"
+            )
         lines.append("")
         lines.append("[Events]")
         lines.append(
             "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text"
         )
+        return lines
 
-        # Dialogue events (existing subtitle pipeline, zone 0/1).
+    def _ass_dialogue_events(
+        self, subtitle_alignments: list[str | None]
+    ) -> list[str]:
+        """Dialogue events (existing subtitle pipeline, zone 0/1)."""
+        lines: list[str] = []
         for sub in self.pred_subs:
             start_ms, end_ms = self._get_subtitle_ms_times(sub)
             tag = subtitle_alignments[sub.zone_index]
@@ -2723,9 +2772,16 @@ class Video:
             if tag:
                 text = f"{{\\{tag}}}{text}"
             lines.append(
-                f"Dialogue: 0,{_ass_time(start_ms)},{_ass_time(end_ms)},Default,,0,0,0,,{_esc(text)}"
+                f"Dialogue: 0,{_ass_time(start_ms)},{_ass_time(end_ms)},Default,,0,0,0,,{_ass_escape(text)}"
             )
+        return lines
 
+    def _ass_label_events(self) -> list[str]:
+        """Label events positioned at their on-screen location via \\pos."""
+        lines: list[str] = []
+        style = getattr(self, "_label_style", {})
+        label_fontsize = int(style.get("fontsize", 22))
+        label_align = int(str(style.get("alignment", "an7")).removeprefix("an") or 7)
         # Label events: cluster per label text and position each at its actual
         # on-screen location (original video coordinates). Each event maps
         # back through its own band's crop origin/scale, then colliding
@@ -2772,9 +2828,9 @@ class Video:
             pos_y = int(round(anchor_y))
             lines.append(
                 f"Dialogue: 2,{_ass_time(item['start_ms'])},{_ass_time(item['end_ms'])},Label,,0,0,0,,"
-                f"{{\\pos({pos_x},{pos_y})}}{_esc(item['text'])}"
+                f"{{\\pos({pos_x},{pos_y})}}{_ass_escape(item['text'])}"
             )
-        return "\n".join(lines) + "\n"
+        return lines
 
     def _merge_label_frames(self) -> list[dict[str, Any]]:
         """Cluster raw label detections into stable label events.

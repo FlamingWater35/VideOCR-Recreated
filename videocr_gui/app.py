@@ -90,7 +90,8 @@ OUTPUT
 - "Save As..." picks the output file for this run; otherwise the path follows the output settings.
 - While "Save Subtitle File in Video Directory" is enabled, subtitles are written next to the video and the Output Directory setting is ignored.
 - File name: <video name>.<language code>.srt - existing files are never overwritten; " (1)", " (2)" ... is appended instead.
-- With Label Detection enabled (Advanced Settings) the output becomes .ass so detected labels keep their on-screen positions.\
+- With Label Detection enabled (Advanced Settings) the output becomes .ass so detected labels keep their on-screen positions.
+- Tick "Save Subtitles and Labels as Separate .ass Files" to split them: the subtitle file is written as usual and the labels go to a companion "<video name>.<language code>.labels.ass" file.\
 """
 
 
@@ -602,6 +603,7 @@ class MainWindow(QMainWindow):
             self._update_tab.retranslate()
         self._refresh_post_action_combo()
         self._translate_process_tab()
+        self._update_output_tooltip()
 
     def _translate_process_tab(self) -> None:
         """Re-translates every process-tab widget that has translatable text."""
@@ -787,9 +789,37 @@ class MainWindow(QMainWindow):
             )
             self.output_edit.setText(str(out))
             self._settings["--output"] = str(out)
+            self._update_output_tooltip()
         except Exception as e:
             config.log_error(f"Could not generate output path: {e}")
             self.output_edit.setText("")
+
+    def _update_output_tooltip(self) -> None:
+        """Show both file paths when labels are written to their own file.
+
+        Kept separate from _update_output_path so a language switch can
+        re-translate the tooltip without discarding a manual "Save As..." path.
+        """
+        current = self.output_edit.text()
+        # With separate label files the run also writes a companion
+        # '<name>.labels.ass' next to the subtitle file.
+        if current and self._separate_label_files():
+            self.output_edit.setToolTip(
+                i18n.tr(
+                    "tip_output_two_files",
+                    "Subtitles: {}\nLabels: {}",
+                ).format(current, argsmod.label_sidecar_path(current))
+            )
+        else:
+            self.output_edit.setToolTip("")
+
+    def _separate_label_files(self) -> bool:
+        """True when label detection writes its own .ass file."""
+        settings = self._current_settings()
+        return bool(
+            settings.get("enable_label_detection")
+            and settings.get("label_separate_files")
+        )
 
     def _save_as(self) -> None:
         current = self.output_edit.text()
@@ -809,6 +839,7 @@ class MainWindow(QMainWindow):
             )
         if path:
             self.output_edit.setText(path)
+            self._update_output_tooltip()
 
     # --- seek / preview --------------------------------------------------------
     def _on_seek(self, value: int) -> None:
@@ -919,7 +950,11 @@ class MainWindow(QMainWindow):
         for key in keys:
             # Output extension/format changes when the subtitle crop, save dir,
             # or label detection setting changes.
-            if key in ("--save_in_video_dir", "enable_label_detection"):
+            if key in (
+                "--save_in_video_dir",
+                "enable_label_detection",
+                "label_separate_files",
+            ):
                 self._update_output_path()
         # Propagate dual-zone toggle to the preview so the user can draw 2 boxes.
         if "--use_dual_zone" in keys:
@@ -1674,6 +1709,8 @@ class MainWindow(QMainWindow):
             gui_key = f"--{arg_key}"
             if arg_key == "enable_label_detection":
                 settings["enable_label_detection"] = bool(arg_val)
+            elif arg_key == "label_separate_files":
+                settings["label_separate_files"] = bool(arg_val)
             elif gui_key == "--directml_performance_preset":
                 settings[gui_key] = C.DIRECTML_PERFORMANCE_FROM_CLI.get(
                     str(arg_val), "Balanced (recommended)"

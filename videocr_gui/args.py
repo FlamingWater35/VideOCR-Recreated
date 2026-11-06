@@ -9,6 +9,23 @@ from . import config, i18n
 from . import constants as C
 from .config import DEFAULT_DOCUMENTS_DIR
 
+# Extensions we strip when deriving the label sidecar name.
+_SUBTITLE_SUFFIXES = frozenset({".ass", ".srt", ".vtt"})
+
+
+def label_sidecar_path(subtitle_path: str) -> pathlib.Path:
+    """Companion label-only .ass path: ``movie.en.ass`` -> ``movie.en.labels.ass``.
+
+    Mirrors ``videocr.api.label_sidecar_path`` so the GUI can preview the
+    second file without importing the CLI package.
+    """
+    path = pathlib.Path(subtitle_path)
+    # Only a real subtitle extension is stripped: "movie.en" is a name with a
+    # dot in it, not a file with an ".en" extension.
+    if path.suffix.lower() in _SUBTITLE_SUFFIXES:
+        return path.with_name(f"{path.stem}.labels.ass")
+    return path.with_name(f"{path.name}.labels.ass")
+
 
 def _is_valid_time(time_str: str | None) -> bool:
     if not time_str:
@@ -270,6 +287,9 @@ def build_args(
     # label detection (text outside the subtitle crop, e.g. names)
     if settings.get("enable_label_detection"):
         args["enable_label_detection"] = True
+        # Two output files instead of one combined .ass (subtitles + labels).
+        if settings.get("label_separate_files"):
+            args["label_separate_files"] = True
 
     # notifications handled by GUI, not CLI
     args["send_notification"] = settings.get("--send_notification", True)
