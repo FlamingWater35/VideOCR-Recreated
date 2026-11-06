@@ -6,7 +6,6 @@ import os
 import platform
 import re
 import shutil
-import stat
 import subprocess
 import sys
 import tarfile
@@ -909,8 +908,13 @@ def package_target(
                 dest_path = temp_gui_dist / script_name
                 if src_path.exists():
                     shutil.copy(src_path, dest_path)
-                    os.chmod(dest_path, dest_path.stat().st_mode | stat.S_IEXEC)
-                    print(f"Copied and set +x on {script_name}")
+                    # Set 0755 explicitly, for the same reason as AppRun above:
+                    # `st_mode | stat.S_IEXEC` only sets the *owner* bit, and the
+                    # scripts are committed as 100644, so the copy ended up at
+                    # 0744 (rwxr--r--) and appimagetool warned that group/other
+                    # users would get "Permission denied" from the AppImage.
+                    os.chmod(dest_path, 0o755)
+                    print(f"Copied and set 0755 on {script_name}")
                 else:
                     print(f"WARNING: Installer script not found at {src_path}")
 

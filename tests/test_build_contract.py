@@ -216,8 +216,13 @@ def test_appimage_appdir_drops_portable_flag_and_keeps_payload_siblings(tmp_path
     import os
     import stat as stat_module
 
-    assert os.stat(appdir / "AppRun").st_mode & stat_module.S_IXUSR
-    assert os.stat(appdir / "VideOCR.desktop").st_mode & stat_module.S_IXUSR
+    # Windows os.chmod only toggles the read-only bit: it never sets S_IXUSR,
+    # so the mode assertions only carry meaning on POSIX. The mode *values*
+    # passed to os.chmod are guarded separately (see
+    # test_every_build_chmod_is_world_executable), which works everywhere.
+    if os.name == "posix":
+        assert os.stat(appdir / "AppRun").st_mode & stat_module.S_IXUSR
+        assert os.stat(appdir / "VideOCR.desktop").st_mode & stat_module.S_IXUSR
 
     desktop = (appdir / "VideOCR.desktop").read_text(encoding="utf-8")
     # The Exec target must match the Linux binary the build actually produces.
@@ -249,6 +254,27 @@ def test_appimage_naming_matches_release_assets():
     )
     assert ".AppImage" in notes, "release notes must list AppImage assets"
     assert "AppImage |" in notes, "release notes table needs an AppImage column"
+
+
+def test_every_build_chmod_is_world_executable():
+    """Every os.chmod in build.py must grant group/other bits explicitly.
+
+    The Linux installer scripts are committed as 100644 and copied into the
+    AppDir payload. Setting only ``st_mode | stat.S_IEXEC`` yields 0744
+    (rwxr--r--), and appimagetool then warns that anyone but the packaging user
+    gets "Permission denied" from the AppImage. A plain ``chmod +x`` has the
+    same problem under a 077 umask, so build.py sets 0755 explicitly; this test
+    keeps it that way.
+    """
+    source = BUILD_SCRIPT.read_text(encoding="utf-8")
+    calls = re.findall(r"os\.chmod\(([^)]*)\)", source)
+    assert calls, "build.py no longer calls os.chmod; update this guard"
+
+    offenders = [call for call in calls if "0o755" not in call]
+    assert not offenders, (
+        "os.chmod calls must use an explicit 0o755 so group/other users can "
+        f"execute the file (found: {offenders})"
+    )
 
 
 def test_release_notes_parse_appimage_asset_names():
