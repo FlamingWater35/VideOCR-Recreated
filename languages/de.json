@@ -309,5 +309,7 @@
   "tip_label_close_pos_distance": "Erkennungen, die näher als dieser Abstand sind, werden als dasselbe Label behandelt, auch bei schwächerer Textähnlichkeit.",
   "lbl_label_close_pos_length_ratio": "Label-Nahbereichs-Längenverhältnis (0-1):",
   "tip_label_close_pos_length_ratio": "Mindestes Längenverhältnis zwischen zwei nahe Erkennungen für die Nahbereichs-Zusammenfassungs-Verknüpfung.",
-  "save_as_ass_filter_name": "Advanced SubStation Alpha Untertitel"
+  "save_as_ass_filter_name": "Advanced SubStation Alpha Untertitel",
+  "lbl_label_lang": "OCR-Sprache für Labels (leer = Untertitelsprache):",
+  "tip_label_lang": "OCR-Sprache für die Label-Erkennung. Leer lassen, um die Untertitelsprache zu verwenden. Nützlich, wenn die Labels auf dem Bildschirm in einer anderen Schrift als der Dialog erscheinen. Wird von ONNX Runtime DirectML nicht verwendet (einheitliches Modell)."
 }

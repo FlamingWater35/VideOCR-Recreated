@@ -309,5 +309,7 @@
   "tip_label_close_pos_distance": "이 거리보다 가까운 감지는 텍스트 유사도가 약해도 동일한 라벨로 간주됩니다.",
   "lbl_label_close_pos_length_ratio": "라벨 근거리 길이 비율 (0-1):",
   "tip_label_close_pos_length_ratio": "근거리 병합 단축키에 필요한 두 감지 간 최소 길이 비율.",
-  "save_as_ass_filter_name": "고급 SubStation Alpha 자막"
+  "save_as_ass_filter_name": "고급 SubStation Alpha 자막",
+  "lbl_label_lang": "라벨 OCR 언어 (비우면 자막 언어 사용):",
+  "tip_label_lang": "라벨 감지에 사용할 OCR 언어입니다. 비워 두면 자막 언어를 그대로 사용합니다. 화면의 라벨이 대사와 다른 문자 체계일 때 유용합니다. ONNX Runtime DirectML은 통합 모델을 사용하므로 이 항목을 쓰지 않습니다."
 }

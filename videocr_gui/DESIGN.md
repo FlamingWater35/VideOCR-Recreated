@@ -226,7 +226,8 @@ QSS theme.
   cut garment/prop OCR hallucinations while keeping small name text) and the
   other merge thresholds (`.ass` output with positioned Label events).
   `--label_lang` (label OCR language, empty = subtitle language) has a
-  config/CLI default but no widget yet — set it in the INI or on the CLI.
+  text field in this section; it is a no-op for ONNX Runtime DirectML, whose
+  PP-OCRv6 model is unified.
 - Style section (see "Style category" above): Label Style subcategory
   (`--label_font`, `--label_fontsize`, `--label_primary_color`,
   `--label_outline_color`, `--label_alignment`) and Subtitle Style

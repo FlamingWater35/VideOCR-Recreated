@@ -164,6 +164,14 @@ def save_subtitles_to_file(
     # file with proper ASS timestamps and \pos-positioned Label events.
     label_detection = bool(enable_label_detection)
     label_output_path: str | None = None
+    if label_separate_files and not label_detection:
+        # The split only exists for label output; without label detection the
+        # flag would silently do nothing.
+        print(
+            "Note: label_separate_files has no effect without label detection "
+            "(labels are only produced when label detection is on).",
+            flush=True,
+        )
     if label_detection:
         if file_path.lower().endswith(".srt"):
             # Fix 8.1: use pathlib so the extension swap is safe regardless of

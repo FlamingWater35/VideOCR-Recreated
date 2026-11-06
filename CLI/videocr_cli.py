@@ -141,6 +141,20 @@ def valid_ass_color(arg: str) -> str:
     )
 
 
+def valid_subtitle_position(arg: str) -> str:
+    """Reject an unknown --subtitle_position at parse time.
+
+    video.py raises on an unknown value, but only once OCR reaches the frame
+    filter — minutes into a run. Validating here fails immediately instead.
+    """
+    if arg in utils.VALID_SUBTITLE_POSITIONS:
+        return arg
+    allowed_values = ", ".join(sorted(utils.VALID_SUBTITLE_POSITIONS))
+    raise argparse.ArgumentTypeError(
+        f"Invalid subtitle position '{arg}'. Allowed values are: {allowed_values}"
+    )
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Extract subtitles from a video using PaddleOCR, Google Lens, EasyOCR DirectML, or ONNX Runtime DirectML."
@@ -236,7 +250,7 @@ def main() -> None:
     )
     parser.add_argument(
         "--subtitle_position",
-        type=str,
+        type=valid_subtitle_position,
         default="center",
         help="Subtitle position alignment (center (default), left, right, any)",
     )

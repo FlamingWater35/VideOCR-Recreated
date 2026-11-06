@@ -309,5 +309,7 @@
   "tip_label_close_pos_distance": "この距離より近い検出は、テキスト類似度が弱くても同じラベルとして扱われます。",
   "lbl_label_close_pos_length_ratio": "ラベル近距離長さ比率（0-1）：",
   "tip_label_close_pos_length_ratio": "近距離マージショートカットに必要な2つの近い検出の最小長さ比率。",
-  "save_as_ass_filter_name": "Advanced SubStation Alpha 字幕"
+  "save_as_ass_filter_name": "Advanced SubStation Alpha 字幕",
+  "lbl_label_lang": "ラベルの OCR 言語（空 = 字幕の言語）：",
+  "tip_label_lang": "ラベル検出に使う OCR 言語です。空欄にすると字幕の言語を使います。画面上のラベルがセリフと異なる文字体系のときに便利です。ONNX Runtime DirectML は統合モデルのため、この項目は使われません。"
 }

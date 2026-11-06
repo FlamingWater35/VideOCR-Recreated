@@ -309,5 +309,7 @@
   "tip_label_close_pos_distance": "Las detecciones más cercanas que esta distancia se tratan como la misma etiqueta incluso con similitud de texto más débil.",
   "lbl_label_close_pos_length_ratio": "Ratio de longitud de proximidad de etiquetas (0-1):",
   "tip_label_close_pos_length_ratio": "Ratio de longitud mínimo entre dos detecciones cercanas requerido para el acceso rápido de fusión por proximidad.",
-  "save_as_ass_filter_name": "Subtítulo Advanced SubStation Alpha"
+  "save_as_ass_filter_name": "Subtítulo Advanced SubStation Alpha",
+  "lbl_label_lang": "Idioma OCR de las etiquetas (vacío = idioma de los subtítulos):",
+  "tip_label_lang": "Idioma OCR para la detección de etiquetas. Déjalo vacío para reutilizar el idioma de los subtítulos. Útil cuando las etiquetas en pantalla usan una escritura distinta a la del diálogo. ONNX Runtime DirectML no lo usa porque emplea un modelo unificado."
 }

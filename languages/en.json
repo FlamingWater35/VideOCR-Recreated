@@ -339,5 +339,7 @@
   "lbl_subtitle_outline_color": "Subtitle Outline Color:",
   "tip_subtitle_outline_color": "Outline color of the ASS Default (subtitle) style in .ass output.",
   "tip_output_two_files": "Subtitles: {}\nLabels: {}",
-  "save_as_ass_filter_name": "Advanced SubStation Alpha Subtitle"
+  "save_as_ass_filter_name": "Advanced SubStation Alpha Subtitle",
+  "lbl_label_lang": "Label OCR Language (empty = subtitle language):",
+  "tip_label_lang": "OCR language for label detection. Leave empty to reuse the subtitle language. Useful when the on-screen labels are in a different script than the dialogue (e.g. Japanese names over English subtitles). Not used by ONNX Runtime DirectML, which has one unified model."
 }

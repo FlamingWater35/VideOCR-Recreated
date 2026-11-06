@@ -309,5 +309,7 @@
   "tip_label_close_pos_distance": "距离小于此值的检测即使文本相似度较弱也将被视为同一标签。",
   "lbl_label_close_pos_length_ratio": "标签近距离长度比（0-1）：",
   "tip_label_close_pos_length_ratio": "近距离合并快捷方式所需的两个近距离检测之间的最小长度比。",
-  "save_as_ass_filter_name": "高级 SubStation Alpha 字幕"
+  "save_as_ass_filter_name": "高级 SubStation Alpha 字幕",
+  "lbl_label_lang": "标签 OCR 语言（留空 = 字幕语言）：",
+  "tip_label_lang": "用于标签检测的 OCR 语言。留空则沿用字幕语言。当屏幕上的标签与对话使用不同文字时很有用。ONNX Runtime DirectML 使用统一模型，不适用此项。"
 }

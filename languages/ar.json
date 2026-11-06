@@ -309,5 +309,7 @@
   "tip_label_close_pos_distance": "تُعامل الاكتشافات الأقرب من هذه المسافة كالتسمية نفسها حتى مع تشابه نص أضعف.",
   "lbl_label_close_pos_length_ratio": "نسبة طول القرب من التسمية (0-1):",
   "tip_label_close_pos_length_ratio": "الحد الأدنى من نسبة الطول بين اكتشافين قريبين المطلوبة لاختصار الدمج بالقرب.",
-  "save_as_ass_filter_name": "ترجمة Advanced SubStation Alpha"
+  "save_as_ass_filter_name": "ترجمة Advanced SubStation Alpha",
+  "lbl_label_lang": "لغة OCR للتسميات (فارغ = لغة الترجمة):",
+  "tip_label_lang": "لغة OCR لكشف التسميات. اتركها فارغة لإعادة استخدام لغة الترجمة. مفيدة عندما تكون التسميات على الشاشة بنص مختلف عن الحوار. لا يستخدمها ONNX Runtime DirectML لأنه يعتمد نموذجًا موحدًا واحدًا."
 }

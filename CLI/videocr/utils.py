@@ -31,6 +31,9 @@ ALIGNMENT_MAP = {
 }
 VALID_ALIGNMENT_NAMES = set(ALIGNMENT_MAP.keys())
 
+# Accepted --subtitle_position values (video.py branches on exactly these).
+VALID_SUBTITLE_POSITIONS = frozenset({"center", "left", "right", "any"})
+
 
 def get_ms_from_time_str(time_str: str) -> float:
     """Convert time string to milliseconds."""

@@ -309,5 +309,7 @@
   "tip_label_close_pos_distance": "Les détections plus proches que cette distance sont traitées comme le même label même avec une similitude de texte plus faible.",
   "lbl_label_close_pos_length_ratio": "Ratio de longueur de proximité des labels (0-1) :",
   "tip_label_close_pos_length_ratio": "Ratio de longueur minimum entre deux détections proches requis pour le raccourci de fusion par proximité.",
-  "save_as_ass_filter_name": "Sous-titre Advanced SubStation Alpha"
+  "save_as_ass_filter_name": "Sous-titre Advanced SubStation Alpha",
+  "lbl_label_lang": "Langue OCR des labels (vide = langue des sous-titres) :",
+  "tip_label_lang": "Langue OCR pour la détection des labels. Laisser vide pour réutiliser la langue des sous-titres. Utile lorsque les labels à l'écran sont dans une écriture différente de celle du dialogue. Non utilisé par ONNX Runtime DirectML, qui dispose d'un modèle unifié."
 }

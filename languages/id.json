@@ -309,5 +309,7 @@
   "tip_label_close_pos_distance": "Deteksi yang lebih dekat dari jarak ini diperlakukan sebagai label yang sama meskipun kemiripan teks lebih lemah.",
   "lbl_label_close_pos_length_ratio": "Rasio Panjang Kedekatan Label (0-1):",
   "tip_label_close_pos_length_ratio": "Rasio panjang minimum antara dua deteksi yang berdekatan yang diperlukan untuk pintasan penggabungan kedekatan.",
-  "save_as_ass_filter_name": "Subtitle Advanced SubStation Alpha"
+  "save_as_ass_filter_name": "Subtitle Advanced SubStation Alpha",
+  "lbl_label_lang": "Bahasa OCR Label (kosong = bahasa subtitle):",
+  "tip_label_lang": "Bahasa OCR untuk deteksi label. Biarkan kosong untuk memakai bahasa subtitle. Berguna saat label di layar memakai aksara berbeda dari dialognya. Tidak dipakai ONNX Runtime DirectML karena memakai satu model terpadu."
 }

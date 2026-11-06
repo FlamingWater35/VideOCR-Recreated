@@ -309,5 +309,7 @@
   "tip_label_close_pos_distance": "Detecções mais próximas que esta distância são tratadas como o mesmo label mesmo com similaridade de texto mais fraca.",
   "lbl_label_close_pos_length_ratio": "Proporção de comprimento de proximidade de labels (0-1):",
   "tip_label_close_pos_length_ratio": "Proporção mínima de comprimento entre duas detecções próximas necessária para o atalho de fusão por proximidade.",
-  "save_as_ass_filter_name": "Legenda Advanced SubStation Alpha"
+  "save_as_ass_filter_name": "Legenda Advanced SubStation Alpha",
+  "lbl_label_lang": "Idioma de OCR dos rótulos (vazio = idioma das legendas):",
+  "tip_label_lang": "Idioma de OCR para a detecção de rótulos. Deixe vazio para reutilizar o idioma das legendas. Útil quando os rótulos na tela usam um alfabeto diferente do diálogo. O ONNX Runtime DirectML não o utiliza porque usa um modelo unificado."
 }

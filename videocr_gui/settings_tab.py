@@ -72,6 +72,7 @@ DML_DEPENDENT_WIDGETS = (
 # apply to .ass output, which is produced only when label detection is on.
 LABEL_DEPENDENT_WIDGETS = (
     "label_separate_files",
+    "--label_lang",
     "--label_time_start",
     "--label_time_end",
     "--label_ocr_image_max_width",
@@ -440,6 +441,14 @@ class SettingsTab(QWidget):
             "Save Subtitles and Labels as Separate .ass Files",
             "tip_label_separate_files",
             False,
+        )
+        self._add_line(
+            label_form,
+            "--label_lang",
+            "lbl_label_lang",
+            "Label OCR Language (empty = subtitle language):",
+            "",
+            "tip_label_lang",
         )
         self._add_line(
             label_form,

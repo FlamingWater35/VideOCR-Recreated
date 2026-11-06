@@ -92,6 +92,27 @@ class TestRestrictedFloat:
             videocr_cli.restricted_float(min_val=0.0)("-0.1")
 
 
+class TestValidSubtitlePosition:
+    @pytest.mark.parametrize("value", ["center", "left", "right", "any"])
+    def test_valid(self, value):
+        assert videocr_cli.valid_subtitle_position(value) == value
+
+    @pytest.mark.parametrize("value", ["sideways", "Center", "", "middle"])
+    def test_invalid_raises(self, value):
+        with pytest.raises(argparse.ArgumentTypeError, match="subtitle position"):
+            videocr_cli.valid_subtitle_position(value)
+
+    def test_matches_video_branches(self):
+        # video.py branches on exactly these four values; a drift here would
+        # reintroduce the late runtime failure this validator prevents.
+        assert set(utils.VALID_SUBTITLE_POSITIONS) == {
+            "center",
+            "left",
+            "right",
+            "any",
+        }
+
+
 class TestValidTimeString:
     @pytest.mark.parametrize("value", ["", "0:00", "1:30", "01:02:03"])
     def test_valid(self, value):

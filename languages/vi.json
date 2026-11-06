@@ -309,5 +309,7 @@
   "tip_label_close_pos_distance": "Các phát hiện gần hơn khoảng cách này được coi là cùng một nhãn ngay cả khi độ tương đồng văn bản yếu hơn.",
   "lbl_label_close_pos_length_ratio": "Tỷ lệ độ dài gần nhãn (0-1):",
   "tip_label_close_pos_length_ratio": "Tỷ lệ độ dài tối thiểu giữa hai phát hiện gần nhau cần thiết cho lối tắt gộp theo khoảng cách gần.",
-  "save_as_ass_filter_name": "Phụ đề Advanced SubStation Alpha"
+  "save_as_ass_filter_name": "Phụ đề Advanced SubStation Alpha",
+  "lbl_label_lang": "Ngôn ngữ OCR cho nhãn (trống = ngôn ngữ phụ đề):",
+  "tip_label_lang": "Ngôn ngữ OCR dùng cho việc phát hiện nhãn. Để trống để dùng lại ngôn ngữ phụ đề. Hữu ích khi nhãn trên màn hình dùng hệ chữ khác với lời thoại. ONNX Runtime DirectML không dùng mục này vì chỉ có một mô hình hợp nhất."
 }
