@@ -17,6 +17,8 @@ GUI_ENTRY = REPO_ROOT / "VideOCR_qt.py"
 CLI_ENTRY = REPO_ROOT / "CLI" / "videocr_cli.py"
 BUILD_SCRIPT = REPO_ROOT / "build.py"
 LINUX_INSTALLER = REPO_ROOT / "Installer" / "Linux" / "install_videocr.sh"
+ISS_SCRIPT = REPO_ROOT / "Installer" / "Windows" / "installer_template.iss"
+ISS_LANGUAGES = REPO_ROOT / "Installer" / "Windows" / "Languages"
 
 
 def _directive_header(path: Path) -> str:
@@ -280,3 +282,164 @@ def test_appimage_only_built_on_linux_and_opted_in():
     assert 'sys.platform != "linux"' in text
     assert "args.appimage" in text
     assert '"--appimage"' in text or "'--appimage'" in text
+
+
+def test_installer_language_files_are_vendored():
+    """Every non-``compiler:`` MessagesFile must exist in the repository.
+
+    Inno Setup aborts the whole compile with a bare "exit code 2" when a
+    MessagesFile cannot be opened. ``chineseSimplified.isl`` is NOT part of
+    Inno Setup's own Languages/ folder at 6.7.x (it lives under
+    Files/Languages/Unofficial/ in issrc), so relying on the compiler's bundled
+    copy failed every Windows build. The files are vendored instead.
+    """
+    build = _load_build_module()
+    missing = build._missing_installer_languages(ISS_SCRIPT)
+    assert not missing, f"missing installer language files: {missing}"
+
+
+def test_installer_languages_are_relative_not_compiler_provided():
+    """Non-English languages must not fall back to the compiler's folder.
+
+    Only real ``Name:`` entries are inspected — the .iss explains the bug in a
+    comment that mentions the old ``compiler:`` path, and that prose must not
+    make this test fail.
+    """
+    text = ISS_SCRIPT.read_text(encoding="utf-8")
+    entries = [
+        line
+        for line in text.splitlines()
+        if line.lstrip().startswith("Name:") and "MessagesFile:" in line
+    ]
+    assert entries, "no [Languages] entries parsed"
+
+    for line in entries:
+        assert "compiler:Languages\\" not in line, (
+            f"non-English language must load from the vendored folder: {line}"
+        )
+
+    for lang in (
+        "German",
+        "ChineseSimplified",
+        "Spanish",
+        "French",
+        "Portuguese",
+        "Italian",
+        "Arabic",
+        "Russian",
+        "Indonesian",
+        "Thai",
+        "Korean",
+        "Japanese",
+        "Vietnamese",
+    ):
+        assert (ISS_LANGUAGES / f"{lang}.isl").is_file(), (
+            f"vendored {lang}.isl is missing"
+        )
+        assert f"Languages\\{lang}.isl" in text, (
+            f"{lang} must be referenced from the vendored Languages/ folder"
+        )
+
+
+def _installer_language_entries() -> list[tuple[str, str]]:
+    """Return the (Name, MessagesFile) pairs from the .iss [Languages] section."""
+    text = ISS_SCRIPT.read_text(encoding="utf-8")
+    return re.findall(
+        r'^\s*Name:\s*"([^"]+)";\s*MessagesFile:\s*"([^"]+)"', text, re.MULTILINE
+    )
+
+
+def _installer_language_case_map() -> dict[str, str]:
+    """Return {installer language name: app language code} from [Code]."""
+    text = ISS_SCRIPT.read_text(encoding="utf-8")
+    pairs = re.findall(
+        r"^\s*'([^']+)':\s*SetIniString\('Settings', '--language', '([^']+)'",
+        text,
+        re.MULTILINE,
+    )
+    return dict(pairs)
+
+
+def test_installer_covers_every_app_language():
+    """The installer must offer a language for every UI language the app ships.
+
+    The app's UI languages are the ``languages/*.json`` files. A language that
+    exists in the app but not in the installer leaves those users with an
+    English-only setup wizard — which is how Indonesian and Vietnamese were
+    commented out.
+    """
+    app_codes = {p.stem for p in (REPO_ROOT / "languages").glob("*.json")}
+    assert app_codes, "no app language files found"
+
+    entry_names = {name for name, _ in _installer_language_entries()}
+    case_map = _installer_language_case_map()
+
+    # A language only counts as offered when it is BOTH an active [Languages]
+    # entry and has a --language mapping. Commenting out either one silently
+    # drops it from the wizard, which is how Indonesian/Vietnamese were lost.
+    orphan_mappings = sorted(set(case_map) - entry_names)
+    assert not orphan_mappings, (
+        f"these languages have a --language mapping but no active [Languages] "
+        f"entry, so the wizard never offers them: {orphan_mappings}"
+    )
+
+    # English is the `else` fallback of the case statement, not an explicit arm.
+    covered = {case_map[name] for name in entry_names if name in case_map} | {"en"}
+
+    missing = sorted(app_codes - covered)
+    assert not missing, (
+        f"installer does not offer these app languages: {missing} "
+        "(add them to [Languages] and to the [Code] case block)"
+    )
+
+    extra = sorted(covered - {"en"} - app_codes)
+    assert not extra, (
+        f"installer maps language codes the app does not ship: {extra}"
+    )
+
+
+def test_every_installer_language_sets_the_app_language():
+    """Each [Languages] entry needs a --language mapping.
+
+    Without one the wizard shows the right language but the app still starts in
+    English, because the mapping is what writes the setting.
+    """
+    entries = _installer_language_entries()
+    assert entries, "no [Languages] entries parsed"
+
+    case_map = _installer_language_case_map()
+    unmapped = sorted(name for name, _ in entries if name != "english" and name not in case_map)
+    assert not unmapped, (
+        f"installer languages with no --language mapping: {unmapped}"
+    )
+
+    # Every mapping must point at a language the app actually ships.
+    app_codes = {p.stem for p in (REPO_ROOT / "languages").glob("*.json")}
+    for name, code in case_map.items():
+        assert code in app_codes, (
+            f"installer language '{name}' maps to '{code}', "
+            f"which is not one of {sorted(app_codes)}"
+        )
+
+
+def test_installer_preflight_flags_a_missing_language_file(tmp_path):
+    """build.py must report the missing file instead of ISCC's bare exit 2."""
+    build = _load_build_module()
+    langs = tmp_path / "Languages"
+    langs.mkdir()
+    (langs / "German.isl").write_text("x", encoding="utf-8")
+    script = tmp_path / "t.iss"
+    script.write_text(
+        "[Languages]\n"
+        'Name: "english"; MessagesFile: "compiler:Default.isl"\n'
+        'Name: "german"; MessagesFile: "Languages\\German.isl"\n'
+        'Name: "thai"; MessagesFile: "Languages\\Thai.isl"\n'
+        '; Name: "indonesian"; MessagesFile: "Languages\\Indonesian.isl"\n',
+        encoding="utf-8",
+    )
+
+    missing = build._missing_installer_languages(script)
+    names = sorted(p.name for p in missing)
+    # Thai is referenced but absent; Indonesian is commented out and ignored;
+    # Default.isl comes from the compiler and is not checked.
+    assert names == ["Thai.isl"], names

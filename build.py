@@ -4,6 +4,7 @@ import argparse
 import importlib.util
 import os
 import platform
+import re
 import shutil
 import stat
 import subprocess
@@ -642,6 +643,42 @@ def create_linux_appimage(
         shutil.rmtree(work_dir, ignore_errors=True)
 
 
+def _is_iss_comment(line: str) -> bool:
+    """True for an Inno Setup comment line.
+
+    Inno Setup only treats a line as a comment when its first non-blank
+    character is ``;`` — there is no end-of-line comment syntax, so a ``;``
+    that separates two entries (``Name: "x"; MessagesFile: "..."``) must NOT be
+    stripped.
+    """
+    return line.lstrip().startswith(";")
+
+
+def _missing_installer_languages(script_path: Path) -> list[Path]:
+    """Return the relative ``MessagesFile`` entries the .iss references but lack.
+
+    Inno Setup resolves a ``MessagesFile: "Languages\\X.isl"`` path relative to
+    the script, and aborts the whole compile when one is absent. Only relative
+    entries are checked: ``compiler:`` ones are provided by Inno Setup itself.
+    Commented-out entries are ignored.
+    """
+    script_dir = script_path.parent
+    missing: list[Path] = []
+    for line in script_path.read_text(encoding="utf-8").splitlines():
+        if _is_iss_comment(line):
+            continue
+        match = re.search(r'MessagesFile:\s*"([^"]+)"', line, re.IGNORECASE)
+        if not match:
+            continue
+        entry = match.group(1).replace("\\", "/")
+        if ":" in entry.split("/")[0]:  # e.g. "compiler:Default.isl"
+            continue
+        candidate = script_dir / entry
+        if not candidate.is_file():
+            missing.append(candidate)
+    return missing
+
+
 def create_windows_installer(final_app_path: Path, args: argparse.Namespace) -> None:
     """Creates a Windows installer using Inno Setup by passing parameters to the compiler."""
     if sys.platform != "win32":
@@ -678,6 +715,23 @@ def create_windows_installer(final_app_path: Path, args: argparse.Namespace) -> 
             f"WARNING: Installer script not found at '{script_path}'. Skipping installer creation."
         )
         return
+
+    # The .iss references its non-English messages by relative path into
+    # Installer/Windows/Languages/ (vendored, not "compiler:"). A missing file
+    # makes ISCC abort with a bare "exit code 2" and a one-line include error
+    # that is easy to miss in CI logs, so verify them up front and say what is
+    # actually wrong.
+    missing = _missing_installer_languages(script_path)
+    if missing:
+        print("ERROR: The installer is missing bundled language file(s):")
+        for path in missing:
+            print(f"       {path}")
+        print(
+            "       These are vendored in the repository (Installer/Windows/Languages).\n"
+            "       Restore them from jrsoftware/issrc (Files/Languages and\n"
+            "       Files/Languages/Unofficial)."
+        )
+        sys.exit(1)
 
     releases_dir = final_app_path.parent
     output_filename = f"{final_app_path.name}-setup-x64"

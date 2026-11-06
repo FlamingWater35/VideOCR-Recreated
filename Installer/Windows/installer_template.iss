@@ -50,20 +50,41 @@ UninstallDisplayIcon={app}\{#MyAppExeName}
 LanguageDetectionMethod=uilanguage
 
 [Languages]
+; The non-English .isl files are vendored in Installer/Windows/Languages/ and
+; referenced by relative path, NOT via "compiler:".
+;
+; Inno Setup only ships a subset of languages in its own Languages/ folder, and
+; which subset differs per version and per install method (e.g. the chocolatey
+; package that CI uses installs 6.7.x, whose Languages/ folder has no
+; ChineseSimplified.isl — that file lives under Files/Languages/Unofficial/ in
+; the issrc tree). Referring to "compiler:Languages\ChineseSimplified.isl" made
+; ISCC abort with exit code 2 and "Couldn't open include file", which failed
+; every Windows build. Vendoring the files removes the dependency on whatever
+; the CI image happens to install. Refresh them from
+; https://github.com/jrsoftware/issrc (Files/Languages and
+; Files/Languages/Unofficial) if the bundled set is changed.
+;
+; This list must stay in sync with the UI languages in languages/*.json
+; (tests/test_build_contract.py enforces it).
+;
+; Indonesian.isl comes from issrc master, NOT from tag is-6_7_4: the tag's copy
+; is missing 19 messages (the signature-verification and RetryCancel* strings),
+; which ISCC silently backfills from English — the wizard would then mix
+; languages. Re-fetch it from master if these files are ever refreshed.
 Name: "english"; MessagesFile: "compiler:Default.isl"
-Name: "german"; MessagesFile: "compiler:Languages\German.isl"
-Name: "chinesesimplified"; MessagesFile: "compiler:Languages\ChineseSimplified.isl"
-Name: "spanish"; MessagesFile: "compiler:Languages\Spanish.isl"
-Name: "french"; MessagesFile: "compiler:Languages\French.isl"
-Name: "portuguese"; MessagesFile: "compiler:Languages\Portuguese.isl"
-Name: "italian"; MessagesFile: "compiler:Languages\Italian.isl"
-Name: "arabic"; MessagesFile: "compiler:Languages\Arabic.isl"
-Name: "russian"; MessagesFile: "compiler:Languages\Russian.isl"
-; Name: "indonesian"; MessagesFile: "compiler:Languages\Indonesian.isl"
-Name: "Thai"; MessagesFile: "compiler:Languages\Thai.isl"
-Name: "Korean"; MessagesFile: "compiler:Languages\Korean.isl"
-Name: "japanese"; MessagesFile: "compiler:Languages\Japanese.isl"
-; Name: "vietnamese"; MessagesFile: "compiler:Languages\Vietnamese.isl"
+Name: "german"; MessagesFile: "Languages\German.isl"
+Name: "chinesesimplified"; MessagesFile: "Languages\ChineseSimplified.isl"
+Name: "spanish"; MessagesFile: "Languages\Spanish.isl"
+Name: "french"; MessagesFile: "Languages\French.isl"
+Name: "portuguese"; MessagesFile: "Languages\Portuguese.isl"
+Name: "italian"; MessagesFile: "Languages\Italian.isl"
+Name: "arabic"; MessagesFile: "Languages\Arabic.isl"
+Name: "russian"; MessagesFile: "Languages\Russian.isl"
+Name: "indonesian"; MessagesFile: "Languages\Indonesian.isl"
+Name: "Thai"; MessagesFile: "Languages\Thai.isl"
+Name: "Korean"; MessagesFile: "Languages\Korean.isl"
+Name: "japanese"; MessagesFile: "Languages\Japanese.isl"
+Name: "vietnamese"; MessagesFile: "Languages\Vietnamese.isl"
 
 [Dirs]
 Name: "{app}"; Permissions: everyone-full
@@ -194,11 +215,11 @@ begin
         'italian':           SetIniString('Settings', '--language', 'it', NewConfigPath);
         'arabic':            SetIniString('Settings', '--language', 'ar', NewConfigPath);
         'russian':           SetIniString('Settings', '--language', 'ru', NewConfigPath);
-        // 'indonesian':        SetIniString('Settings', '--language', 'id', NewConfigPath);
+        'indonesian':        SetIniString('Settings', '--language', 'id', NewConfigPath);
         'Thai':              SetIniString('Settings', '--language', 'th', NewConfigPath);
         'Korean':            SetIniString('Settings', '--language', 'ko', NewConfigPath);
         'japanese':          SetIniString('Settings', '--language', 'ja', NewConfigPath);
-        // 'vietnamese':        SetIniString('Settings', '--language', 'vi', NewConfigPath);
+        'vietnamese':        SetIniString('Settings', '--language', 'vi', NewConfigPath);
       else
         SetIniString('Settings', '--language', 'en', NewConfigPath);
       end;

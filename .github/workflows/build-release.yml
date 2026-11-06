@@ -63,26 +63,13 @@ jobs:
       - name: Install 7-Zip and Inno Setup
         run: choco install 7zip innosetup -y --no-progress
 
-      - name: Download and install all Inno Setup languages
-        run: |
-          $langDir = "C:\Program Files (x86)\Inno Setup 6\Languages"
-          if (-not (Test-Path $langDir)) {
-              $langDir = "C:\Program Files\Inno Setup 6\Languages"
-          }
-          Write-Host "Cloning Inno Setup source repository to get all language files..."
-          # Use --depth 1 for a fast shallow clone
-          git clone --depth 1 https://github.com/jrsoftware/issrc.git C:\temp\issrc
-          # Copy both official and Unofficial language files to ensure none are missing
-          $officialDir = "C:\temp\issrc\Files\Languages"
-          $unofficialDir = "C:\temp\issrc\Files\Languages\Unofficial"
-          if (Test-Path $officialDir) {
-              Copy-Item "$officialDir\*.isl" $langDir -Force -ErrorAction SilentlyContinue
-          }
-          if (Test-Path $unofficialDir) {
-              Copy-Item "$unofficialDir\*.isl" $langDir -Force -ErrorAction SilentlyContinue
-          }
-          Write-Host "Successfully populated Inno Setup languages folder."
-        shell: pwsh
+      # The installer's non-English .isl files are vendored in
+      # Installer/Windows/Languages/ and referenced by relative path, so no
+      # language-file staging step is needed here. (A previous step cloned
+      # jrsoftware/issrc and copied .isl files into the compiler's Languages/
+      # folder; it silently missed ChineseSimplified.isl, which is only shipped
+      # under Files/Languages/Unofficial/, and ISCC then aborted every Windows
+      # build with exit code 2.)
 
       - name: Install Python dependencies
         shell: pwsh
