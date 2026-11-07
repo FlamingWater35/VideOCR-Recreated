@@ -519,12 +519,16 @@ def run_easyocr_on_stitched_images(
         stitch_map: dict[str, list[dict[str, Any]]],
         lang: str,
         use_gpu: bool,
-        directml_recognition_mode: str = "stable") -> dict[tuple[int, int], list[Any]]:
+        directml_recognition_mode: str = "stable",
+        model_tier: str = "small") -> dict[tuple[int, int], list[Any]]:
     """
     Run EasyOCR on VideOCR's already-filtered stitched image grids.
 
     Returns a map keyed by (frame_idx, zone_idx). Each value is compatible with
     PredictedFrames: [[box, (text, confidence)], ...].
+
+    ``model_tier`` is accepted for interface parity with the ONNX runner; EasyOCR
+    ships a single recognition network per language and has no tier to select.
     """
     if use_gpu:
         os.environ["VIDEOCR_DIRECTML_RECOGNITION_MODE"] = str(directml_recognition_mode or "stable")

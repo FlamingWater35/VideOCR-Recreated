@@ -415,6 +415,14 @@ SUBTITLE_ALIGNMENT_LIST = [('align_bottom_center', 'bottom-center'),
  ('align_middle_left', 'middle-left'),
  ('align_middle_right', 'middle-right')]
 
+# --- OCR model tier ---
+# One setting honored by every engine: PaddleOCR resolves a local model
+# directory from it, the ONNX engine selects the matching PP-OCRv6 ONNX files.
+MODEL_TIER_LIST = [('tier_tiny', 'tiny'),
+ ('tier_small', 'small'),
+ ('tier_medium', 'medium')]
+DEFAULT_MODEL_TIER = 'small'
+
 # --- Post-completion actions ---
 POST_ACTION_KEYS_WINDOWS = ['action_none', 'action_sleep', 'action_hibernate', 'action_shutdown', 'action_lock']
 POST_ACTION_KEYS_OTHER = ['action_none', 'action_sleep', 'action_shutdown']

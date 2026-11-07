@@ -169,7 +169,7 @@ def get_default_settings() -> dict[str, Any]:
         "--use_angle_cls": False,
         "--post_processing": False,
         "--min_subtitle_duration": str(C.DEFAULT_MIN_SUBTITLE_DURATION),
-        "--use_server_model": False,
+        "--model_tier": "small",
         "--use_dual_zone": False,
         "enable_subtitle_alignment": False,
         "--subtitle_alignment": C.DEFAULT_SUBTITLE_ALIGNMENT,
@@ -228,7 +228,6 @@ _BOOL_KEYS = {
     "--use_directml_gpu",
     "--use_angle_cls",
     "--post_processing",
-    "--use_server_model",
     "--use_dual_zone",
     "enable_subtitle_alignment",
     "enable_label_detection",
@@ -288,6 +287,18 @@ def load_settings() -> dict[str, Any]:
         CONFIG_SECTION, "--use_directml_gpu"
     ):
         settings["--use_directml_gpu"] = settings["--use_gpu"]
+
+    # "Use Server Model" became the three-way --model_tier dropdown. Carry a
+    # checked legacy flag over to the "medium" tier (the accuracy tier it
+    # selected), so a user who had it on keeps the same OCR quality.
+    if parser.has_option(CONFIG_SECTION, "--use_server_model") and not (
+        parser.has_option(CONFIG_SECTION, "--model_tier")
+    ):
+        # Parse the legacy bool explicitly: the key is no longer in _BOOL_KEYS,
+        # so _normalize_value would hand back the raw string ("False" is truthy).
+        legacy = parser.get(CONFIG_SECTION, "--use_server_model")
+        if legacy.strip().lower() in ("1", "true", "yes", "on"):
+            settings["--model_tier"] = "medium"
     return settings
 
 

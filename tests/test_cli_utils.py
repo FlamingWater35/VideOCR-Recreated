@@ -419,24 +419,39 @@ class TestAlignmentMap:
 
 class TestResolveModelDirs:
     def test_latin_english(self):
-        det, rec, cls = utils.resolve_model_dirs("en", use_server_model=False)
+        det, rec, cls = utils.resolve_model_dirs("en", model_tier="small")
         assert det.endswith(os.path.join("det", "PP-OCRv6_small_det"))
         assert rec.endswith(os.path.join("rec", "PP-OCRv6_small_rec"))
         assert cls.endswith(os.path.join("cls", "PP-LCNet_x1_0_textline_ori"))
 
-    def test_server_model_uses_medium(self):
-        det, rec, _ = utils.resolve_model_dirs("en", use_server_model=True)
+    def test_default_tier_is_small(self):
+        det, rec, _ = utils.resolve_model_dirs("en")
+        assert det.endswith("PP-OCRv6_small_det")
+        assert rec.endswith("PP-OCRv6_small_rec")
+
+    def test_medium_tier(self):
+        det, rec, _ = utils.resolve_model_dirs("en", model_tier="medium")
         assert det.endswith("PP-OCRv6_medium_det")
         assert rec.endswith("PP-OCRv6_medium_rec")
 
+    def test_tiny_tier(self):
+        det, rec, _ = utils.resolve_model_dirs("en", model_tier="tiny")
+        assert det.endswith("PP-OCRv6_tiny_det")
+        assert rec.endswith("PP-OCRv6_tiny_rec")
+
+    def test_unknown_tier_falls_back_to_default(self):
+        det, rec, _ = utils.resolve_model_dirs("en", model_tier="enormous")
+        assert det.endswith("PP-OCRv6_small_det")
+        assert rec.endswith("PP-OCRv6_small_rec")
+
     @pytest.mark.parametrize("lang", ["ar", "fa", "ur"])
     def test_arabic_branch(self, lang):
-        _, rec, _ = utils.resolve_model_dirs(lang, use_server_model=False)
+        _, rec, _ = utils.resolve_model_dirs(lang, model_tier="small")
         assert rec.endswith("arabic_PP-OCRv5_mobile_rec")
 
     @pytest.mark.parametrize("lang", ["ru", "uk", "be"])
     def test_eslav_before_cyrillic(self, lang):
-        _, rec, _ = utils.resolve_model_dirs(lang, use_server_model=False)
+        _, rec, _ = utils.resolve_model_dirs(lang, model_tier="small")
         assert rec.endswith("eslav_PP-OCRv5_mobile_rec")
 
     @pytest.mark.parametrize(
@@ -449,17 +464,17 @@ class TestResolveModelDirs:
         ],
     )
     def test_specific_branches(self, lang, rec_suffix):
-        det, rec, _ = utils.resolve_model_dirs(lang, use_server_model=False)
+        det, rec, _ = utils.resolve_model_dirs(lang, model_tier="small")
         assert det.endswith("PP-OCRv6_small_det")
         assert rec.endswith(rec_suffix)
 
     def test_ka_uses_v3_models(self):
-        det, rec, _ = utils.resolve_model_dirs("ka", use_server_model=False)
+        det, rec, _ = utils.resolve_model_dirs("ka", model_tier="small")
         assert det.endswith("PP-OCRv3_mobile_det")
         assert rec.endswith("ka_PP-OCRv3_mobile_rec")
 
     def test_ku_resolves_latin_not_arabic(self):
-        _, rec, _ = utils.resolve_model_dirs("ku", use_server_model=False)
+        _, rec, _ = utils.resolve_model_dirs("ku", model_tier="small")
         assert rec.endswith("PP-OCRv6_small_rec")  # latin unified rec model
 
 

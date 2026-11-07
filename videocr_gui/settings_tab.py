@@ -406,13 +406,14 @@ class SettingsTab(QWidget):
             "tip_normalize_chinese",
             True,
         )
-        self._add_check(
+        self._add_combo(
             mode_form,
-            "--use_server_model",
-            "chk_server_model",
-            "Use Server Model",
-            "tip_server_model",
-            False,
+            "--model_tier",
+            "lbl_model_tier",
+            "OCR Model Tier:",
+            C.MODEL_TIER_LIST,
+            "tip_model_tier",
+            internal_values=[v for _, v in C.MODEL_TIER_LIST],
         )
         root.addWidget(mode_box)
 
@@ -1127,6 +1128,27 @@ class SettingsTab(QWidget):
             if cur_internal in internal_list:
                 widget.setCurrentIndex(internal_list.index(cur_internal))
             widget.blockSignals(False)
+
+        # Model tier combo: same rebuild, driven by C.MODEL_TIER_LIST
+        tier_widget = self._widgets.get("--model_tier")
+        if isinstance(tier_widget, QComboBox):
+            tier_internal = self._combo_internal.get("--model_tier", [])
+            cur_internal = (
+                tier_internal[tier_widget.currentIndex()]
+                if 0 <= tier_widget.currentIndex() < len(tier_internal)
+                else C.DEFAULT_MODEL_TIER
+            )
+            tier_widget.blockSignals(True)
+            tier_widget.clear()
+            tier_widget.addItems(
+                [
+                    _translated_label(lang_key, name)
+                    for lang_key, name in C.MODEL_TIER_LIST
+                ]
+            )
+            if cur_internal in tier_internal:
+                tier_widget.setCurrentIndex(tier_internal.index(cur_internal))
+            tier_widget.blockSignals(False)
 
         # DirectML option combos: rebuild localized items preserving selection
         for key in DML_OPTION_COMBOS:

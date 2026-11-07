@@ -246,6 +246,16 @@ QSS theme.
   DirectML engine (see `CLI/videocr/onnx_directml_ocr.py`). Old configs /
   saved queue jobs that reference the removed display name are migrated to the
   ONNX Runtime DirectML engine via `constants.LEGACY_OCR_ENGINE_MAP`.
+- OCR model tier: a three-way dropdown (`--model_tier` = `tiny` / `small` /
+  `medium`) replaces the old "Use Server Model" checkbox. PP-OCRv6 has no
+  "server" tier, so the boolean's implicit "medium = better" mapping became an
+  explicit choice, defaulting to `small` (the accuracy/speed point the app
+  previously shipped with). Every engine honors it: PaddleOCR resolves a local
+  support-files directory, ONNX Runtime DirectML selects the matching rapidocr
+  `ModelType`, and the Google Lens / EasyOCR paths accept it without changing
+  their behavior. A legacy config with `--use_server_model = true` is migrated
+  to `medium` on load. All three tiers ship with the app so switching never
+  downloads anything.
 - Config: `videocr_gui_config.ini` (portable mode via `portable_mode.txt`,
   else `%APPDATA%/VideOCR` or XDG), autosave on change, relative crop-box
   persistence, defaults matching the old GUI except DirectML index default 0

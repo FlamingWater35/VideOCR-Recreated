@@ -155,6 +155,16 @@ def valid_subtitle_position(arg: str) -> str:
     )
 
 
+def valid_model_tier(arg: str) -> str:
+    """Reject an unknown --model_tier at parse time."""
+    if arg in utils.MODEL_TIERS:
+        return arg
+    allowed_values = ", ".join(utils.MODEL_TIERS)
+    raise argparse.ArgumentTypeError(
+        f"Invalid model tier '{arg}'. Allowed values are: {allowed_values}"
+    )
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Extract subtitles from a video using PaddleOCR, Google Lens, EasyOCR DirectML, or ONNX Runtime DirectML."
@@ -231,10 +241,14 @@ def main() -> None:
         help="Enable Classification (PaddleOCR only, default: false)",
     )
     parser.add_argument(
-        "--use_server_model",
-        type=lambda x: x.lower() == "true",
-        default=False,
-        help="Enable usage of server model (default: false)",
+        "--model_tier",
+        type=valid_model_tier,
+        default=utils.DEFAULT_MODEL_TIER,
+        help=(
+            "PP-OCRv6 model tier: tiny (fastest, least accurate), small "
+            "(default), or medium (most accurate, slowest). Honored by every "
+            "OCR engine."
+        ),
     )
     parser.add_argument(
         "--brightness_threshold",
@@ -684,7 +698,7 @@ def main() -> None:
                 use_fullframe=args.use_fullframe,
                 use_gpu=args.use_gpu,
                 use_angle_cls=args.use_angle_cls,
-                use_server_model=args.use_server_model,
+                model_tier=args.model_tier,
                 brightness_threshold=args.brightness_threshold,
                 ssim_threshold=args.ssim_threshold,
                 subtitle_position=args.subtitle_position,

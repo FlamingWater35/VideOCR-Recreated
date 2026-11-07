@@ -964,7 +964,12 @@ class Video:
             return cast(
                 dict[tuple[int, int], list[Any]],
                 runner(
-                    stitched_dir, stitch_map, subtitle_lang, use_gpu, recognition_mode
+                    stitched_dir,
+                    stitch_map,
+                    subtitle_lang,
+                    use_gpu,
+                    recognition_mode,
+                    self._model_tier,
                 ),
             )
         sub_map: dict[str, list[dict[str, Any]]] = {}
@@ -977,7 +982,12 @@ class Video:
         if sub_map:
             outputs.update(
                 runner(
-                    stitched_dir, sub_map, subtitle_lang, use_gpu, recognition_mode
+                    stitched_dir,
+                    sub_map,
+                    subtitle_lang,
+                    use_gpu,
+                    recognition_mode,
+                    self._model_tier,
                 )
             )
         if label_map:
@@ -992,6 +1002,7 @@ class Video:
                     self._label_lang,
                     use_gpu,
                     recognition_mode,
+                    self._model_tier,
                 )
             )
         return outputs
@@ -1068,6 +1079,7 @@ class Video:
         subtitle_primary_color: str = "&H00FFFFFF",
         subtitle_outline_color: str = "&H00000000",
         label_separate_files: bool = False,
+        model_tier: str = "small",
     ) -> None:
         perf_total_start = time.perf_counter()
         step1_start = perf_total_start
@@ -1153,6 +1165,11 @@ class Video:
         # caller can write it to a second file.
         self._label_separate_files = bool(label_separate_files)
         self.label_ass_text: str | None = None
+        # Every OCR engine maps this one setting onto its own backend: PaddleOCR
+        # picks a local model directory, the DirectML engines pick a tier.
+        self._model_tier = (
+            model_tier if model_tier in utils.MODEL_TIERS else utils.DEFAULT_MODEL_TIER
+        )
 
         if ocr_engine == "onnx_directml":
             os.environ["VIDEOCR_ONNX_DIRECTML_TUNING"] = (

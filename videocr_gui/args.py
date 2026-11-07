@@ -251,6 +251,12 @@ def build_args(
             args[stripped] = C.DIRECTML_FRAME_SCAN_TO_CLI.get(str(value), "cpu_ssim")
         elif key == "--onnx_directml_tuning":
             args[stripped] = C.ONNX_DIRECTML_TUNING_TO_CLI.get(str(value), "balanced")
+        elif key == "--model_tier":
+            # Stored as the internal value already; fall back so a hand-edited
+            # config cannot send an unknown tier to the CLI.
+            tier = str(value).strip().lower()
+            valid = [v for _, v in C.MODEL_TIER_LIST]
+            args[stripped] = tier if tier in valid else C.DEFAULT_MODEL_TIER
         elif isinstance(value, bool):
             args[stripped] = value
         else:

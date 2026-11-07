@@ -115,24 +115,39 @@ def _normalize_box(box: Any) -> list[list[float]]:
     return points
 
 
-# PP-OCRv6 medium model identifiers (PaddleOCR naming convention).
-# Detection: PP-OCRv6_medium_det (~59 MB), Recognition: PP-OCRv6_medium_rec (~73 MB).
-# The unified `rapidocr` package bundles the PP-OCRv6 *small* tier by default;
-# requesting the medium tier via `params` gives higher accuracy.
-PP_OCRV6_MEDIUM_DET = "PP-OCRv6_medium_det"
-PP_OCRV6_MEDIUM_REC = "PP-OCRv6_medium_rec"
+# PP-OCRv6 model tiers, as understood by rapidocr's ``model_type`` key.
+# Detection and recognition files for every tier ship in rapidocr/models, so
+# switching tiers never needs a network round-trip.
+PP_OCRV6_TIERS = ("tiny", "small", "medium")
+DEFAULT_PP_OCRV6_TIER = "small"
 
 
-def _load_rapidocr_engine(lang: str = "en") -> tuple[Any | None, str]:
-    """Create a RapidOCR engine on ONNX Runtime DirectML with PP-OCRv6 medium models.
+def _tier_model_type(tier: str) -> Any:
+    """Maps a tier name onto rapidocr's ``ModelType`` enum."""
+    from rapidocr.utils.typings import ModelType
+
+    name = tier if tier in PP_OCRV6_TIERS else DEFAULT_PP_OCRV6_TIER
+    return ModelType(name)
+
+
+def _load_rapidocr_engine(
+    lang: str = "en", model_tier: str = DEFAULT_PP_OCRV6_TIER
+) -> tuple[Any | None, str]:
+    """Create a RapidOCR engine on ONNX Runtime DirectML for a PP-OCRv6 tier.
 
     The unified ``rapidocr`` package is used. Its constructor accepts EITHER a
     ``params`` dict (model/config overrides) OR top-level provider/session
-    kwargs — not both at once. Since PP-OCRv6 medium model selection requires
-    ``params``, the engine relies on ONNX Runtime's default provider ordering
-    (which includes ``DmlExecutionProvider`` because ``onnxruntime-directml``
-    is installed) rather than explicit provider kwargs.
+    kwargs — not both at once. Since tier selection requires ``params``, the
+    engine relies on ONNX Runtime's default provider ordering (which includes
+    ``DmlExecutionProvider`` because ``onnxruntime-directml`` is installed)
+    rather than explicit provider kwargs.
+
+    The tier is selected via ``Det.model_type`` / ``Rec.model_type``. Note that
+    ``Det.model_name`` is NOT a real rapidocr key: it is accepted into the
+    config section and then silently ignored, so the engine would keep loading
+    whatever tier ``model_type`` says (previously always "small").
     """
+    tier = model_tier if model_tier in PP_OCRV6_TIERS else DEFAULT_PP_OCRV6_TIER
     tuning = (
         os.environ.get("VIDEOCR_ONNX_DIRECTML_TUNING", "balanced").strip().lower()
         or "balanced"
@@ -183,24 +198,24 @@ def _load_rapidocr_engine(lang: str = "en") -> tuple[Any | None, str]:
 
     provider_list = ["DmlExecutionProvider", "CPUExecutionProvider"]
 
-    # 5. Create the engine with PP-OCRv6 medium models. This is the known-good
-    #    configuration: `params` with `model_name` keys and no provider kwargs.
+    # 5. Create the engine with the requested PP-OCRv6 tier.
     try:
+        model_type = _tier_model_type(tier)
         engine = RapidOCR(
             params={
-                "Det.model_name": PP_OCRV6_MEDIUM_DET,
-                "Rec.model_name": PP_OCRV6_MEDIUM_REC,
+                "Det.model_type": model_type,
+                "Rec.model_type": model_type,
             }
         )
         return engine, (
             f"ONNX Runtime providers: {providers}; provider order: {provider_list}; "
-            f"tuning: {tuning}; models: PP-OCRv6 medium (model_name); lang: {rapidocr_lang}"
+            f"tuning: {tuning}; models: PP-OCRv6 {tier} (model_type); lang: {rapidocr_lang}"
         )
-    except Exception as medium_err:
-        # Fall back to the bundled defaults (PP-OCRv6 small) if the medium
-        # model config is rejected for any reason.
+    except Exception as tier_err:
+        # Fall back to the bundled defaults (PP-OCRv6 small) if the requested
+        # tier is rejected for any reason.
         print(
-            f"[ONNX] PP-OCRv6 medium config rejected ({type(medium_err).__name__}); "
+            f"[ONNX] PP-OCRv6 {tier} config rejected ({type(tier_err).__name__}); "
             f"falling back to bundled defaults.",
             flush=True,
         )
@@ -264,15 +279,16 @@ def run_onnx_directml_on_stitched_images(
     lang: str,
     use_gpu: bool,
     directml_recognition_mode: str = "stable",
+    model_tier: str = DEFAULT_PP_OCRV6_TIER,
 ) -> dict[tuple[int, int], list[Any]]:
     """Experimental ONNXRuntime DirectML OCR pass.
 
     When RapidOCR + ONNXRuntime DirectML are available, this reads the already
-    stitched VideOCR Recreated grids with ONNXRuntime using PP-OCRv6 medium
-    models. The selected subtitle language is normalized and logged. If the
-    optional ONNX stack is not available or cannot initialize on DirectML, it
-    falls back to the proven EasyOCR DirectML Hybrid backend so the run still
-    finishes.
+    stitched VideOCR Recreated grids with ONNXRuntime using the requested
+    PP-OCRv6 tier (``model_tier``). The selected subtitle language is normalized
+    and logged. If the optional ONNX stack is not available or cannot initialize
+    on DirectML, it falls back to the proven EasyOCR DirectML Hybrid backend so
+    the run still finishes.
     """
     filenames = sorted(
         f
@@ -292,11 +308,16 @@ def run_onnx_directml_on_stitched_images(
         from .easyocr_directml import run_easyocr_on_stitched_images
 
         return run_easyocr_on_stitched_images(
-            input_dir, stitch_map, lang, use_gpu, directml_recognition_mode
+            input_dir,
+            stitch_map,
+            lang,
+            use_gpu,
+            directml_recognition_mode,
+            model_tier,
         )
 
     print("Starting ONNX Runtime DirectML OCR (experimental)...", flush=True)
-    engine, reason = _load_rapidocr_engine(lang)
+    engine, reason = _load_rapidocr_engine(lang, model_tier)
     print(f"ONNX DirectML status: {reason}", flush=True)
 
     if engine is None:
@@ -307,7 +328,12 @@ def run_onnx_directml_on_stitched_images(
         from .easyocr_directml import run_easyocr_on_stitched_images
 
         return run_easyocr_on_stitched_images(
-            input_dir, stitch_map, lang, use_gpu, directml_recognition_mode
+            input_dir,
+            stitch_map,
+            lang,
+            use_gpu,
+            directml_recognition_mode,
+            model_tier,
         )
 
     try:
@@ -358,5 +384,10 @@ def run_onnx_directml_on_stitched_images(
         from .easyocr_directml import run_easyocr_on_stitched_images
 
         return run_easyocr_on_stitched_images(
-            input_dir, stitch_map, lang, use_gpu, directml_recognition_mode
+            input_dir,
+            stitch_map,
+            lang,
+            use_gpu,
+            directml_recognition_mode,
+            model_tier,
         )

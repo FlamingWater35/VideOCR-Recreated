@@ -103,7 +103,7 @@ def save_subtitles_to_file(
     use_fullframe: bool = False,
     use_gpu: bool = False,
     use_angle_cls: bool = False,
-    use_server_model: bool = False,
+    model_tier: str = utils.DEFAULT_MODEL_TIER,
     brightness_threshold: int | None = None,
     ssim_threshold: int = 92,
     subtitle_position: str = "center",
@@ -233,14 +233,14 @@ def save_subtitles_to_file(
             sys.exit(1)
         if ocr_engine == "paddleocr":
             det_model_dir, rec_model_dir, cls_model_dir = utils.resolve_model_dirs(
-                lang, use_server_model
+                lang, model_tier
             )
             label_lang_code = (label_lang or "").strip()
             if label_lang_code and label_lang_code != lang:
                 # Labels OCR'd in a different language need their own
                 # recognition model set for the second PaddleOCR pass.
                 label_det, label_rec, label_cls = utils.resolve_model_dirs(
-                    label_lang_code, use_server_model
+                    label_lang_code, model_tier
                 )
                 label_model_dirs = {
                     "det": label_det,
@@ -250,7 +250,7 @@ def save_subtitles_to_file(
         else:
             # For the Text-Detection-Only Pass just the default detection model is needed
             det_model_dir, rec_model_dir, cls_model_dir = utils.resolve_model_dirs(
-                "en", use_server_model
+                "en", model_tier
             )
         if ocr_engine == "google_lens":
             try:
@@ -328,6 +328,7 @@ def save_subtitles_to_file(
             subtitle_primary_color,
             subtitle_outline_color,
             label_separate_files,
+            model_tier,
         )
         ocr_end = time.perf_counter()
     except Exception as e:

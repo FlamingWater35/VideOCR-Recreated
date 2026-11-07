@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import importlib.util
+import io
 import os
 import platform
 import re
@@ -317,6 +318,123 @@ def download_file(urls: str | list[str], dest_folder: str | Path) -> Path:
             print(f"ERROR: Failed to download {url}. Reason: {e}")
             sys.exit(1)
     return first_file_path
+
+
+# PP-OCRv6 tiers the app can select at runtime. The upstream support archive
+# ships only "small" and "medium", so the build adds "tiny" itself; without it,
+# picking Tiny would make PaddleOCR download models on first use.
+PP_OCRV6_TINY_MODELS: dict[str, str] = {
+    "det": "PP-OCRv6_tiny_det",
+    "rec": "PP-OCRv6_tiny_rec",
+}
+PADDLE_MODEL_BASE_URL = (
+    "https://paddle-model-ecology.bj.bcebos.com/paddlex/"
+    "official_inference_model/paddle3.0.0"
+)
+# rapidocr resolves these names through its own manifest; the version segment
+# must match the rapidocr release pinned in pyproject.toml.
+ONNX_MODELS_BASE_URL = (
+    "https://www.modelscope.cn/models/RapidAI/RapidOCR/resolve/v3.9.2/onnx/PP-OCRv6"
+)
+
+
+def fetch_tiny_models(support_root: Path) -> None:
+    """Downloads the PP-OCRv6 tiny det/rec models into the support-files tree.
+
+    The upstream support archive only contains the small and medium tiers. The
+    model tier dropdown offers Tiny, so the build has to place those two model
+    directories next to the others; otherwise selecting Tiny triggers a runtime
+    download (and fails offline).
+    """
+    print_header("Fetching PP-OCRv6 tiny models")
+    for task, model_name in PP_OCRV6_TINY_MODELS.items():
+        target_dir = support_root / task / model_name
+        if target_dir.is_dir() and any(target_dir.iterdir()):
+            print(f"  {task}: already present ({model_name})")
+            continue
+        url = f"{PADDLE_MODEL_BASE_URL}/{model_name}_infer.tar"
+        print(f"  {task}: downloading {model_name}...")
+        try:
+            with requests.get(url, stream=True, timeout=120) as response:
+                response.raise_for_status()
+                payload = response.content
+        except Exception as e:
+            print(f"ERROR: Failed to download {url}. Reason: {e}")
+            sys.exit(1)
+        try:
+            with tarfile.open(fileobj=io.BytesIO(payload), mode="r:") as archive:
+                members = archive.getmembers()
+                # Archives contain one top-level "<model>_infer/" directory.
+                prefix = f"{model_name}_infer/"
+                for member in members:
+                    if not member.name.startswith(prefix):
+                        continue
+                    relative = member.name[len(prefix) :]
+                    if not relative:
+                        continue
+                    destination = target_dir / relative
+                    if member.isdir():
+                        destination.mkdir(parents=True, exist_ok=True)
+                        continue
+                    source = archive.extractfile(member)
+                    if source is None:
+                        continue
+                    destination.parent.mkdir(parents=True, exist_ok=True)
+                    destination.write_bytes(source.read())
+        except Exception as e:
+            print(f"ERROR: Failed to extract {model_name}. Reason: {e}")
+            sys.exit(1)
+        print(f"  {task}: installed to {target_dir}")
+
+
+# Detection models that ship in the upstream archive but that
+# utils.resolve_model_dirs() can never return: detection resolves to
+# PP-OCRv6_{tier}_det for every language (PP-OCRv3_mobile_det for Georgian),
+# while the per-script PP-OCRv5 models are recognition-only. Keeping them cost
+# ~89 MB unpacked for nothing.
+UNUSED_DET_MODELS = ("PP-OCRv5_mobile_det", "PP-OCRv5_server_det")
+
+
+def prune_unused_det_models(support_root: Path) -> None:
+    """Deletes detection model dirs that no language/tier combination selects."""
+    det_root = support_root / "det"
+    if not det_root.is_dir():
+        return
+    for name in UNUSED_DET_MODELS:
+        target = det_root / name
+        if target.is_dir():
+            shutil.rmtree(target, ignore_errors=True)
+            print(f"  Pruned unused detection model: {name}")
+
+
+def fetch_onnx_models(models_dir: Path) -> None:
+    """Downloads every PP-OCRv6 ONNX tier into rapidocr's bundled model folder.
+
+    rapidocr ships only the small tier, and it downloads any other tier on first
+    use. The model tier dropdown offers all three, so the build pre-places the
+    missing files: switching tiers then never needs a network round-trip (and
+    works offline). The classification model is tier-independent.
+    """
+    print_header("Fetching PP-OCRv6 ONNX models")
+    models_dir.mkdir(parents=True, exist_ok=True)
+    for task in ("det", "rec"):
+        for tier in ("tiny", "small", "medium"):
+            filename = f"PP-OCRv6_{task}_{tier}.onnx"
+            destination = models_dir / filename
+            if destination.exists():
+                print(f"  {filename}: already present")
+                continue
+            url = f"{ONNX_MODELS_BASE_URL}/{task}/{filename}"
+            print(f"  {filename}: downloading...")
+            try:
+                with requests.get(url, stream=True, timeout=300) as response:
+                    response.raise_for_status()
+                    destination.write_bytes(response.content)
+            except Exception as e:
+                destination.unlink(missing_ok=True)
+                print(f"ERROR: Failed to download {url}. Reason: {e}")
+                sys.exit(1)
+            print(f"  {filename}: {destination.stat().st_size / 1048576:.1f} MB")
 
 
 def extract_archive(file_path: Path, dest_folder: str | Path) -> None:
@@ -834,6 +952,29 @@ def package_target(
     extract_archive(support_archive_path, temp_cli_dist)
     extract_archive(paddle_archive_path, temp_cli_dist)
     extract_archive(chrome_lens_archive_path, temp_cli_dist)
+
+    # The support archive only carries the small and medium PP-OCRv6 tiers; the
+    # model-tier dropdown also offers Tiny, so add those two model dirs here.
+    support_root = Path(temp_cli_dist) / "PaddleOCR.PP-OCRv6.support.files"
+    if support_root.is_dir():
+        fetch_tiny_models(support_root)
+        prune_unused_det_models(support_root)
+    else:
+        print(
+            "WARNING: PP-OCRv6 support files folder not found; "
+            "skipping the tiny model download."
+        )
+
+    # The ONNX engine selects a tier at runtime from rapidocr's bundled model
+    # folder, so all three tiers have to be on disk for an offline run.
+    rapidocr_models = Path(temp_cli_dist) / "rapidocr" / "models"
+    if rapidocr_models.is_dir():
+        fetch_onnx_models(rapidocr_models)
+    else:
+        print(
+            "WARNING: rapidocr models folder not found in the CLI build; "
+            "skipping the ONNX model download."
+        )
 
     print("Cleaning up downloaded archives...")
     os.remove(support_archive_path)

@@ -34,6 +34,13 @@ VALID_ALIGNMENT_NAMES = set(ALIGNMENT_MAP.keys())
 # Accepted --subtitle_position values (video.py branches on exactly these).
 VALID_SUBTITLE_POSITIONS = frozenset({"center", "left", "right", "any"})
 
+# PP-OCRv6 model tiers, smallest/fastest first. Every OCR engine maps this one
+# setting onto its own backend: PaddleOCR picks a local support-files directory,
+# ONNX Runtime DirectML picks the matching rapidocr ONNX file. "medium" is the
+# accuracy tier (formerly "Use Server Model"); there is no v6 "server" tier.
+MODEL_TIERS = ("tiny", "small", "medium")
+DEFAULT_MODEL_TIER = "small"
+
 
 def get_ms_from_time_str(time_str: str) -> float:
     """Convert time string to milliseconds."""
@@ -361,27 +368,31 @@ def find_executable(program_name: str) -> str:
     )
 
 
-def resolve_model_dirs(lang: str, use_server_model: bool) -> tuple[str, str, str]:
-    """Resolves the model directory for the specified language and mode."""
+def resolve_model_dirs(lang: str, model_tier: str = DEFAULT_MODEL_TIER) -> tuple[str, str, str]:
+    """Resolves the model directory for the specified language and model tier.
+
+    ``model_tier`` is one of :data:`MODEL_TIERS`; unknown values fall back to
+    the default tier so a hand-edited config cannot break a run.
+    """
     program_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
     base_path = os.path.join(program_dir, "PaddleOCR.PP-OCRv6.support.files")
     det_path = os.path.join(base_path, "det")
     rec_path = os.path.join(base_path, "rec")
     cls_path = os.path.join(base_path, "cls", "PP-LCNet_x1_0_textline_ori")
-    # The PP-OCRv6 support archive names the tiers "small" (lightweight) and
-    # "medium" (higher accuracy) — unlike PP-OCRv5's "mobile"/"server".
-    mode = "medium" if use_server_model else "small"
+    # The PP-OCRv6 support archive names the tiers "tiny"/"small"/"medium" —
+    # unlike PP-OCRv5's "mobile"/"server".
+    tier = model_tier if model_tier in MODEL_TIERS else DEFAULT_MODEL_TIER
 
     # DET
     if lang == "ka":
         det_sub = "PP-OCRv3_mobile_det"
     else:
-        det_sub = f"PP-OCRv6_{mode}_det"
+        det_sub = f"PP-OCRv6_{tier}_det"
 
     # REC
     # PP-OCRv6 supports ch, chinese_cht, japan, en, and all latin languages with a single unified model
     if lang in ("ch", "chinese_cht", "japan", "en") or lang in PADDLEOCR_LANGS["latin"]:
-        rec_sub = f"PP-OCRv6_{mode}_rec"
+        rec_sub = f"PP-OCRv6_{tier}_rec"
     elif lang in PADDLEOCR_LANGS["arabic"]:
         rec_sub = "arabic_PP-OCRv5_mobile_rec"
     elif lang in PADDLEOCR_LANGS["eslav"]:
