@@ -87,7 +87,7 @@
   "chk_normalize_chinese": "繁体字中国語を簡体字に変換",
   "tip_normalize_chinese": "有効にすると、処理前に繁体字中国語が\n簡体字中国語に変換されます。「Chinese & English」のみ有効です。",
   "lbl_model_tier": "OCR モデル階層：",
-  "tip_model_tier": "OCR に使用する PP-OCRv6 モデルのサイズを制御します。\nTiny は最速ですが精度は最低、Medium は最高精度ですが最も遅くなります。\nすべての OCR エンジンがこの設定に従います。\nMedium はより多くの VRAM と CPU 時間を必要とします。",
+  "tip_model_tier": "OCR に使用する PP-OCRv6 モデルのサイズを制御します。\nTiny は最速ですが精度は最低、Medium は最高精度ですが最も遅くなります。\nPP-OCRv6 エンジン（PaddleOCR、ONNX Runtime DirectML、Google Lens 検出）に適用されます。EasyOCR は独自の固定モデルを使用します。\nMedium はより多くの VRAM と CPU 時間を必要とします。",
   "tier_tiny": "Tiny（最速）",
   "tier_small": "Small（バランス）",
   "tier_medium": "Medium（最高精度）",

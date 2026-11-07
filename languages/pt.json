@@ -87,7 +87,7 @@
   "chk_normalize_chinese": "Converter chinês tradicional para simplificado",
   "tip_normalize_chinese": "Se ativado, os caracteres chineses tradicionais serão convertidos para\nchinês simplificado antes do processamento. Ativo apenas para \"Chinese & English\".",
   "lbl_model_tier": "Nível do modelo OCR:",
-  "tip_model_tier": "Controla o tamanho do modelo PP-OCRv6 usado no OCR.\nMinúsculo é o mais rápido, mas o menos preciso; Médio é o mais preciso e o mais lento.\nTodos os motores de OCR respeitam esta definição.\nMédio exige bastante mais VRAM e tempo de CPU.",
+  "tip_model_tier": "Controla o tamanho do modelo PP-OCRv6 usado no OCR.\nMinúsculo é o mais rápido, mas o menos preciso; Médio é o mais preciso e o mais lento.\nAplica-se aos motores PP-OCRv6 (PaddleOCR, ONNX Runtime DirectML e a deteção do Google Lens). O EasyOCR usa o seu próprio modelo fixo.\nMédio exige bastante mais VRAM e tempo de CPU.",
   "tier_tiny": "Minúsculo (mais rápido)",
   "tier_small": "Pequeno (equilibrado)",
   "tier_medium": "Médio (melhor precisão)",

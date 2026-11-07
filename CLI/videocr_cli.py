@@ -246,8 +246,9 @@ def main() -> None:
         default=utils.DEFAULT_MODEL_TIER,
         help=(
             "PP-OCRv6 model tier: tiny (fastest, least accurate), small "
-            "(default), or medium (most accurate, slowest). Honored by every "
-            "OCR engine."
+            "(default), or medium (most accurate, slowest). Applies to the "
+            "PP-OCRv6 engines (paddleocr, google_lens detection, and "
+            "onnx_directml). easyocr_directml has no tiers and ignores it."
         ),
     )
     parser.add_argument(

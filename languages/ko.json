@@ -87,7 +87,7 @@
   "chk_normalize_chinese": "번체 중국어를 간체 중국어로 변환",
   "tip_normalize_chinese": "활성화하면 처리 전에 번체 중국어 문자가\n간체 중국어로 변환됩니다. \"Chinese & English\"에서만 활성화됩니다.",
   "lbl_model_tier": "OCR 모델 등급:",
-  "tip_model_tier": "OCR에 사용할 PP-OCRv6 모델 크기를 제어합니다.\nTiny는 가장 빠르지만 정확도가 가장 낮고, Medium은 정확도가 가장 높지만 가장 느립니다.\n모든 OCR 엔진이 이 설정을 따릅니다.\nMedium은 더 많은 VRAM과 CPU 시간이 필요합니다.",
+  "tip_model_tier": "OCR에 사용할 PP-OCRv6 모델 크기를 제어합니다.\nTiny는 가장 빠르지만 정확도가 가장 낮고, Medium은 정확도가 가장 높지만 가장 느립니다.\nPP-OCRv6 엔진(PaddleOCR, ONNX Runtime DirectML, Google Lens 감지)에 적용됩니다. EasyOCR은 자체 고정 모델을 사용합니다.\nMedium은 더 많은 VRAM과 CPU 시간이 필요합니다.",
   "tier_tiny": "Tiny (가장 빠름)",
   "tier_small": "Small (균형)",
   "tier_medium": "Medium (최고 정확도)",

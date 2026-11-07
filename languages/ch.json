@@ -87,7 +87,7 @@
   "chk_normalize_chinese": "将繁体中文转换为简体中文",
   "tip_normalize_chinese": "启用后，将在处理前把繁体中文字符转换为\n简体中文。仅在“Chinese & English”下生效。",
   "lbl_model_tier": "OCR 模型级别：",
-  "tip_model_tier": "控制 OCR 使用的 PP-OCRv6 模型大小。\n极小最快但精度最低；中精度最高但速度最慢。\n所有 OCR 引擎都会遵循此设置。\n中级别需要明显更多的显存和 CPU 时间。",
+  "tip_model_tier": "控制 OCR 使用的 PP-OCRv6 模型大小。\n极小最快但精度最低；中精度最高但速度最慢。\n适用于 PP-OCRv6 引擎（PaddleOCR、ONNX Runtime DirectML 和 Google Lens 检测）。EasyOCR 使用自己的固定模型。\n中级别需要明显更多的显存和 CPU 时间。",
   "tier_tiny": "极小（最快）",
   "tier_small": "小（均衡）",
   "tier_medium": "中（最佳精度）",

@@ -250,12 +250,14 @@ QSS theme.
   `medium`) replaces the old "Use Server Model" checkbox. PP-OCRv6 has no
   "server" tier, so the boolean's implicit "medium = better" mapping became an
   explicit choice, defaulting to `small` (the accuracy/speed point the app
-  previously shipped with). Every engine honors it: PaddleOCR resolves a local
-  support-files directory, ONNX Runtime DirectML selects the matching rapidocr
-  `ModelType`, and the Google Lens / EasyOCR paths accept it without changing
-  their behavior. A legacy config with `--use_server_model = true` is migrated
-  to `medium` on load. All three tiers ship with the app so switching never
-  downloads anything.
+  previously shipped with). The tier reaches the PP-OCRv6 engines: PaddleOCR
+  resolves a local support-files directory, ONNX Runtime DirectML selects the
+  matching rapidocr `ModelType`, and the Google Lens detection pass uses the
+  tier-resolved detection model. EasyOCR is the internal fallback backend, ships
+  one fixed network per language, and takes the parameter only for interface
+  parity — it has no tier to honor, which the tooltip and CLI help state. A
+  legacy config with `--use_server_model = true` is migrated to `medium` on
+  load. All three tiers ship with the app so switching never downloads anything.
 - Config: `videocr_gui_config.ini` (portable mode via `portable_mode.txt`,
   else `%APPDATA%/VideOCR` or XDG), autosave on change, relative crop-box
   persistence, defaults matching the old GUI except DirectML index default 0

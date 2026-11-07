@@ -87,7 +87,7 @@
   "chk_normalize_chinese": "Normalize Traditional to Simplified Chinese",
   "tip_normalize_chinese": "If enabled, Traditional Chinese characters will be converted to\nSimplified Chinese before processing. Only active for \"Chinese & English\".",
   "lbl_model_tier": "OCR Model Tier:",
-  "tip_model_tier": "Controls the PP-OCRv6 model size used for OCR.\nTiny is the fastest but least accurate; Medium is the most accurate and the slowest.\nEvery OCR engine honors this setting.\nMedium needs noticeably more VRAM and CPU time.",
+  "tip_model_tier": "Controls the PP-OCRv6 model size used for OCR.\nTiny is the fastest but least accurate; Medium is the most accurate and the slowest.\nApplies to the PP-OCRv6 engines (PaddleOCR, ONNX Runtime DirectML, and the Google Lens detection pass). EasyOCR uses its own fixed model.\nMedium needs noticeably more VRAM and CPU time.",
   "tier_tiny": "Tiny (fastest)",
   "tier_small": "Small (balanced)",
   "tier_medium": "Medium (best accuracy)",

@@ -310,12 +310,21 @@ class TestTranslations:
         for key in ("tier_tiny", "tier_small", "tier_medium"):
             assert data[key].strip()
 
-    def test_tooltip_mentions_every_engine(self):
-        """The tooltip must say the setting applies to all engines."""
+    @pytest.mark.parametrize("path", LANGUAGES, ids=lambda p: p.stem)
+    def test_tooltip_does_not_overclaim(self, path):
+        """EasyOCR has no tiers, so "every engine" would be a lie."""
+        data = json.loads(path.read_text(encoding="utf-8"))
+        tip = data["tip_model_tier"].lower()
+        assert "every ocr engine" not in tip
+        assert "every engine" not in tip
+
+    def test_english_tooltip_names_easyocr_as_the_exception(self):
         data = json.loads(
             (REPO_ROOT / "languages" / "en.json").read_text(encoding="utf-8")
         )
-        assert "every ocr engine" in data["tip_model_tier"].lower()
+        tip = data["tip_model_tier"]
+        assert "EasyOCR" in tip
+        assert "PP-OCRv6" in tip
 
 
 class TestBuildBundling:
@@ -342,8 +351,16 @@ class TestBuildBundling:
                 assert "PP-OCRv5" not in os.path.basename(det)
 
 
-class TestEveryEngineHonorsTheTier:
-    """Guard: each engine entry point must accept ``model_tier``."""
+class TestTierReachesTheRightEngines:
+    """Which engines honor the tier, and which cannot.
+
+    The tier is a PP-OCRv6 concept. PaddleOCR and ONNX Runtime DirectML both
+    select a v6 model with it; the Google Lens detection pass shares PaddleOCR's
+    detection model. EasyOCR is the internal fallback backend with one fixed
+    recognition network per language, so it takes the parameter for signature
+    parity and ignores it. These tests pin that split so neither the code nor
+    the docs drift back into claiming universal support.
+    """
 
     @pytest.mark.parametrize(
         ("module_name", "function_name"),
@@ -373,3 +390,23 @@ class TestEveryEngineHonorsTheTier:
         )
         assert "model_tier: str = utils.DEFAULT_MODEL_TIER" in source
         assert source.count("model_tier") >= 4
+
+    def test_easyocr_documents_that_it_ignores_the_tier(self):
+        source = (
+            REPO_ROOT / "CLI" / "videocr" / "easyocr_directml.py"
+        ).read_text(encoding="utf-8")
+        assert "interface parity" in source
+        assert "no tier to select" in source
+
+    def test_cli_help_names_the_easyocr_exception(self):
+        source = (REPO_ROOT / "CLI" / "videocr_cli.py").read_text(encoding="utf-8")
+        assert "easyocr_directml has no tiers" in source
+
+    def test_easyocr_reader_is_not_tier_parameterized(self):
+        """EasyOCR's Reader takes no tier; the fallback must not fake one."""
+        import inspect
+
+        easyocr = pytest.importorskip("easyocr")
+        params = set(inspect.signature(easyocr.Reader.__init__).parameters)
+        assert "model_tier" not in params
+        assert "model_type" not in params

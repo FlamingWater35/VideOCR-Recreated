@@ -87,7 +87,7 @@
   "chk_normalize_chinese": "Chuẩn hóa tiếng Trung phồn thể sang giản thể",
   "tip_normalize_chinese": "Khi bật, các ký tự Trung phồn thể sẽ được chuyển sang\nTrung giản thể trước khi xử lý. Chỉ hoạt động với \"Chinese & English\".",
   "lbl_model_tier": "Cấp mô hình OCR:",
-  "tip_model_tier": "Điều khiển kích thước mô hình PP-OCRv6 dùng cho OCR.\nTiny nhanh nhất nhưng kém chính xác nhất; Medium chính xác nhất nhưng chậm nhất.\nMọi công cụ OCR đều tuân theo cài đặt này.\nMedium cần nhiều VRAM và thời gian CPU hơn rõ rệt.",
+  "tip_model_tier": "Điều khiển kích thước mô hình PP-OCRv6 dùng cho OCR.\nTiny nhanh nhất nhưng kém chính xác nhất; Medium chính xác nhất nhưng chậm nhất.\nÁp dụng cho các công cụ PP-OCRv6 (PaddleOCR, ONNX Runtime DirectML và bước phát hiện của Google Lens). EasyOCR dùng mô hình cố định riêng.\nMedium cần nhiều VRAM và thời gian CPU hơn rõ rệt.",
   "tier_tiny": "Rất nhỏ (nhanh nhất)",
   "tier_small": "Nhỏ (cân bằng)",
   "tier_medium": "Trung bình (chính xác nhất)",

@@ -87,7 +87,7 @@
   "chk_normalize_chinese": "Traditionelles Chinesisch in vereinfachtes umwandeln",
   "tip_normalize_chinese": "Wenn aktiviert, werden traditionelle chinesische Zeichen vor der Verarbeitung in\nvereinfachtes Chinesisch umgewandelt. Nur aktiv für \"Chinese & English\".",
   "lbl_model_tier": "OCR-Modellstufe:",
-  "tip_model_tier": "Steuert die PP-OCRv6-Modellgröße für die OCR.\nWinzig ist am schnellsten, aber am ungenauesten; Mittel ist am genauesten und am langsamsten.\nJede OCR-Engine beachtet diese Einstellung.\nMittel benötigt deutlich mehr VRAM und CPU-Zeit.",
+  "tip_model_tier": "Steuert die PP-OCRv6-Modellgröße für die OCR.\nWinzig ist am schnellsten, aber am ungenauesten; Mittel ist am genauesten und am langsamsten.\nGilt für die PP-OCRv6-Engines (PaddleOCR, ONNX Runtime DirectML und die Google-Lens-Erkennung). EasyOCR verwendet ein eigenes festes Modell.\nMittel benötigt deutlich mehr VRAM und CPU-Zeit.",
   "tier_tiny": "Winzig (am schnellsten)",
   "tier_small": "Klein (ausgewogen)",
   "tier_medium": "Mittel (beste Genauigkeit)",
