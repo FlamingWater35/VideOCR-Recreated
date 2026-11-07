@@ -413,6 +413,42 @@ def prune_unused_det_models(support_root: Path) -> None:
             print(f"  Pruned unused detection model: {name}")
 
 
+# torch's native libraries exist twice in a standalone build: once at the package
+# root (Nuitka's dependency walk copies every resolved DLL there) and once in
+# torch/lib (where torch's own loader looks). The copies are byte-identical, and
+# 7-Zip's solid mode does NOT deduplicate them — archiving both produced exactly
+# 2x the single-copy size. Only torch/lib is load-bearing: torch_python.dll,
+# _C.pyd and torch_directml_native.pyd all resolve their imports with
+# torch/lib on the DLL search path (verified by loading them from that directory
+# alone), so the root duplicates are pure dead weight (~53 MB compressed).
+DUPLICATE_ROOT_DLLS = (
+    "torch_cpu.dll",
+    "torch_python.dll",
+    "fbgemm.dll",
+    "libiomp5md.dll",
+)
+
+
+def prune_duplicate_torch_dlls(package_root: Path) -> None:
+    """Deletes package-root copies of DLLs that also live in ``torch/lib``.
+
+    Only removes a root file when an identical copy exists under ``torch/lib``,
+    so a future torch layout change cannot silently break the package.
+    """
+    torch_lib = package_root / "torch" / "lib"
+    if not torch_lib.is_dir():
+        return
+    for name in DUPLICATE_ROOT_DLLS:
+        duplicate = package_root / name
+        canonical = torch_lib / name
+        if not duplicate.is_file() or not canonical.is_file():
+            continue
+        if duplicate.stat().st_size != canonical.stat().st_size:
+            continue
+        duplicate.unlink()
+        print(f"  Pruned duplicate root DLL: {name}")
+
+
 def fetch_ffmpeg(dest_root: Path, variant: str) -> None:
     """Bundles a managed FFmpeg into ``dest_root/ffmpeg`` for DirectML builds.
 
@@ -1061,6 +1097,11 @@ def package_target(
     # D3D11VA frame scan, so it is the only one that ships an ffmpeg binary.
     # A missing download degrades to PyAV rather than failing the build.
     fetch_ffmpeg(Path(temp_cli_dist), build_target)
+
+    # Nuitka's dependency walk leaves a second copy of torch's DLLs at the
+    # package root; torch loads the ones in torch/lib. Dropping the root copies
+    # saves ~53 MB in the archive (7-Zip does not deduplicate them).
+    prune_duplicate_torch_dlls(Path(temp_cli_dist))
 
     print("Cleaning up downloaded archives...")
     os.remove(support_archive_path)

@@ -16,6 +16,7 @@ from pathlib import Path
 import pytest
 
 from videocr import utils
+from videocr.lang_dictionaries import PADDLEOCR_LANGS
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 LANGUAGES = sorted((REPO_ROOT / "languages").glob("*.json"))
@@ -349,6 +350,106 @@ class TestBuildBundling:
             for tier in utils.MODEL_TIERS:
                 det, _, _ = utils.resolve_model_dirs(lang, tier)
                 assert "PP-OCRv5" not in os.path.basename(det)
+
+    def test_pruning_runs_for_every_target(self):
+        """The prune call must not sit inside a single-variant branch."""
+        source = (REPO_ROOT / "build.py").read_text(encoding="utf-8")
+        body = source.split("def package_target(", 1)[1]
+        assert "prune_unused_det_models(support_root)" in body
+        # It runs right after the tiny-model fetch, unconditionally on variant.
+        tail = body.split("prune_unused_det_models(support_root)", 1)[0]
+        assert "fetch_tiny_models(support_root)" in tail
+
+    def test_unreachable_models_are_really_unreachable(self):
+        """Exhaustive check over every language the resolver knows about."""
+        reachable = set()
+        languages = set()
+        for group in PADDLEOCR_LANGS.values():
+            if isinstance(group, str):
+                languages.add(group)
+            else:
+                languages.update(group)
+        for lang in languages:
+            for tier in utils.MODEL_TIERS:
+                det, rec, _ = utils.resolve_model_dirs(lang, tier)
+                reachable.add(os.path.basename(det))
+                reachable.add(os.path.basename(rec))
+        for unused in ("PP-OCRv5_mobile_det", "PP-OCRv5_server_det"):
+            assert unused not in reachable
+
+    def test_every_reachable_model_is_shipped(self):
+        """Guards the opposite mistake: pruning something the resolver needs."""
+        source = (REPO_ROOT / "build.py").read_text(encoding="utf-8")
+        pruned = set()
+        block = source.split("UNUSED_DET_MODELS = (", 1)[1].split(")", 1)[0]
+        for token in block.split(","):
+            token = token.strip().strip('"').strip("'")
+            if token:
+                pruned.add(token)
+        reachable = set()
+        for lang in ("en", "japan", "korean", "ar", "ka", "ch", "th"):
+            for tier in utils.MODEL_TIERS:
+                det, rec, _ = utils.resolve_model_dirs(lang, tier)
+                reachable.add(os.path.basename(det))
+                reachable.add(os.path.basename(rec))
+        assert not (pruned & reachable)
+
+
+class TestDuplicateTorchDlls:
+    """torch ships the same DLLs at the package root and in ``torch/lib``."""
+
+    def test_build_prunes_duplicate_root_dlls(self):
+        source = (REPO_ROOT / "build.py").read_text(encoding="utf-8")
+        assert "def prune_duplicate_torch_dlls" in source
+        assert "prune_duplicate_torch_dlls(Path(temp_cli_dist))" in source
+
+    def test_prune_keeps_the_canonical_copy(self, tmp_path):
+        import build
+
+        lib = tmp_path / "torch" / "lib"
+        lib.mkdir(parents=True)
+        for name in build.DUPLICATE_ROOT_DLLS:
+            (lib / name).write_bytes(b"x" * 16)
+            (tmp_path / name).write_bytes(b"x" * 16)
+        build.prune_duplicate_torch_dlls(tmp_path)
+        for name in build.DUPLICATE_ROOT_DLLS:
+            assert not (tmp_path / name).exists(), f"{name} root copy survived"
+            assert (lib / name).exists(), f"{name} canonical copy was removed"
+
+    def test_prune_skips_when_canonical_copy_is_absent(self, tmp_path):
+        """A layout change must not delete a file torch still needs."""
+        import build
+
+        (tmp_path / "torch").mkdir()
+        target = tmp_path / "torch_cpu.dll"
+        target.write_bytes(b"only copy")
+        build.prune_duplicate_torch_dlls(tmp_path)
+        assert target.exists()
+
+    def test_prune_ignores_differing_sizes(self, tmp_path):
+        """Only remove a byte-count match; a real difference means not a dup."""
+        import build
+
+        lib = tmp_path / "torch" / "lib"
+        lib.mkdir(parents=True)
+        (lib / "torch_cpu.dll").write_bytes(b"x" * 8)
+        root_copy = tmp_path / "torch_cpu.dll"
+        root_copy.write_bytes(b"x" * 16)
+        build.prune_duplicate_torch_dlls(tmp_path)
+        assert root_copy.exists()
+
+    def test_prune_is_idempotent(self, tmp_path):
+        import build
+
+        lib = tmp_path / "torch" / "lib"
+        lib.mkdir(parents=True)
+        for name in build.DUPLICATE_ROOT_DLLS:
+            (lib / name).write_bytes(b"x" * 16)
+            (tmp_path / name).write_bytes(b"x" * 16)
+        build.prune_duplicate_torch_dlls(tmp_path)
+        build.prune_duplicate_torch_dlls(tmp_path)  # must not raise
+        for name in build.DUPLICATE_ROOT_DLLS:
+            assert (lib / name).exists()
 
 
 class TestTierReachesTheRightEngines:
