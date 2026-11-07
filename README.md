@@ -32,7 +32,7 @@ VideOCR Recreated extracts hardcoded/burned-in subtitles from videos and exports
 - **AMD DirectML Support**: Experimental hybrid GPU acceleration for Windows (DirectML text detection + CPU recognition fallback for maximum stability).
 - **ONNX Runtime DirectML**: Experimental unified RapidOCR backend with PP-OCRv6 models for higher accuracy.
 - **Refined FFmpeg Path**: Uses `-fps_mode vfr` for seamless compatibility with newer FFmpeg versions.
-- **Streamlined Experience**: Removed GUI update polling and benchmarking buttons (CLI benchmark tools remain available for advanced users).
+- **Streamlined Experience**: Removed GUI benchmarking buttons (CLI benchmark tools remain available for advanced users). Update checks are folded into the About tab, which flags new releases and links straight to them.
 
 ---
 

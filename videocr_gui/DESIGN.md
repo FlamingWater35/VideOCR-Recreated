@@ -65,10 +65,17 @@ QSS theme.
      **Apply Tested AMD Preset** button are NOT ported.
    - CLI arguments (`--benchmark_compare_engine`, `--benchmark_compare_sample_grids`),
      `[Perf]`/`[Bench]` CLI output, and `tools/benchmark_*.py` are left intact.
-3. Update-checking is **removed entirely** from the GUI:
-   - No startup update thread, no "Check Now" button, no `check_for_updates()`,
-     no `update_*` popups.
-   - The About tab keeps the GitHub releases/issues *links* (manual navigation only).
+3. Update-checking is **folded into the About tab**:
+   - One startup check (3 s after launch, off the UI thread, `check_updates`
+     setting) feeds an update card inside the About tab.
+   - There is **no separate Update tab** and no modal update popup.
+   - The card is hidden at rest and shows one of four states: `checking`,
+     `available`, `uptodate`, or hidden (`idle`). An offline/rate-limited check
+     stays `idle` — a network hiccup is not the user's problem.
+   - When a newer release exists the card turns gold and grows an
+     **Open Latest Release** button; the About tab title gains a gold dot as a
+     secondary, always-visible cue.
+   - The About tab keeps the GitHub releases/issues *links* (manual navigation).
 4. The new GUI lives in a small package: `videocr_gui/`, with root launcher
    `VideOCR_qt.py`.
 5. The GUI is **dark-only** — there is no light theme. The warm-obsidian + gold
@@ -271,7 +278,7 @@ videocr_gui/
   workers.py       videocr-cli subprocess worker (QThread) + kill/pause helpers
   settings_tab.py  Advanced Settings tab widget
   queue_tab.py     Queue tab widget
-  about_tab.py     About tab widget
+  about_tab.py     About tab widget (hero header + update indicator + links)
   style.py         QSS theme ("warm obsidian & gold") + shared PALETTE
   DESIGN.md        this file
 

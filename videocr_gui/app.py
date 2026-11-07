@@ -33,7 +33,6 @@ from .dialogs import CountdownDialog, ask_yes_no, info
 from .progress import ProgressUpdate
 from .queue_tab import QueueTab
 from .settings_tab import SettingsTab
-from .update_tab import UpdateTab
 from .video_preview import VideoPreview
 from .widgets import ClickableSlider, OutlinedProgressBar, WheelGuardComboBox
 from .workers import VIDEOCR_PATH, CLIWorker
@@ -121,7 +120,6 @@ class MainWindow(QMainWindow):
         self._wake_lock: Any = None
         self._taskbar: Any = None
         self._graph_size = (720, 405)
-        self._update_tab: UpdateTab | None = None
         self._update_check_started = False
 
         self._crop_save_timer = QTimer(self)
@@ -595,12 +593,7 @@ class MainWindow(QMainWindow):
         self.queue_tab.retranslate()
         self.about_tab.retranslate(self._version())
         self.settings_tab.retranslate()
-        if self._update_tab is not None:
-            self.tabs.setTabText(
-                self.tabs.indexOf(self._update_tab),
-                i18n.tr("update_title", "Update Available"),
-            )
-            self._update_tab.retranslate()
+        self._refresh_about_tab_title()
         self._refresh_post_action_combo()
         self._translate_process_tab()
         self._update_output_tooltip()
@@ -961,14 +954,16 @@ class MainWindow(QMainWindow):
             self.preview.set_dual_zone(
                 bool(self._settings.get("--use_dual_zone", False))
             )
-        # The Update tab only exists while the startup check is enabled.
+        # The update indicator lives in the About tab; disabling the check
+        # clears it so no stale "update available" card survives.
         if "check_updates" in keys:
             if self._settings.get("check_updates", True):
                 if not self._update_check_started:
                     self._update_timer.start()
             else:
                 self._update_timer.stop()
-                self._hide_update_tab()
+                self.about_tab.set_update_state("idle")
+                self._refresh_about_tab_title()
         config.save_settings(self._settings)
 
     def _on_directml_gpu(self, index: str) -> None:
@@ -1783,6 +1778,8 @@ class MainWindow(QMainWindow):
         if not self._settings.get("check_updates", True):
             return
         self._update_check_started = True
+        self.about_tab.set_update_state("checking")
+        self._refresh_about_tab_title()
 
         def worker() -> None:
             latest = update_check.fetch_latest_version()
@@ -1794,32 +1791,32 @@ class MainWindow(QMainWindow):
         threading.Thread(target=worker, name="update-check", daemon=True).start()
 
     def _on_update_check_finished(self, latest: object) -> None:
-        """Shows the Update tab only when the fetched release is newer."""
-        if not isinstance(latest, str) or not latest:
-            return
+        """Shows the update indicator only when the fetched release is newer."""
         if not self._settings.get("check_updates", True):
-            return
-        if not update_check.is_newer(latest, self._version()):
-            return
-        self._show_update_tab(latest)
-
-    def _show_update_tab(self, latest: str) -> None:
-        if self._update_tab is None:
-            self._update_tab = UpdateTab(latest, self._version())
-            self.tabs.addTab(
-                self._update_tab, i18n.tr("update_title", "Update Available")
-            )
+            self.about_tab.set_update_state("idle")
+        elif not isinstance(latest, str) or not latest:
+            # No answer (offline / rate-limited). Say nothing: an error card on
+            # every offline start would be noise, not information.
+            self.about_tab.set_update_state("idle")
+        elif update_check.is_newer(latest, self._version()):
+            self.about_tab.set_update_state("available", latest)
         else:
-            self._update_tab.set_versions(latest, self._version())
+            self.about_tab.set_update_state("uptodate")
+        self._refresh_about_tab_title()
 
-    def _hide_update_tab(self) -> None:
-        if self._update_tab is None:
+    def _refresh_about_tab_title(self) -> None:
+        """Puts a gold dot on the About tab title while an update is available.
+
+        The update card is only visible once the user opens the About tab; the
+        dot makes the news visible from any other tab.
+        """
+        index = self.tabs.indexOf(self.about_tab)
+        if index == -1:
             return
-        index = self.tabs.indexOf(self._update_tab)
-        if index != -1:
-            self.tabs.removeTab(index)
-        self._update_tab.deleteLater()
-        self._update_tab = None
+        label = i18n.tr("tab_about", "About")
+        if self.about_tab.has_update():
+            label = f"● {label}"
+        self.tabs.setTabText(index, label)
 
     # --- misc --------------------------------------------------------------------
     def _append_log(self, text: str) -> None:

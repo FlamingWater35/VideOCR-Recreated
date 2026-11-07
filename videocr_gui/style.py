@@ -386,12 +386,69 @@ QLabel#formLabel {
     color: #9c8b69;
 }
 QLabel#aboutTitle {
-    font-size: 30px;
+    font-size: 26px;
     font-weight: 800;
     color: #fff4dc;
 }
-QLabel#aboutVersion {
+QLabel#aboutTagline {
     color: #9c8b69;
+}
+QLabel#aboutVersionPill {
+    color: #e1a636;
+    background-color: #201810;
+    border: 1px solid #3a2f1c;
+    border-radius: 9px;
+    padding: 2px 10px;
+    font-size: 12px;
+    font-weight: 600;
+}
+QLabel#aboutCardTitle {
+    color: #e1a636;
+    font-weight: 600;
+    font-size: 12px;
+}
+QLabel#aboutSectionHeading {
+    color: #e1a636;
+    font-weight: 600;
+    font-size: 14px;
+}
+QLabel#aboutCardBody {
+    color: #9c8b69;
+}
+QLabel#aboutBadge {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 9px;
+    border-radius: 8px;
+    border: 1px solid #3a2f1c;
+    color: #9c8b69;
+    background-color: #16110a;
+}
+QLabel#aboutBadge[state="available"] {
+    color: #0c0a07;
+    background-color: #e1a636;
+    border-color: #ffd98a;
+}
+QLabel#aboutBadge[state="uptodate"] {
+    color: #9bd6a0;
+    background-color: #16240f;
+    border-color: #2f4a26;
+}
+
+/* --- about cards --------------------------------------------------------- */
+QFrame#aboutCard {
+    background-color: #16110a;
+    border: 1px solid #2c2316;
+    border-radius: 10px;
+}
+QFrame#aboutUpdateCard {
+    background-color: #16110a;
+    border: 1px solid #2c2316;
+    border-radius: 10px;
+}
+QFrame#aboutUpdateCard[state="available"] {
+    background-color: #201810;
+    border: 1px solid #e1a636;
 }
 QLabel#linkLabel {
     color: #e1a636;
