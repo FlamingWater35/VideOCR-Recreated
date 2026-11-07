@@ -26,8 +26,8 @@ ENV/
 # Test fixtures (large media binaries, kept locally only)
 /tests/data/
 
-/.ocrmgr/
 /build-artifacts/
+/ffmpeg/
 
 # appimagetool download cache (Linux AppImage builds)
 /.appimage-tools/

@@ -19,7 +19,7 @@ import numpy as np
 import wordninja_enhanced as wordninja  # type: ignore
 from PIL import Image
 
-from . import utils
+from . import ffmpeg_tools, utils
 from .models import PredictedFrames, PredictedSubtitle
 from .pyav_adapter import Capture, get_video_properties
 
@@ -213,22 +213,29 @@ class Video:
         instead of falling back to PyAV without buffering the whole video's
         label frames on disk.
         """
-        ffmpeg_path = shutil.which("ffmpeg")
+        ffmpeg_path = ffmpeg_tools.find_ffmpeg()
         if not ffmpeg_path:
             print(
-                "Warning: FFmpeg was not found on PATH. Falling back to PyAV CPU frame scan.",
+                "Warning: No FFmpeg found (checked the bundled copy and PATH). "
+                "Falling back to the AMD DirectML SSIM frame scan.",
                 flush=True,
             )
             return False
+        print(
+            f"FFmpeg: {ffmpeg_tools.describe(*ffmpeg_tools.resolve_ffmpeg())}",
+            flush=True,
+        )
         if len(self.validated_zones) != 1:
             print(
-                "Warning: FFmpeg D3D11VA prototype currently supports one OCR zone. Falling back to PyAV CPU frame scan.",
+                "Warning: FFmpeg D3D11VA prototype currently supports one OCR zone. "
+                "Falling back to the AMD DirectML SSIM frame scan.",
                 flush=True,
             )
             return False
         if self.fps <= 0:
             print(
-                "Warning: Could not determine input FPS for FFmpeg D3D11VA timestamp mapping. Falling back to PyAV CPU frame scan.",
+                "Warning: Could not determine input FPS for FFmpeg D3D11VA timestamp "
+                "mapping. Falling back to the AMD DirectML SSIM frame scan.",
                 flush=True,
             )
             return False
@@ -676,7 +683,8 @@ class Video:
 
         if ocr_end <= 0 or det_counter <= 0:
             print(
-                "Warning: FFmpeg D3D11VA scan produced no OCR grids. Falling back to PyAV CPU frame scan.",
+                "Warning: FFmpeg D3D11VA scan produced no OCR grids. "
+                "Falling back to the AMD DirectML SSIM frame scan.",
                 flush=True,
             )
             return False
@@ -1385,31 +1393,59 @@ class Video:
                     f"DirectML stitched grid target: {ffmpeg_grid_w}x{ffmpeg_grid_h}px ({grid_note})",
                     flush=True,
                 )
-                used_ffmpeg_hw_path = self._run_easyocr_directml_ffmpeg_hw_scan(
-                    temp_dir,
-                    target_end_str,
-                    ssim_threshold_ratio,
-                    subtitle_position,
-                    brightness_threshold,
-                    frames_to_skip,
-                    ffmpeg_grid_w,
-                    ffmpeg_grid_h,
-                    directml_recognition_mode,
-                    use_gpu,
-                    ocr_engine,
-                    conf_threshold_ratio,
-                    lang,
-                    normalize_to_simplified_chinese,
-                    step1_start,
-                    perf_total_start,
-                    onnx_directml_tuning,
-                    benchmark_compare_engine,
-                    benchmark_compare_sample_grids,
-                    target_start_ms,
-                    target_end_ms,
-                )
+                try:
+                    used_ffmpeg_hw_path = self._run_easyocr_directml_ffmpeg_hw_scan(
+                        temp_dir,
+                        target_end_str,
+                        ssim_threshold_ratio,
+                        subtitle_position,
+                        brightness_threshold,
+                        frames_to_skip,
+                        ffmpeg_grid_w,
+                        ffmpeg_grid_h,
+                        directml_recognition_mode,
+                        use_gpu,
+                        ocr_engine,
+                        conf_threshold_ratio,
+                        lang,
+                        normalize_to_simplified_chinese,
+                        step1_start,
+                        perf_total_start,
+                        onnx_directml_tuning,
+                        benchmark_compare_engine,
+                        benchmark_compare_sample_grids,
+                        target_start_ms,
+                        target_end_ms,
+                    )
+                except Exception as e:
+                    # A runtime FFmpeg failure (unsupported hwaccel, a codec the
+                    # GPU cannot decode, a locked binary, ...) must not abort the
+                    # run: the whole point of this mode is an optional speedup.
+                    # Degrade to the DirectML SSIM path first; that path falls
+                    # back to CPU SSIM on its own if DirectML cannot start.
+                    print(
+                        "Warning: FFmpeg D3D11VA frame scan failed; falling back to "
+                        f"AMD DirectML SSIM (and then CPU SSIM if needed). Reason: {e}",
+                        flush=True,
+                    )
+                    # The failed attempt may have recorded frame timestamps for
+                    # frames the fallback will index differently; keeping them
+                    # would misalign every subtitle timestamp.
+                    self.frame_timestamps.clear()
+                    used_ffmpeg_hw_path = False
                 if used_ffmpeg_hw_path:
                     return
+                # The scan declined to run (no binary, unsupported zone layout,
+                # unknown FPS, no grids). It has already said why; continue on
+                # the DirectML SSIM path so the requested GPU acceleration is
+                # still attempted before CPU SSIM.
+                if ssim_threshold_ratio < 1:
+                    print(
+                        "Falling back to AMD DirectML SSIM frame scan "
+                        "(CPU SSIM if DirectML is unavailable).",
+                        flush=True,
+                    )
+                directml_frame_scan_mode = "directml_ssim"
 
             raw_queue: queue.Queue[Any] = queue.Queue(maxsize=100)
             processed_queue: queue.Queue[Any] = queue.Queue(maxsize=100)

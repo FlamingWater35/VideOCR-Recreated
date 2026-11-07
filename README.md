@@ -62,7 +62,8 @@ A quick guide to the most important GUI and CLI parameters to help you balance s
 | **Separate Label Files** | Writes subtitles and labels as two `.ass` files instead of one combined file. | Subtitles keep the output path you chose; labels go to a `<name>.labels.ass` companion file. Handy when you want to translate, restyle or toggle the labels independently of the dialogue. |
 | **DirectML Perf. Preset** | Controls the stitched grid target size for AMD GPUs. | `Compatibility` (1600x1600), `Balanced` (2400x2400, recommended), `Max` (4096x4096). |
 | **DirectML Rec. Mode** | How text recognition is handled on AMD GPUs. | **`Stable`** (GPU detection + CPU recognition, safest). `Auto`/`Experimental` may crash on some models. |
-| **DirectML Frame Scan** | How frames are pre-processed before OCR. | `CPU SSIM` (compatible), `AMD DirectML SSIM` (experimental), `FFmpeg D3D11VA` (prototype, fastest). |
+| **DirectML Frame Scan** | How frames are pre-processed before OCR. | `CPU SSIM` (compatible), `AMD DirectML SSIM` (experimental), `FFmpeg D3D11VA` (prototype, fastest). If a mode cannot start, the app falls back automatically — FFmpeg → DirectML SSIM → CPU SSIM — and logs why. |
+| **FFmpeg** | The binary used by the `FFmpeg D3D11VA` frame scan. | DirectML builds ship a managed copy that takes precedence over any `ffmpeg` on `PATH`. *Check for Updates* compares it against the newest release and *Update FFmpeg* replaces it in place — no restart needed, since the next run resolves the new binary. |
 | **DirectML Grid Max W/H** | Manual override for stitched OCR grid size. | Larger values reduce per-image overhead but use more VRAM. |
 
 ---

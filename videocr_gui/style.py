@@ -415,6 +415,19 @@ QLabel#aboutSectionHeading {
 QLabel#aboutCardBody {
     color: #9c8b69;
 }
+/* FFmpeg row in Advanced Settings: muted sentence, compact action buttons. */
+QLabel#ffmpegStatus {
+    color: #9c8b69;
+    font-size: 12px;
+}
+QPushButton#ffmpegCheckButton, QPushButton#ffmpegUpdateButton {
+    padding: 4px 10px;
+    font-size: 12px;
+}
+QProgressBar#ffmpegProgress {
+    max-height: 12px;
+    font-size: 10px;
+}
 QLabel#aboutBadge {
     font-size: 11px;
     font-weight: 700;

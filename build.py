@@ -10,6 +10,7 @@ import shutil
 import subprocess
 import sys
 import tarfile
+import zipfile
 from pathlib import Path
 
 import requests  # type: ignore
@@ -336,6 +337,11 @@ PADDLE_MODEL_BASE_URL = (
 ONNX_MODELS_BASE_URL = (
     "https://www.modelscope.cn/models/RapidAI/RapidOCR/resolve/v3.9.2/onnx/PP-OCRv6"
 )
+# Windows-only FFmpeg bundle. The "essentials" build is the smallest official
+# gyan.dev archive that still includes the D3D11VA hardware decoder the frame
+# scan needs. The moving "release" URL is intentional: a packaged build should
+# ship a current FFmpeg, and the GUI can replace it in place later.
+FFMPEG_BUILD_URL = "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip"
 
 
 def fetch_tiny_models(support_root: Path) -> None:
@@ -405,6 +411,81 @@ def prune_unused_det_models(support_root: Path) -> None:
         if target.is_dir():
             shutil.rmtree(target, ignore_errors=True)
             print(f"  Pruned unused detection model: {name}")
+
+
+def fetch_ffmpeg(dest_root: Path, variant: str) -> None:
+    """Bundles a managed FFmpeg into ``dest_root/ffmpeg`` for DirectML builds.
+
+    The DirectML package is the one that can use the FFmpeg D3D11VA frame scan,
+    so it is the only variant that ships a binary. Windows gets the official
+    gyan.dev "essentials" build (which includes D3D11VA); Linux gets the distro
+    binary only if one is already present, because redistributing an arbitrary
+    system build is neither portable nor license-clean.
+
+    A failure here is reported and skipped rather than fatal: FFmpeg is an
+    optional accelerator and the app runs on PyAV without it.
+    """
+    if variant != "gpu-directml":
+        return
+    print_header("Bundling FFmpeg")
+    target_dir = dest_root / "ffmpeg"
+    if (target_dir / f"ffmpeg{'' if sys.platform != 'win32' else '.exe'}").exists():
+        print("  ffmpeg: already present")
+        return
+    if sys.platform != "win32":
+        system_ffmpeg = shutil.which("ffmpeg")
+        if not system_ffmpeg:
+            print("  No system ffmpeg found; the package will use PyAV only.")
+            return
+        target_dir.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(system_ffmpeg, target_dir / "ffmpeg")
+        os.chmod(target_dir / "ffmpeg", 0o755)
+        print(f"  Bundled system ffmpeg from {system_ffmpeg}")
+        return
+
+    # Download here rather than through download_file(): that helper calls
+    # sys.exit(1) on failure, and SystemExit derives from BaseException, so it
+    # would abort the whole build. FFmpeg is optional — a failed download must
+    # leave a working (PyAV-only) package.
+    archive_name = FFMPEG_BUILD_URL.split("/")[-1]
+    archive_path = dest_root / archive_name
+    print(f"Downloading {archive_name}...")
+    try:
+        with requests.get(FFMPEG_BUILD_URL, stream=True, timeout=300) as response:
+            response.raise_for_status()
+            with open(archive_path, "wb") as handle:
+                for chunk in response.iter_content(chunk_size=1024 * 256):
+                    handle.write(chunk)
+        print(f"Downloaded to {archive_path}")
+    except Exception as e:
+        archive_path.unlink(missing_ok=True)
+        print(f"WARNING: Could not download FFmpeg ({e}). The package will use PyAV only.")
+        return
+    try:
+        target_dir.mkdir(parents=True, exist_ok=True)
+        with zipfile.ZipFile(archive_path) as bundle:
+            for name in ("ffmpeg", "ffprobe"):
+                member = next(
+                    (
+                        n
+                        for n in bundle.namelist()
+                        if n.lower().endswith(f"/bin/{name}.exe")
+                    ),
+                    None,
+                )
+                if member is None:
+                    if name == "ffmpeg":
+                        raise ValueError("archive has no bin/ffmpeg.exe")
+                    continue
+                with bundle.open(member) as source, open(
+                    target_dir / f"{name}.exe", "wb"
+                ) as sink:
+                    shutil.copyfileobj(source, sink, 1024 * 512)
+        print(f"  Bundled {archive_name}")
+    except Exception as e:
+        print(f"WARNING: Could not extract FFmpeg ({e}). The package will use PyAV only.")
+    finally:
+        archive_path.unlink(missing_ok=True)
 
 
 def fetch_onnx_models(models_dir: Path) -> None:
@@ -975,6 +1056,11 @@ def package_target(
             "WARNING: rapidocr models folder not found in the CLI build; "
             "skipping the ONNX model download."
         )
+
+    # The DirectML package is the only variant that can drive the FFmpeg
+    # D3D11VA frame scan, so it is the only one that ships an ffmpeg binary.
+    # A missing download degrades to PyAV rather than failing the build.
+    fetch_ffmpeg(Path(temp_cli_dist), build_target)
 
     print("Cleaning up downloaded archives...")
     os.remove(support_archive_path)

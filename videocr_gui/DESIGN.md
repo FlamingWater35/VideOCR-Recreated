@@ -209,6 +209,24 @@ QSS theme.
   Applied in `CLI/videocr/video.py` (FFmpeg D3D11VA path) and
   `tools/benchmark_amd_decode.py` (same helper fix).
 
+## FFmpeg resolution and in-place updates
+
+- `CLI/videocr/ffmpeg_tools.py` owns the answer to "which ffmpeg runs": the
+  managed copy (`<app root>/ffmpeg/ffmpeg[.exe]`) first, then `PATH`. Bundled
+  wins deliberately — a packaged build should behave identically everywhere
+  instead of inheriting whatever the user installed.
+- Only `gpu-directml` packages ship a binary (`build.py:fetch_ffmpeg`), because
+  only that variant offers the D3D11VA frame scan. The download failing is not a
+  build failure: the package simply falls back to PyAV.
+- The Advanced Settings row (`videocr_gui/ffmpeg_settings.py`) shows the current
+  build and offers *Check for Updates* / *Update FFmpeg*. No restart is needed
+  because the GUI never runs ffmpeg — it spawns the CLI per job and the CLI
+  resolves the binary at the start of every run, so replacing the file on disk
+  is enough. Installs stage to `<name>.new` and `os.replace` into position so an
+  interrupted download can never become the live binary.
+- A failing FFmpeg must never abort a run. The chain is FFmpeg → DirectML SSIM →
+  CPU SSIM, each step logging why it degraded.
+
 ## Feature inventory ported from VideOCR.py
 
 - Process Video tab: Open File/Folder, video preview (PyAV decode + seek),
@@ -289,6 +307,7 @@ videocr_gui/
                         + async single-flight seek/decode worker
   workers.py       videocr-cli subprocess worker (QThread) + kill/pause helpers
   settings_tab.py  Advanced Settings tab widget
+  ffmpeg_settings.py  Advanced Settings FFmpeg row (status + check/update)
   queue_tab.py     Queue tab widget
   about_tab.py     About tab widget (hero header + update indicator + links)
   style.py         QSS theme ("warm obsidian & gold") + shared PALETTE

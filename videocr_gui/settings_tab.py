@@ -23,6 +23,7 @@ from PySide6.QtWidgets import (
 
 from . import config, i18n
 from . import constants as C
+from .ffmpeg_settings import FFmpegRow
 from .style import ass_color_to_html, html_to_ass_color
 from .widgets import WheelGuardComboBox
 
@@ -767,6 +768,20 @@ class SettingsTab(QWidget):
             True,
         )
 
+        # FFmpeg is optional (PyAV covers everything), but the D3D11VA frame
+        # scan needs a binary. This row reports which one would run and can
+        # replace the bundled copy in place — no restart, because the CLI
+        # resolves the path at the start of every job. It only makes sense in a
+        # package that ships the DirectML backend (or from source, where the
+        # build variant is "unknown"), so it is hidden elsewhere.
+        self._vo_form = vo_form
+        self.ffmpeg_label = self._lbl("lbl_ffmpeg", "FFmpeg:")
+        self.ffmpeg_row = FFmpegRow()
+        self.ffmpeg_row.setToolTip(i18n.tr("tip_ffmpeg", ""))
+        self._tooltips[self.ffmpeg_row] = "tip_ffmpeg"
+        vo_form.addRow(self.ffmpeg_label, self.ffmpeg_row)
+        self._ffmpeg_row_index = vo_form.rowCount() - 1
+
         self.reset_btn = QPushButton(
             i18n.tr("btn_reset_settings", "Reset to Defaults")
         )
@@ -994,10 +1009,26 @@ class SettingsTab(QWidget):
         The CUDA and DirectML toggles are greyed out when the running package
         does not ship that backend; DirectML controls additionally follow the
         DirectML master toggle; label-detection controls and the whole Style
-        category are disabled while label detection is disabled.
+        category are disabled while label detection is disabled. The FFmpeg row
+        is hidden outright in packages without the DirectML backend.
         """
         cuda_ok = config.supports_cuda()
         dml_ok = config.supports_directml()
+
+        # The FFmpeg row only applies to builds that ship the DirectML backend
+        # (supports_directml() is also True for the from-source "unknown"
+        # variant). A CPU/CUDA package has no D3D11VA frame scan to feed, so the
+        # row is hidden rather than merely disabled.
+        ffmpeg_ok = dml_ok
+        row_index = getattr(self, "_ffmpeg_row_index", -1)
+        if row_index >= 0:
+            self._vo_form.setRowVisible(row_index, ffmpeg_ok)
+        for widget in (
+            getattr(self, "ffmpeg_label", None),
+            getattr(self, "ffmpeg_row", None),
+        ):
+            if widget is not None:
+                widget.setVisible(ffmpeg_ok)
 
         cuda_check = self._widgets.get("--use_gpu")
         if isinstance(cuda_check, QCheckBox):
@@ -1191,6 +1222,9 @@ class SettingsTab(QWidget):
 
         # Reset-to-defaults button
         self.reset_btn.setText(i18n.tr("btn_reset_settings", "Reset to Defaults"))
+
+        # FFmpeg row (own buttons + status sentence)
+        self.ffmpeg_row.retranslate()
 
         # Tooltips
         for widget, tip_key in self._tooltips.items():
