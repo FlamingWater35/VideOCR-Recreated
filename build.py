@@ -7,6 +7,7 @@ import os
 import platform
 import re
 import shutil
+import struct
 import subprocess
 import sys
 import tarfile
@@ -447,6 +448,135 @@ def prune_duplicate_torch_dlls(package_root: Path) -> None:
             continue
         duplicate.unlink()
         print(f"  Pruned duplicate root DLL: {name}")
+
+
+def _pe_imports(path: Path) -> list[str]:
+    """Returns the DLL names a PE binary imports, or [] for non-PE files."""
+    try:
+        data = path.read_bytes()
+    except OSError:
+        return []
+    if data[:2] != b"MZ":
+        return []
+    try:
+        pe = struct.unpack_from("<I", data, 0x3C)[0]
+        if data[pe : pe + 4] != b"PE\0\0":
+            return []
+        coff = pe + 4
+        num_sections = struct.unpack_from("<H", data, coff + 2)[0]
+        opt_size = struct.unpack_from("<H", data, coff + 16)[0]
+        opt = coff + 20
+        magic = struct.unpack_from("<H", data, opt)[0]
+        dd = opt + (112 if magic == 0x20B else 96)
+        imp_rva = struct.unpack_from("<II", data, dd + 8)[0]
+        if not imp_rva:
+            return []
+        sections: list[tuple[int, int, int]] = []
+        sec = opt + opt_size
+        for i in range(num_sections):
+            base = sec + i * 40
+            vsize, vaddr, rawsize, rawptr = struct.unpack_from("<IIII", data, base + 8)
+            sections.append((int(vaddr), int(max(vsize, rawsize)), int(rawptr)))
+
+        def rva_to_off(rva: int) -> int:
+            for vaddr, size, rawptr in sections:
+                if vaddr <= rva < vaddr + size:
+                    return int(rva - vaddr + rawptr)
+            return -1
+
+        off = rva_to_off(imp_rva)
+        if off < 0:
+            return []
+        names = []
+        while True:
+            entry = struct.unpack_from("<IIIII", data, off)
+            if not any(entry):
+                break
+            name_off = rva_to_off(entry[3])
+            if name_off < 0:
+                break
+            end = data.index(b"\0", name_off)
+            names.append(data[name_off:end].decode("ascii", "replace"))
+            off += 20
+        return names
+    except (struct.error, ValueError, IndexError):
+        return []
+
+
+# Conda's CPython links ``_ctypes.pyd`` against a plain ``ffi.dll`` (libffi's
+# MSVC import library name) instead of the ``libffi-8.dll`` that python.org
+# builds use. Nuitka resolves that dependency while walking imports but does not
+# copy the file into the dist folder, so every packaged binary died instantly
+# with 0xC0000409 (STATUS_STACK_BUFFER_OVERRUN / __fastfail) the moment
+# ``import ctypes`` ran — which is nearly every entry point, because argparse,
+# PySide6 and wakepy all import it. Copying the DLL in fixes it.
+#
+# Rather than hardcode one filename, audit the finished dist for every imported
+# DLL it does not contain and fill it in from the build environment. Only files
+# that actually exist in the environment's library directories are copied, so
+# Windows system DLLs (kernel32, d3d11, ...) are left alone by construction.
+_DLL_SEARCH_SUBDIRS = ("Library/bin", "Library/mingw-w64/bin", "DLLs", ".")
+
+
+def _env_dll_dirs() -> list[Path]:
+    """Returns the build environment's directories that hold redistributable DLLs."""
+    prefix = Path(sys.prefix)
+    return [prefix / sub for sub in _DLL_SEARCH_SUBDIRS if (prefix / sub).is_dir()]
+
+
+def copy_pure_python_libs(dist_root: Path, libs: tuple[str, ...]) -> None:
+    """Copies pure-Python library trees that Nuitka deliberately did not follow.
+
+    Used for sympy/mpmath, which are excluded from compilation (they are large
+    and slow to compile) but are still imported at runtime by EasyOCR's torch
+    fallback path. ``--include-package`` cannot do this job because pairing it
+    with ``--nofollow-import-to`` makes Nuitka exclude the package entirely.
+    """
+    for lib in libs:
+        spec = importlib.util.find_spec(lib)
+        if spec is None or not spec.submodule_search_locations:
+            continue
+        source = Path(list(spec.submodule_search_locations)[0])
+        target = dist_root / lib
+        if not source.is_dir() or target.exists():
+            continue
+        shutil.copytree(source, target)
+        print(f"  Copied pure-Python library: {lib} ({_dir_size_mb(target):.1f} MB)")
+
+
+def _dir_size_mb(path: Path) -> float:
+    """Returns the total size of a directory tree in megabytes."""
+    return sum(p.stat().st_size for p in path.rglob("*") if p.is_file()) / (1024 * 1024)
+
+
+def ensure_native_dlls(package_root: Path) -> None:
+    """Copies build-environment DLLs that packaged binaries import but lack."""
+    if os.name != "nt" or not package_root.is_dir():
+        return
+    present = {p.name.lower() for p in package_root.rglob("*") if p.is_file()}
+    wanted: set[str] = set()
+    for path in package_root.rglob("*"):
+        if path.suffix.lower() not in (".pyd", ".dll", ".exe"):
+            continue
+        for dep in _pe_imports(path):
+            low = dep.lower()
+            if low in present or low in wanted:
+                continue
+            if low.startswith(("api-ms-win-", "ext-ms-")):
+                continue
+            wanted.add(low)
+    if not wanted:
+        return
+    search = _env_dll_dirs()
+    for name in sorted(wanted):
+        for directory in search:
+            candidate = directory / name
+            if not candidate.is_file():
+                continue
+            shutil.copy2(candidate, package_root / candidate.name)
+            print(f"  Bundled missing native DLL: {candidate.name} (from {directory})")
+            present.add(name)
+            break
 
 
 def fetch_ffmpeg(dest_root: Path, variant: str) -> None:
@@ -1150,6 +1280,10 @@ def package_target(
 
     if not is_gui_only:
         print(f"Creating standalone CLI at '{final_cli_path}'")
+        # The CLI dist needs the same native-DLL audit: a `--cli-only` build
+        # never touches the merged GUI tree, and Nuitka drops `ffi.dll` for
+        # `_ctypes.pyd` there too, which kills the exe at startup.
+        ensure_native_dlls(Path(temp_cli_dist))
         shutil.copytree(temp_cli_dist, final_cli_path)
     else:
         print("Skipping standalone CLI folder creation (--gui-only).")
@@ -1166,6 +1300,17 @@ def package_target(
                 target_path.mkdir(exist_ok=True)
             else:
                 shutil.copy2(item, target_path)
+
+        # The GUI dist ships its own copy of torch's DLLs at the root (Nuitka
+        # resolves them for the GUI's own dependency walk), and the merge above
+        # can put the CLI's copy back. Prune the *merged* tree, otherwise the
+        # CLI-side prune is undone here.
+        prune_duplicate_torch_dlls(Path(temp_gui_dist))
+
+        # Nuitka does not copy every DLL that conda-built extensions import
+        # (notably ``ffi.dll`` for ``_ctypes.pyd``), which makes the packaged
+        # exe die at startup. Fill in whatever the dist still lacks.
+        ensure_native_dlls(Path(temp_gui_dist))
 
         # Copy Linux installer scripts if applicable
         if os_name == "Linux":
@@ -1449,15 +1594,20 @@ def main() -> None:
     except ImportError:
         pass
 
-    # Bundle heavy pure-Python libraries (sympy, mpmath) as bytecode instead of
-    # compiling them to C. This saves massive amounts of CI compile time while
-    # ensuring they are present at runtime to prevent missing module errors.
+    # sympy and mpmath are pure-Python and huge (65 MB + 4 MB). Asking Nuitka to
+    # *compile* them costs a long time in CI, and `--include-package` alone
+    # makes it compile every module to C. Copy the source trees in afterwards
+    # instead (see copy_pure_python_libs below): bytecode is not needed because
+    # the files are plain .py, and the trees are not followed during the build.
+    #
+    # Do NOT pair `--nofollow-import-to=sympy` with `--include-package=sympy`:
+    # nofollow wins and the package is excluded outright, which is why the
+    # packaged CLI used to die with `ModuleNotFoundError: No module named
+    # 'sympy'` as soon as EasyOCR was needed as the fallback backend.
     for lib in ("sympy", "mpmath"):
         try:
             __import__(lib)
-            cli_command.extend(
-                [f"--nofollow-import-to={lib}", f"--include-package={lib}"]
-            )
+            cli_command.append(f"--nofollow-import-to={lib}")
         except ImportError:
             pass
 
@@ -1465,6 +1615,8 @@ def main() -> None:
     if not cli_dist_folder.is_dir():
         print(f"ERROR: Nuitka failed to create the CLI dist folder: {cli_dist_folder}")
         sys.exit(1)
+
+    copy_pure_python_libs(cli_dist_folder, ("sympy", "mpmath"))
 
     cli_exe = cli_dist_folder / (
         "videocr-cli.exe" if sys.platform == "win32" else "videocr-cli.bin"

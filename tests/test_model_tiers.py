@@ -452,6 +452,100 @@ class TestDuplicateTorchDlls:
             assert (lib / name).exists()
 
 
+class TestPackagingDllAudit:
+    """Nuitka drops DLLs that conda-built extensions import.
+
+    Conda's CPython links ``_ctypes.pyd`` against ``ffi.dll``, which Nuitka does
+    not copy. Every packaged exe then died at startup with 0xC0000409 the moment
+    ``import ctypes`` ran, so the build has to audit the dist itself.
+    """
+
+    def test_build_audits_native_dlls(self):
+        source = (REPO_ROOT / "build.py").read_text(encoding="utf-8")
+        assert "def ensure_native_dlls" in source
+        # Both assembly paths must call it, or `--cli-only` builds stay broken.
+        assert source.count("ensure_native_dlls(") >= 3
+
+    def test_pe_imports_reads_a_real_binary(self):
+        import build
+
+        exe = Path(sys.executable)
+        if not exe.is_file():
+            pytest.skip("no interpreter binary to inspect")
+        deps = [d.lower() for d in build._pe_imports(exe)]
+        assert deps, "expected at least one import from python.exe"
+        assert any("python" in d for d in deps)
+
+    def test_pe_imports_tolerates_non_pe_files(self, tmp_path):
+        import build
+
+        junk = tmp_path / "not-a-pe.dll"
+        junk.write_bytes(b"hello world")
+        assert build._pe_imports(junk) == []
+        assert build._pe_imports(tmp_path / "missing.dll") == []
+
+    def test_audit_copies_only_missing_dlls(self, tmp_path, monkeypatch):
+        """A DLL already present must not be overwritten from the environment."""
+        import build
+
+        dist = tmp_path / "dist"
+        dist.mkdir()
+        fake_env = tmp_path / "envbin"
+        fake_env.mkdir()
+        (fake_env / "ffi.dll").write_bytes(b"from env")
+        monkeypatch.setattr(build, "_env_dll_dirs", lambda: [fake_env])
+        monkeypatch.setattr(build, "_pe_imports", lambda _p: ["ffi.dll"])
+
+        probe = dist / "probe.pyd"
+        probe.write_bytes(b"MZ")
+        build.ensure_native_dlls(dist)
+        assert (dist / "ffi.dll").read_bytes() == b"from env"
+
+        (dist / "ffi.dll").write_bytes(b"already here")
+        build.ensure_native_dlls(dist)
+        assert (dist / "ffi.dll").read_bytes() == b"already here"
+
+
+class TestPurePythonLibBundling:
+    """sympy/mpmath must ship even though Nuitka does not follow them."""
+
+    def test_nofollow_is_not_paired_with_include_package(self):
+        """That pair makes Nuitka exclude the package entirely."""
+        source = (REPO_ROOT / "build.py").read_text(encoding="utf-8")
+        # Strip comments first: the explanatory comment above the code names
+        # both flags, so a naive search would match its own documentation.
+        code = [
+            line.split("#", 1)[0]
+            for line in source.splitlines()
+            if not line.lstrip().startswith("#")
+        ]
+        joined = "\n".join(code)
+        assert "--include-package={lib}" not in joined
+        assert "include-package=sympy" not in joined
+
+    def test_build_copies_pure_python_libs(self):
+        source = (REPO_ROOT / "build.py").read_text(encoding="utf-8")
+        assert "def copy_pure_python_libs" in source
+        assert 'copy_pure_python_libs(cli_dist_folder, ("sympy", "mpmath"))' in source
+
+    def test_copy_pure_python_libs_is_idempotent(self, tmp_path):
+        import build
+
+        build.copy_pure_python_libs(tmp_path, ("mpmath",))
+        target = tmp_path / "mpmath"
+        assert target.is_dir()
+        marker = target / "keep.txt"
+        marker.write_text("x", encoding="utf-8")
+        build.copy_pure_python_libs(tmp_path, ("mpmath",))
+        assert marker.exists(), "an existing copy must be left alone"
+
+    def test_copy_pure_python_libs_skips_absent_packages(self, tmp_path):
+        import build
+
+        build.copy_pure_python_libs(tmp_path, ("definitely_not_installed_xyz",))
+        assert list(tmp_path.iterdir()) == []
+
+
 class TestTierReachesTheRightEngines:
     """Which engines honor the tier, and which cannot.
 
