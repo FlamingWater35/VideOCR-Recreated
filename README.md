@@ -14,12 +14,36 @@
   </p>
 
   <p align="center">
-    <img src="https://img.shields.io/badge/Python-3.9%20|%203.12-blue" alt="Python Version">
+    <img src="https://img.shields.io/badge/Python-3.12-blue" alt="Python Version">
     <img src="https://img.shields.io/badge/Platform-Windows%20|%20Linux-lightgrey" alt="Platform">
     <img src="https://img.shields.io/badge/GUI-PySide6-41CD52" alt="PySide6 GUI">
     <img src="https://img.shields.io/badge/Status-Active-success" alt="Status">
   </p>
 </p>
+
+---
+
+<p align="center">
+  <img src="Pictures/GUI.jpg" alt="VideOCR Recreated GUI" width="720">
+  <br />
+  <em>VideOCR Recreated main window</em>
+</p>
+
+---
+
+## 📑 Table of Contents
+
+- [✨ About & Key Features](#-about--key-features)
+- [⚙️ Settings Reference](#️-settings-reference)
+- [🚀 Quick Setup](#-quick-setup)
+  - [📦 Pre-built Releases](#-pre-built-releases-recommended)
+  - [💻 Development Setup (From Source)](#-development-setup-from-source)
+  - [🔨 Building Standalone Executables](#-building-standalone-executables)
+- [🎯 Usage Examples](#-usage-examples)
+- [⚡ Performance & Tuning](#-performance--tuning)
+- [🛠️ Troubleshooting](#️-troubleshooting)
+- [🙏 Credits](#-credits)
+  - [🌐 Translating the subtitles](#-translating-the-subtitles)
 
 ---
 
@@ -36,17 +60,14 @@ VideOCR Recreated extracts hardcoded/burned-in subtitles from videos and exports
 
 ---
 
-<p align="center">
-  <img src="Pictures/GUI.jpg" alt="VideOCR Recreated GUI" width="720">
-  <br />
-  <em>VideOCR Recreated main window</em>
-</p>
-
----
-
 ## ⚙️ Settings Reference
 
 A quick guide to the most important GUI and CLI parameters to help you balance speed and accuracy.
+
+<details>
+<summary><strong>📋 Click to expand the full settings table</strong></summary>
+
+<br>
 
 | Setting | Description | Tuning Tip |
 | :--- | :--- | :--- |
@@ -65,6 +86,8 @@ A quick guide to the most important GUI and CLI parameters to help you balance s
 | **DirectML Frame Scan** | How frames are pre-processed before OCR. | `CPU SSIM` (compatible), `AMD DirectML SSIM` (experimental), `FFmpeg D3D11VA` (prototype, fastest). If a mode cannot start, the app falls back automatically — FFmpeg → DirectML SSIM → CPU SSIM — and logs why. |
 | **FFmpeg** | The binary used by the `FFmpeg D3D11VA` frame scan. | DirectML builds ship a managed copy that takes precedence over any `ffmpeg` on `PATH`. *Check for Updates* compares it against the newest release and *Update FFmpeg* replaces it in place — no restart needed, since the next run resolves the new binary. |
 | **DirectML Grid Max W/H** | Manual override for stitched OCR grid size. | Larger values reduce per-image overhead but use more VRAM. |
+
+</details>
 
 ---
 
@@ -182,6 +205,10 @@ This project is a **fork of a fork**, building upon the excellent work of:
 2. **[VideOCR-AMD-DirectML](https://github.com/BaseCrunch/VideOCR-AMD-DirectML)** by `BaseCrunch` (Added the AMD DirectML backend, GPU selection, performance presets, and D3D11VA frame-scan).
 
 This recreation adds the PySide6 GUI, Label Detection, ONNX DirectML support, and further refinements for a modern user experience.
+
+## 🪪License
+
+[![GitHub](https://img.shields.io/github/license/FlamingWater35/VideOCR-Recreated?style=for-the-badge)](https://github.com/FlamingWater35/VideOCR-Recreated/blob/main/LICENSE)
 
 ### 🌐 Translating the subtitles
 
