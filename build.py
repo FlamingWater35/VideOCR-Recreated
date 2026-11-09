@@ -1522,6 +1522,12 @@ def main() -> None:
                 "--windows-console-mode=disable",
                 "--include-module=av.utils",
                 *av_cyutil_include_args(),
+                # The Advanced-settings FFmpeg row imports this helper by path at
+                # runtime (videocr_gui/ffmpeg_settings.py:_tools). The GUI never
+                # follows the videocr package -- that would pull the whole OCR
+                # stack into the GUI -- so the single module ships as a data file
+                # in the layout _tools() looks for.
+                "--include-data-files=CLI/videocr/ffmpeg_tools.py=CLI/videocr/ffmpeg_tools.py",
                 # The GUI only spawns the CLI. It does not run OCR itself.
                 # Exclude heavy AI/ML libraries to prevent MSVC C1002 "out of heap space"
                 # errors and to slash GUI compile times.

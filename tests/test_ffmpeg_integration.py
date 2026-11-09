@@ -470,3 +470,84 @@ class TestBuildVariantGating:
         assert "dml_ok = config.supports_directml()" in source
         assert gui_config.supports_directml() is True  # from source == unknown
         assert hasattr(SettingsTab, "_update_dependent_states")
+
+
+class TestBundledHelperResolution:
+    """The Advanced-settings row must find ffmpeg_tools inside a release.
+
+    The GUI compile runs from the repository root with the CLI package off
+    sys.path and deliberately does not follow it (that would pull torch and the
+    OCR stack into the GUI binary). The shipped folder therefore contains no
+    ``videocr`` package at all, so ``from videocr import ffmpeg_tools`` raised
+    ModuleNotFoundError and the row rendered
+    "FFmpeg status unavailable: No module named 'videocr'" on every release
+    build while working perfectly from source.
+    """
+
+    def test_tools_does_not_require_the_videocr_package(self):
+        source = (REPO_ROOT / "videocr_gui" / "ffmpeg_settings.py").read_text(
+            encoding="utf-8"
+        )
+        assert "spec_from_file_location" in source, (
+            "_tools() must be able to load the helper by path"
+        )
+
+    def test_helper_is_shipped_as_a_data_file(self):
+        source = (REPO_ROOT / "build.py").read_text(encoding="utf-8")
+        gui_block = source.split("gui_script = ", 1)[1]
+        assert "ffmpeg_tools.py" in gui_block, (
+            "the GUI build must bundle ffmpeg_tools.py as a data file"
+        )
+
+    def test_resolves_from_a_packaged_layout(self, tmp_path, monkeypatch):
+        """Simulates a release: no videocr package, only the data file."""
+        import builtins
+        import shutil
+
+        from videocr_gui import ffmpeg_settings
+
+        target = tmp_path / "CLI" / "videocr"
+        target.mkdir(parents=True)
+        shutil.copy(
+            REPO_ROOT / "CLI" / "videocr" / "ffmpeg_tools.py",
+            target / "ffmpeg_tools.py",
+        )
+        monkeypatch.setattr(ffmpeg_settings.config, "APP_DIR", str(tmp_path))
+        monkeypatch.setattr(ffmpeg_settings, "_TOOLS", None)
+
+        real_import = builtins.__import__
+
+        def blocked(name, *args, **kwargs):
+            if name == "videocr" or name.startswith("videocr."):
+                raise ImportError("simulated: videocr is not in a release")
+            return real_import(name, *args, **kwargs)
+
+        monkeypatch.setattr(builtins, "__import__", blocked)
+        tools = ffmpeg_settings._tools()
+        assert Path(tools.__file__) == target / "ffmpeg_tools.py"
+        # And it is functional, not just importable.
+        status = tools.managed_status(str(tmp_path))
+        assert isinstance(status, dict)
+        assert "managed_path" in status
+
+    def test_reports_a_clear_error_when_the_helper_is_absent(
+        self, tmp_path, monkeypatch
+    ):
+        """A missing data file must raise, not silently return a broken module."""
+        import builtins
+
+        from videocr_gui import ffmpeg_settings
+
+        monkeypatch.setattr(ffmpeg_settings.config, "APP_DIR", str(tmp_path))
+        monkeypatch.setattr(ffmpeg_settings, "_TOOLS", None)
+
+        real_import = builtins.__import__
+
+        def blocked(name, *args, **kwargs):
+            if name == "videocr" or name.startswith("videocr."):
+                raise ImportError("simulated: videocr is not in a release")
+            return real_import(name, *args, **kwargs)
+
+        monkeypatch.setattr(builtins, "__import__", blocked)
+        with pytest.raises(ImportError, match="ffmpeg_tools is unavailable"):
+            ffmpeg_settings._tools()

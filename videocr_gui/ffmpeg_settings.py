@@ -16,9 +16,11 @@ the GUI thread, which is what makes the status updates safe.
 from __future__ import annotations
 
 import contextlib
+import importlib.util
 import os
 import sys
 import threading
+from types import ModuleType
 from typing import Any
 
 from PySide6.QtCore import Qt, Signal
@@ -33,19 +35,50 @@ from PySide6.QtWidgets import (
 
 from . import config, dialogs, i18n
 
+#: Cached ``videocr.ffmpeg_tools`` module (see :func:`_tools`).
+_TOOLS: ModuleType | None = None
+
 
 def _tools() -> Any:
-    """Imports the CLI's ``ffmpeg_tools`` module.
+    """Imports the CLI's ``ffmpeg_tools`` module, from source or a build.
 
-    The GUI never imports the CLI package at module scope: ``main()`` puts
-    ``CLI/`` on ``sys.path`` only after importing the GUI modules, and tests
-    import those modules directly. Resolving the path here keeps both working.
+    ``ffmpeg_tools`` is a plain module with no package-relative imports, so it
+    is bundled as a **data file** into the GUI build and loaded from its path
+    here. A normal ``from videocr import ffmpeg_tools`` cannot work in a
+    release: the GUI compile runs from the repository root with the CLI package
+    off ``sys.path`` and deliberately does not follow it (that would pull torch
+    and the OCR stack into the GUI). The package therefore does not exist in
+    the shipped folder at all, and importing it raised
+    ``ModuleNotFoundError: No module named 'videocr'`` in the settings row.
+
+    The module is cached so that callers (and tests) can patch attributes on
+    the returned object and see the change on later calls.
     """
-    cli_dir = os.path.join(config.APP_DIR, "CLI")
-    if cli_dir not in sys.path:
-        sys.path.insert(0, cli_dir)
-    from videocr import ffmpeg_tools  # type: ignore[import-not-found]
+    global _TOOLS
+    if _TOOLS is not None:
+        return _TOOLS
 
+    # Prefer a real import: that is the from-source case, where the repository
+    # root has ``CLI/`` on ``sys.path`` (see videocr_gui/main.py).
+    ffmpeg_tools: ModuleType | None = None
+    with contextlib.suppress(ImportError):
+        from videocr import ffmpeg_tools  # type: ignore[import-not-found,no-redef]
+
+    if ffmpeg_tools is None:
+        bundled = os.path.join(config.APP_DIR, "CLI", "videocr", "ffmpeg_tools.py")
+        if not os.path.isfile(bundled):
+            raise ImportError(
+                "ffmpeg_tools is unavailable: neither the videocr package nor "
+                f"the bundled helper at {bundled} could be found."
+            )
+        spec = importlib.util.spec_from_file_location("videocr_ffmpeg_tools", bundled)
+        if spec is None or spec.loader is None:
+            raise ImportError(f"could not load the bundled helper at {bundled}")
+        ffmpeg_tools = importlib.util.module_from_spec(spec)
+        sys.modules[spec.name] = ffmpeg_tools
+        spec.loader.exec_module(ffmpeg_tools)
+
+    _TOOLS = ffmpeg_tools
     return ffmpeg_tools
 
 
