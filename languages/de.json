@@ -336,5 +336,13 @@
   "ffmpeg_install_failed": "FFmpeg-Aktualisierung fehlgeschlagen: {error}",
   "ffmpeg_install_failed_title": "FFmpeg-Aktualisierung fehlgeschlagen",
   "ffmpeg_install_done": "FFmpeg {version} ist installiert. Der nächste Lauf nutzt es automatisch; kein Neustart nötig.",
-  "ffmpeg_install_done_title": "FFmpeg aktualisiert"
+  "ffmpeg_install_done_title": "FFmpeg aktualisiert",
+  "lbl_preset": "Voreinstellung:",
+  "preset_paddle": "PaddleOCR / Google Lens",
+  "preset_onnx": "ONNX Runtime DirectML",
+  "preset_custom": "Benutzerdefiniert",
+  "tip_preset": "Füllt die Abschnitte „OCR-Einstellungen“ und „Label-Erkennung“ mit für die gewählte Engine abgestimmten Werten. Außerhalb dieser Abschnitte ändert sich nichts, und die Label-Erkennung wird nie ein- oder ausgeschaltet.",
+  "preset_note_applies": "Ändert nur OCR- und Label-Einstellungen.",
+  "preset_note_custom": "Benutzerdefinierte Werte. Wählen Sie eine Voreinstellung, um die Standardwerte der Engine wiederherzustellen.",
+  "val_err_onnx_language": "„{language}“ ist für ONNX Runtime DirectML nicht verfügbar. PP-OCRv6 erkennt 50 Sprachen; wählen Sie eine andere."
 }

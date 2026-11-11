@@ -13,6 +13,7 @@ from PySide6.QtGui import (
 )
 from PySide6.QtWidgets import (
     QComboBox,
+    QCompleter,
     QProgressBar,
     QSlider,
     QStyle,
@@ -44,6 +45,74 @@ class WheelGuardComboBox(QComboBox):
 
     def wheelEvent(self, event) -> None:  # noqa: N802 - Qt API name
         event.ignore()
+
+
+class SearchableComboBox(WheelGuardComboBox):
+    """A combo box whose list can be filtered by typing.
+
+    The subtitle-language list runs to 230 entries (Google Lens), which is far
+    too long to scroll. Typing in the box filters the popup with
+    ``MatchContains`` so "jap" finds "Japanese" without knowing the first
+    letter, and Enter picks the highlighted entry.
+
+    Two behaviours keep the *stored* value trustworthy:
+
+    * The completion popup only narrows the list; it never rewrites the model,
+      so ``itemText``/``findText`` keep working for callers that restore a
+      saved selection.
+    * Text that does not name an entry is discarded — on focus-out or Enter
+      the box snaps back to the current index. Otherwise a half-typed language
+      would be saved to the config and forwarded to the CLI as an unknown code.
+    """
+
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.setEditable(True)
+        self.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
+        line = self.lineEdit()
+        if line is not None:
+            line.setClearButtonEnabled(True)
+            completer = line.completer()
+            if completer is None:
+                completer = QCompleter(self.model(), self)
+                line.setCompleter(completer)
+            completer.setFilterMode(Qt.MatchFlag.MatchContains)
+            completer.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
+            completer.setCompletionMode(QCompleter.CompletionMode.PopupCompletion)
+            line.editingFinished.connect(self._snap_to_selection)
+
+    def _snap_to_selection(self) -> None:
+        """Resolves free-typed text to an entry, or reverts it.
+
+        A case-insensitive exact match wins ("japanese" -> "Japanese"). Failing
+        that, a unique case-insensitive substring match is accepted, so typing
+        "jap" and pressing Enter picks Japanese — but only when it is
+        unambiguous. Anything else (a typo, a partial name matching several
+        languages, an empty box) falls back to the current entry, so a
+        half-typed language can never reach the config or the CLI.
+        """
+        if self.signalsBlocked():
+            return
+        text = self.currentText().strip()
+        if not text:
+            self.setEditText(self.itemText(self.currentIndex()))
+            return
+        index = self._resolve_text(text)
+        if index >= 0:
+            if index != self.currentIndex():
+                self.setCurrentIndex(index)
+            self.setEditText(self.itemText(index))
+        else:
+            self.setEditText(self.itemText(self.currentIndex()))
+
+    def _resolve_text(self, text: str) -> int:
+        """Returns the item index ``text`` names, or -1 when it is ambiguous."""
+        needle = text.casefold()
+        for i in range(self.count()):
+            if self.itemText(i).casefold() == needle:
+                return i
+        hits = [i for i in range(self.count()) if needle in self.itemText(i).casefold()]
+        return hits[0] if len(hits) == 1 else -1
 
 
 class ClickableSlider(QSlider):

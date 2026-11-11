@@ -71,6 +71,7 @@ A quick guide to the most important GUI and CLI parameters to help you balance s
 
 | Setting | Description | Tuning Tip |
 | :--- | :--- | :--- |
+| **Preset** | Fills the OCR Settings and label-tuning fields with values measured for the selected engine (`PaddleOCR / Google Lens`, `ONNX Runtime DirectML`, or `Custom`). | Touches **only** OCR Settings and the label-tuning knobs — crop boxes, GPU options and ASS styles are never changed, and label detection is never switched on or off. Editing any of those settings by hand switches the selector to `Custom`; switching the OCR engine applies that engine's preset unless you are on `Custom`. The ONNX preset selects the `medium` model tier, which recovered two subtitle windows and all eight labels that `small` missed on the 4K test episode (about 2× the runtime). |
 | **Frames to Skip** | Number of frames to skip before sampling for OCR. | **Higher** = faster processing. **Lower** (or `0`) = more accurate timestamps. |
 | **OCR Image Max Width** | Downscales the cropped image before passing it to OCR. | **Lower** (e.g., `720`) = faster. **Higher** (e.g., `960`) = better for small text. |
 | **SSIM Threshold** | Structural similarity threshold for frame deduplication. | **Lower** (e.g., `85`) = skips more similar frames (faster). **Higher** (e.g., `92`) = safer, processes more frames. |
@@ -80,6 +81,7 @@ A quick guide to the most important GUI and CLI parameters to help you balance s
 | **Crop Area** | Bounding box (X, Y, Width, Height) for OCR. | Keep it **tight** around the subtitles. Avoid full-frame OCR unless absolutely necessary. |
 | **Full Frame** | Forces OCR on the entire video frame instead of the crop. | Generally **unchecked**. Slower and less accurate; only use if subtitles move wildly. |
 | **Enable Label Detection** | Detects text outside the crop (e.g., names) and exports as `.ass`. | Adds valuable context but requires extra processing. Auto-runs `ass-qafix` post-processing. |
+| **Subtitle Language** | Language of the text in the video. | The list is searchable: type part of a name to filter it. The choices follow the selected engine (PaddleOCR, Google Lens and ONNX Runtime DirectML each have their own coverage; EasyOCR is the fallback). |
 | **Separate Label Files** | Writes subtitles and labels as two `.ass` files instead of one combined file. | Subtitles keep the output path you chose; labels go to a `<name>.labels.ass` companion file. Handy when you want to translate, restyle or toggle the labels independently of the dialogue. |
 | **DirectML Perf. Preset** | Controls the stitched grid target size for AMD GPUs. | `Compatibility` (1600x1600), `Balanced` (2400x2400, recommended), `Max` (4096x4096). |
 | **DirectML Rec. Mode** | How text recognition is handled on AMD GPUs. | **`Stable`** (GPU detection + CPU recognition, safest). `Auto`/`Experimental` may crash on some models. |

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+import threading
 from pathlib import Path
 
 import pytest
@@ -114,7 +115,28 @@ class TestFFmpegRow:
     def test_reports_a_status_sentence(self, row):
         assert row.status_label.text()
 
-    def test_missing_ffmpeg_is_described_as_such(self, row, monkeypatch):
+    def test_status_is_read_off_the_gui_thread(self, row, qtbot, monkeypatch):
+        """The probe must never run inline: a cold ``ffmpeg -version`` is slow.
+
+        Reading the status from the constructor used to block MainWindow()
+        construction for seconds, freezing the window before it appeared.
+        """
+        from videocr_gui import ffmpeg_settings
+
+        tools = ffmpeg_settings._tools()
+        seen = []
+        gui_thread = threading.current_thread()
+
+        def slow_status(_root):
+            seen.append(threading.current_thread())
+            return {"path": "", "source": "", "version": "", "managed_path": ""}
+
+        monkeypatch.setattr(tools, "managed_status", slow_status)
+        row.refresh()
+        qtbot.waitUntil(lambda: bool(seen), timeout=3000)
+        assert seen and seen[0] is not gui_thread
+
+    def test_missing_ffmpeg_is_described_as_such(self, row, qtbot, monkeypatch):
         from videocr_gui import ffmpeg_settings
 
         tools = ffmpeg_settings._tools()
@@ -129,9 +151,9 @@ class TestFFmpegRow:
             },
         )
         row.refresh()
-        assert "No FFmpeg" in row.status_label.text()
+        qtbot.waitUntil(lambda: "No FFmpeg" in row.status_label.text(), timeout=3000)
 
-    def test_bundled_copy_is_named_bundled(self, row, monkeypatch):
+    def test_bundled_copy_is_named_bundled(self, row, qtbot, monkeypatch):
         from videocr_gui import ffmpeg_settings
 
         tools = ffmpeg_settings._tools()
@@ -146,7 +168,7 @@ class TestFFmpegRow:
             },
         )
         row.refresh()
-        assert "9.0.2" in row.status_label.text()
+        qtbot.waitUntil(lambda: "9.0.2" in row.status_label.text(), timeout=3000)
 
     def test_check_offers_the_newer_version(self, row, monkeypatch):
         from videocr_gui import ffmpeg_settings
@@ -270,7 +292,7 @@ class TestFFmpegRow:
             assert "self.status_label" not in text
             assert "self.progress.setValue" not in text
             assert "self.check_btn" not in text
-            assert "_finished.emit" in text or "_progress.emit" in text
+            assert "_finished.emit" in text or "_progress.emit" in text or "_status_ready.emit" in text
 
 
 class TestTranslations:

@@ -10,6 +10,13 @@ def main() -> int:
     from PySide6.QtCore import Qt
     from PySide6.QtWidgets import QApplication
 
+    # Do this before anything can spawn a child: a windowed build has no console,
+    # so every unmarked child would open its own window and flash on screen
+    # (ffmpeg -version and the `ver` call inside `import torch_directml` did).
+    from videocr_gui import no_console
+
+    no_console.suppress_child_consoles()
+
     # Qt 6 is Per-Monitor V2 DPI aware by default on Windows. Do NOT call
     # SetProcessDpiAwareness/SetProcessDPIAware here: that would change the
     # process awareness context after Qt already set it, producing

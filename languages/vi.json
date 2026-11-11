@@ -336,5 +336,13 @@
   "ffmpeg_install_failed": "Cập nhật FFmpeg thất bại: {error}",
   "ffmpeg_install_failed_title": "Cập nhật FFmpeg thất bại",
   "ffmpeg_install_done": "Đã cài FFmpeg {version}. Lần chạy tiếp theo sẽ tự động dùng bản này; không cần khởi động lại.",
-  "ffmpeg_install_done_title": "Đã cập nhật FFmpeg"
+  "ffmpeg_install_done_title": "Đã cập nhật FFmpeg",
+  "lbl_preset": "Cài đặt sẵn:",
+  "preset_paddle": "PaddleOCR / Google Lens",
+  "preset_onnx": "ONNX Runtime DirectML",
+  "preset_custom": "Tùy chỉnh",
+  "tip_preset": "Điền phần Cài đặt OCR và Phát hiện nhãn bằng các giá trị đã tinh chỉnh cho công cụ đã chọn. Không có gì ngoài các phần đó thay đổi, và tính năng phát hiện nhãn không bao giờ bị bật hay tắt.",
+  "preset_note_applies": "Chỉ thay đổi cài đặt OCR và nhãn.",
+  "preset_note_custom": "Giá trị tùy chỉnh. Chọn một cài đặt sẵn để khôi phục mặc định của công cụ đó.",
+  "val_err_onnx_language": "'{language}' không khả dụng cho ONNX Runtime DirectML. PP-OCRv6 nhận diện 50 ngôn ngữ; hãy chọn ngôn ngữ khác."
 }

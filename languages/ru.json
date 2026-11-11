@@ -336,5 +336,13 @@
   "ffmpeg_install_failed": "Не удалось обновить FFmpeg: {error}",
   "ffmpeg_install_failed_title": "Не удалось обновить FFmpeg",
   "ffmpeg_install_done": "FFmpeg {version} установлен. Следующий запуск использует его автоматически; перезапуск не нужен.",
-  "ffmpeg_install_done_title": "FFmpeg обновлён"
+  "ffmpeg_install_done_title": "FFmpeg обновлён",
+  "lbl_preset": "Пресет:",
+  "preset_paddle": "PaddleOCR / Google Lens",
+  "preset_onnx": "ONNX Runtime DirectML",
+  "preset_custom": "Пользовательский",
+  "tip_preset": "Заполняет разделы настроек OCR и обнаружения меток значениями, подобранными для выбранного движка. За пределами этих разделов ничего не меняется, а обнаружение меток никогда не включается и не выключается.",
+  "preset_note_applies": "Меняет только настройки OCR и меток.",
+  "preset_note_custom": "Пользовательские значения. Выберите пресет, чтобы восстановить значения по умолчанию для этого движка.",
+  "val_err_onnx_language": "«{language}» недоступен для ONNX Runtime DirectML. PP-OCRv6 распознаёт 50 языков; выберите другой."
 }

@@ -336,5 +336,13 @@
   "ffmpeg_install_failed": "Aggiornamento di FFmpeg non riuscito: {error}",
   "ffmpeg_install_failed_title": "Aggiornamento di FFmpeg non riuscito",
   "ffmpeg_install_done": "FFmpeg {version} è installato. La prossima esecuzione lo userà automaticamente; nessun riavvio necessario.",
-  "ffmpeg_install_done_title": "FFmpeg aggiornato"
+  "ffmpeg_install_done_title": "FFmpeg aggiornato",
+  "lbl_preset": "Preimpostazione:",
+  "preset_paddle": "PaddleOCR / Google Lens",
+  "preset_onnx": "ONNX Runtime DirectML",
+  "preset_custom": "Personalizzato",
+  "tip_preset": "Compila le sezioni Impostazioni OCR e Rilevamento etichette con valori ottimizzati per il motore selezionato. Nulla al di fuori di queste sezioni cambia e il rilevamento etichette non viene mai attivato o disattivato.",
+  "preset_note_applies": "Modifica solo le impostazioni OCR ed etichette.",
+  "preset_note_custom": "Valori personalizzati. Scegli una preimpostazione per ripristinare i valori predefiniti di quel motore.",
+  "val_err_onnx_language": "«{language}» non è disponibile per ONNX Runtime DirectML. PP-OCRv6 riconosce 50 lingue; scegline un'altra."
 }

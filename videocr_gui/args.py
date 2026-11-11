@@ -91,7 +91,10 @@ def _language_iso_code(settings: dict[str, Any]) -> str:
     lang_name = settings.get("subtitle_language", C.DEFAULT_SUBTITLE_LANGUAGE)
     if "Google Lens" in engine:
         code = C.lens_abbr_lookup.get(lang_name, "en")
-    elif "EasyOCR DirectML" in engine or "ONNX Runtime DirectML" in engine:
+    elif "ONNX Runtime DirectML" in engine:
+        onnx = C.onnx_abbr_lookup.get(lang_name, "en")
+        code = C.EASY_TO_ISO_MAP.get(onnx, onnx)
+    elif "EasyOCR DirectML" in engine:
         easy = C.easyocr_abbr_lookup.get(lang_name, "en")
         code = C.EASY_TO_ISO_MAP.get(easy, easy)
     else:
@@ -211,7 +214,17 @@ def build_args(
         lang_abbr = C.lens_abbr_lookup.get(lang_name)
     elif "ONNX Runtime DirectML" in engine_display:
         args["ocr_engine"] = "onnx_directml"
-        lang_abbr = C.easyocr_abbr_lookup.get(lang_name)
+        lang_abbr = C.onnx_abbr_lookup.get(lang_name)
+        if lang_abbr is None:
+            # The saved language is not one PP-OCRv6 can read (e.g. Korean,
+            # Arabic, Russian or Thai from the old EasyOCR-based list). Say so
+            # instead of silently recognising English.
+            errors.append(i18n.tr(
+                "val_err_onnx_language",
+                "'{language}' is not available for ONNX Runtime DirectML. "
+                "PP-OCRv6 recognises 50 languages; pick another one.",
+            ).format(language=lang_name))
+            return None, errors
     elif "EasyOCR DirectML" in engine_display:
         args["ocr_engine"] = "easyocr_directml"
         lang_abbr = C.easyocr_abbr_lookup.get(lang_name)
@@ -236,6 +249,10 @@ def build_args(
         "--send_notification", "--save_crop_box", "--language", "--use_dual_zone",
         "--subtitle_alignment", "--subtitle_alignment2", "--saved_crop_boxes",
         "--output", "--use_directml_gpu",
+        # GUI-only: the preset selector picks which values the OCR-settings
+        # widgets hold. Those values are forwarded individually, so the
+        # selector itself must never reach the CLI (which has no such flag).
+        "--preset",
     }
     for key, value in settings.items():
         if not key.startswith("--") or key in excluded:

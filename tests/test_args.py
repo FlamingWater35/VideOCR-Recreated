@@ -77,9 +77,17 @@ class TestLanguageIsoCode:
         )
         assert args_mod._language_iso_code(s) == "de"
 
-    def test_onnx_engine_uses_easyocr_lookup(self):
+    def test_onnx_engine_uses_its_own_ppocrv6_lookup(self):
+        """ONNX runs PP-OCRv6, whose language names are its own list."""
         s = _default_settings(
-            ocr_engine=C.OCR_ENGINES[2], subtitle_language="Japanese + English"
+            ocr_engine=C.OCR_ENGINES[2], subtitle_language="Japanese"
+        )
+        assert args_mod._language_iso_code(s) == "ja"
+
+    def test_easyocr_engine_uses_the_easyocr_lookup(self):
+        s = _default_settings(
+            ocr_engine="EasyOCR DirectML (AMD GPU)",
+            subtitle_language="Japanese + English",
         )
         assert args_mod._language_iso_code(s) == "ja"
 

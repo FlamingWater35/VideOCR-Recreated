@@ -170,6 +170,11 @@ def get_default_settings() -> dict[str, Any]:
         "--post_processing": False,
         "--min_subtitle_duration": str(C.DEFAULT_MIN_SUBTITLE_DURATION),
         "--model_tier": "small",
+        # Which OCR-settings preset the Advanced Settings selector shows.
+        # Persisted so the UI can say "Custom" after hand-tuning; the values
+        # themselves live in the individual keys above, so a preset change
+        # never has to migrate anything.
+        "--preset": "paddle",
         "--use_dual_zone": False,
         "enable_subtitle_alignment": False,
         "--subtitle_alignment": C.DEFAULT_SUBTITLE_ALIGNMENT,
@@ -199,7 +204,7 @@ def get_default_settings() -> dict[str, Any]:
         # New configurable label-detection thresholds (fix 3 + fix 7)
         "--label_conf_threshold": "70",
         "--label_text_similarity": "55",
-        "--label_pos_drift": "160",
+        "--label_pos_drift": "400",
         "--label_close_pos_distance": "40",
         "--label_close_pos_length_ratio": "0.5",
         "--label_ssim_dedup": True,

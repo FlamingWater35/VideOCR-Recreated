@@ -336,5 +336,13 @@
   "ffmpeg_install_failed": "อัปเดต FFmpeg ไม่สำเร็จ: {error}",
   "ffmpeg_install_failed_title": "อัปเดต FFmpeg ไม่สำเร็จ",
   "ffmpeg_install_done": "ติดตั้ง FFmpeg {version} แล้ว การรันครั้งถัดไปจะใช้โดยอัตโนมัติ ไม่ต้องรีสตาร์ต",
-  "ffmpeg_install_done_title": "อัปเดต FFmpeg แล้ว"
+  "ffmpeg_install_done_title": "อัปเดต FFmpeg แล้ว",
+  "lbl_preset": "พรีเซ็ต:",
+  "preset_paddle": "PaddleOCR / Google Lens",
+  "preset_onnx": "ONNX Runtime DirectML",
+  "preset_custom": "กำหนดเอง",
+  "tip_preset": "เติมส่วนการตั้งค่า OCR และการตรวจจับป้ายด้วยค่าที่ปรับมาแล้วสำหรับเอนจินที่เลือก ไม่มีการเปลี่ยนแปลงนอกส่วนเหล่านี้ และการตรวจจับป้ายจะไม่ถูกเปิดหรือปิด",
+  "preset_note_applies": "เปลี่ยนเฉพาะการตั้งค่า OCR และป้าย",
+  "preset_note_custom": "ค่าที่กำหนดเอง เลือกพรีเซ็ตเพื่อคืนค่าเริ่มต้นของเอนจินนั้น",
+  "val_err_onnx_language": "'{language}' ไม่พร้อมใช้งานสำหรับ ONNX Runtime DirectML PP-OCRv6 รองรับ 50 ภาษา โปรดเลือกภาษาอื่น"
 }

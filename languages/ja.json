@@ -336,5 +336,13 @@
   "ffmpeg_install_failed": "FFmpeg の更新に失敗しました：{error}",
   "ffmpeg_install_failed_title": "FFmpeg の更新に失敗しました",
   "ffmpeg_install_done": "FFmpeg {version} をインストールしました。次回の実行で自動的に使用されます。再起動は不要です。",
-  "ffmpeg_install_done_title": "FFmpeg を更新しました"
+  "ffmpeg_install_done_title": "FFmpeg を更新しました",
+  "lbl_preset": "プリセット:",
+  "preset_paddle": "PaddleOCR / Google Lens",
+  "preset_onnx": "ONNX Runtime DirectML",
+  "preset_custom": "カスタム",
+  "tip_preset": "選択したエンジン用に調整された値で OCR 設定とラベル検出のセクションを埋めます。これらのセクション以外は変更されず、ラベル検出がオン／オフされることもありません。",
+  "preset_note_applies": "OCR 設定とラベル設定のみを変更します。",
+  "preset_note_custom": "カスタム値です。プリセットを選ぶとそのエンジンの既定値に戻ります。",
+  "val_err_onnx_language": "「{language}」は ONNX Runtime DirectML では使用できません。PP-OCRv6 は 50 言語を認識します。別の言語を選択してください。"
 }

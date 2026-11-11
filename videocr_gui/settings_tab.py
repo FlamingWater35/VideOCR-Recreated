@@ -21,7 +21,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from . import config, i18n
+from . import config, i18n, presets
 from . import constants as C
 from .ffmpeg_settings import FFmpegRow
 from .style import ass_color_to_html, html_to_ass_color
@@ -156,6 +156,30 @@ class SettingsTab(QWidget):
         form = QFormLayout(ocr_box)
         form.setLabelAlignment(Qt.AlignmentFlag.AlignLeft)
         form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow)
+
+        # Preset selector: the only control that rewrites OCR values wholesale.
+        # It sits inside the OCR box on purpose — a preset touches this section
+        # and nothing else, and the caption says so.
+        preset_row = QHBoxLayout()
+        preset_row.setContentsMargins(0, 0, 0, 0)
+        preset_combo = WheelGuardComboBox()
+        self._widgets["--preset"] = preset_combo
+        preset_combo.currentIndexChanged.connect(
+            lambda _i: self._on_changed(["--preset"])
+        )
+        preset_combo.setToolTip(i18n.tr("tip_preset", ""))
+        self._tooltips[preset_combo] = "tip_preset"
+        preset_row.addWidget(preset_combo, 1)
+        self._preset_note = QLabel()
+        self._preset_note.setObjectName("presetNote")
+        self._preset_note.setWordWrap(True)
+        preset_row.addWidget(self._preset_note, 2)
+        form.addRow(self._lbl("lbl_preset", "Preset:"), preset_row)
+        self._combo_internal["--preset"] = presets.preset_ids()
+        preset_combo.addItems(
+            [_translated_label(key, name) for _pid, key, name in presets.PRESET_LIST]
+        )
+        self._refresh_preset_note()
 
         self._add_line(
             form,
@@ -1000,6 +1024,20 @@ class SettingsTab(QWidget):
             scale_combo.setCurrentIndex(idx)
 
             self._update_dependent_states()
+            # Select the preset these values correspond to, without rewriting
+            # them: a restored config may be a hand-tuned "Custom" one. A
+            # saved preset id wins over value-matching only while its values
+            # still hold — two presets can legitimately carry identical
+            # numbers, and the user's explicit choice should survive a restart,
+            # but an edited config must still come back as Custom.
+            engine = str(settings.get("ocr_engine", C.DEFAULT_OCR_ENGINE))
+            saved_preset = str(settings.get("--preset", "")).strip()
+            if saved_preset in presets.preset_ids() and presets.matches_preset(
+                settings, saved_preset
+            ):
+                self._set_preset_combo(saved_preset)
+            else:
+                self._set_preset_combo(presets.detect_preset(settings, engine))
         finally:
             self._block_signals = False
 
@@ -1160,6 +1198,26 @@ class SettingsTab(QWidget):
                 widget.setCurrentIndex(internal_list.index(cur_internal))
             widget.blockSignals(False)
 
+        # Preset combo: rebuild localized items preserving the internal selection
+        preset_widget = self._widgets.get("--preset")
+        if isinstance(preset_widget, QComboBox):
+            internal = self._combo_internal.get("--preset", [])
+            idx = preset_widget.currentIndex()
+            current = (
+                internal[idx]
+                if 0 <= idx < len(internal)
+                else str(presets.DEFAULT_PRESET)
+            )
+            preset_widget.blockSignals(True)
+            preset_widget.clear()
+            preset_widget.addItems(
+                [_translated_label(key, name) for _pid, key, name in presets.PRESET_LIST]
+            )
+            if current in internal:
+                preset_widget.setCurrentIndex(internal.index(current))
+            preset_widget.blockSignals(False)
+            self._refresh_preset_note()
+
         # Model tier combo: same rebuild, driven by C.MODEL_TIER_LIST
         tier_widget = self._widgets.get("--model_tier")
         if isinstance(tier_widget, QComboBox):
@@ -1239,7 +1297,18 @@ class SettingsTab(QWidget):
         if self._block_signals:
             return
         key = keys[0]
-        if key == "--directml_performance_preset":
+        if key == "--preset":
+            preset = self._current_preset()
+            if preset != presets.CUSTOM_PRESET:
+                self._apply_preset_values(preset)
+            self._refresh_preset_note()
+            self.settings_changed.emit(list(presets.PRESET_KEYS) + ["--preset"])
+            return
+        if key in presets.PRESET_KEYS:
+            # A hand edit of an OCR setting means the values no longer are the
+            # preset's, so the selector must say "Custom".
+            self._mark_custom()
+        elif key == "--directml_performance_preset":
             self._apply_preset_grid()
         elif key == "--onnx_directml_tuning":
             self._apply_onnx_grid()
@@ -1348,6 +1417,113 @@ class SettingsTab(QWidget):
         if folder:
             self._widgets["--default_output_dir"].setText(folder)
             self.settings_changed.emit(["--default_output_dir"])
+
+    # --- presets ------------------------------------------------------------
+
+    def _current_preset(self) -> str:
+        """Preset id currently shown in the selector."""
+        combo = self._widgets.get("--preset")
+        if not isinstance(combo, QComboBox):
+            return str(presets.DEFAULT_PRESET)
+        internal = self._combo_internal.get("--preset", [])
+        idx = combo.currentIndex()
+        return (
+            internal[idx]
+            if 0 <= idx < len(internal)
+            else str(presets.DEFAULT_PRESET)
+        )
+
+    def _set_preset_combo(self, preset: str) -> None:
+        """Selects ``preset`` in the combo without emitting a change."""
+        combo = self._widgets.get("--preset")
+        if not isinstance(combo, QComboBox):
+            return
+        internal = self._combo_internal.get("--preset", [])
+        if preset not in internal:
+            return
+        combo.blockSignals(True)
+        try:
+            combo.setCurrentIndex(internal.index(preset))
+        finally:
+            combo.blockSignals(False)
+        self._refresh_preset_note()
+
+    def _refresh_preset_note(self) -> None:
+        """Rewrites the caption beside the combo for the current selection."""
+        note = getattr(self, "_preset_note", None)
+        if note is None:
+            return
+        preset = self._current_preset()
+        if preset == presets.CUSTOM_PRESET:
+            text = i18n.tr(
+                "preset_note_custom",
+                "Custom values. Pick a preset to restore that engine's defaults.",
+            )
+        else:
+            text = i18n.tr(
+                "preset_note_applies",
+                "Changes OCR Settings only.",
+            )
+        note.setText(text)
+
+    def _apply_preset_values(self, preset: str) -> None:
+        """Writes ``preset``'s values into the widgets.
+
+        Most preset keys are line edits, but ``--model_tier`` is a combo whose
+        items carry internal values, so it is set through ``_combo_internal``
+        rather than by text.
+        """
+        values = presets.preset_values(preset)
+        if not values:
+            return
+        for key, value in values.items():
+            widget = self._widgets.get(key)
+            if isinstance(widget, QComboBox):
+                internal = self._combo_internal.get(key, [])
+                if str(value) in internal:
+                    widget.blockSignals(True)
+                    try:
+                        widget.setCurrentIndex(internal.index(str(value)))
+                    finally:
+                        widget.blockSignals(False)
+            elif isinstance(widget, QLineEdit):
+                widget.setText(str(value))
+
+    def _select_preset(self, preset: str) -> None:
+        """Applies ``preset`` and selects it, then reports the change."""
+        self._apply_preset_values(preset)
+        self._set_preset_combo(preset)
+        self.settings_changed.emit(list(presets.PRESET_KEYS))
+
+    def sync_preset_to_engine(self, engine: str) -> None:
+        """Follows an engine change: switches (and applies) that engine's preset.
+
+        A user who deliberately tuned the values sits on ``Custom``; that
+        choice is preserved, because silently overwriting hand-picked numbers
+        on an engine switch would be destructive. Everywhere else the preset
+        follows the engine, which is what the info view promises.
+        """
+        if self._block_signals:
+            return
+        if self._current_preset() == presets.CUSTOM_PRESET:
+            return
+        preset = presets.preset_for_engine(engine)
+        self._apply_preset_values(preset)
+        self._set_preset_combo(preset)
+
+    def apply_engine_preset(self, engine: str) -> None:
+        """Applies the engine's preset wholesale (used on first run / reset)."""
+        preset = presets.preset_for_engine(engine)
+        self._apply_preset_values(preset)
+        self._set_preset_combo(preset)
+
+    def _mark_custom(self) -> None:
+        """Switches the selector to Custom after a manual OCR edit."""
+        if self._block_signals:
+            return
+        if self._current_preset() == presets.CUSTOM_PRESET:
+            return
+        self._set_preset_combo(presets.CUSTOM_PRESET)
 
 
 class DirectMLTab(SettingsTab):

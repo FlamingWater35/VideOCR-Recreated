@@ -240,6 +240,9 @@ QSS theme.
   mode, frame scan mode, ONNX tuning, grid max width/height), UI language,
   GUI scaling, save options, output dir, seek step, notification, sleep,
   normalize-chinese.
+- OCR Settings section opens with the **preset selector** (see "Engine presets"
+  below), then confidence/similarity thresholds, merge gap, brightness, SSIM,
+  OCR image width, frame skip and minimum subtitle duration.
 - Label detection section: `enable_label_detection`, label start/end time
   (independent of the subtitle extraction window; empty falls back to the main
   window), label OCR width, min display duration, min confirmation frames
@@ -280,6 +283,64 @@ QSS theme.
   else `%APPDATA%/VideOCR` or XDG), autosave on change, relative crop-box
   persistence, defaults matching the old GUI except DirectML index default 0
   and the removed update/benchmark keys.
+
+## Engine presets
+
+- Advanced Settings > OCR Settings starts with a **Preset** combo: *PaddleOCR /
+  Google Lens*, *ONNX Runtime DirectML*, *Custom*. A preset rewrites the OCR
+  Settings section (confidence/similarity, merge gap, brightness, SSIM, OCR
+  image width, frame skip, minimum subtitle duration, model tier) and the
+  label-tuning knobs in Label Detection (label confidence, confirmation frames,
+  text similarity, position drift, reappear merge gap, minimum zone height).
+  Crop boxes, the DirectML section and ASS styles are never touched, so a preset
+  switch cannot move a crop or change an output path. `--enable_label_detection`
+  is never toggled either: a preset tunes the knobs but never turns the feature
+  on or off behind the user's back.
+- `--preset` is **GUI-only**; `args.build_args()` drops it and forwards the
+  individual values instead (there is no CLI flag for it).
+- Editing any preset-managed setting by hand flips the combo to *Custom*;
+  editing anything outside that set leaves it alone. Switching the OCR engine
+  applies that engine's preset, unless the user sits on *Custom* — then their
+  numbers are preserved, because silently overwriting a hand-tuned config would
+  be destructive.
+- The values were measured against the real clips in `tests/data/` (see the
+  module docstring of `videocr_gui/presets.py`). The long clip's hand-written
+  embedded English track is the ground truth for timings and text; `eval.py`
+  scores a run against it (95 windows, 14 transcribed frames, 8 labels). What
+  the sweep found:
+  - PaddleOCR's subtitles are already exact (95/95, 100 % text) at every gate
+    setting tried, so its preset keeps the shipped OCR defaults.
+  - ONNX Runtime DirectML loses ~4 windows on the default `small` tier. The
+    `medium` tier recovers two of them and all eight labels, so the ONNX preset
+    selects `medium` — a real, measured per-engine difference at ~2× runtime.
+  - Label false positives are dominated by `--label_reappear_merge_gap` (a 2 s
+    gap splits the long-running title card into separate events) and
+    `--label_pos_drift` (drifting title art). Both are now the app defaults
+    (5.0 s / 400 px), which takes PaddleOCR from 13 label events / 6 false
+    positives to 9 / 2 and ONNX from 12 / 5 to 11 / 3 with recall unchanged.
+  - `--label_conf_threshold` is the one knob that differs per engine: PaddleOCR
+    keeps 70 (80 lost the 乔蚩光 label on the short clip), ONNX uses 80 (one
+    fewer false positive, identical output on the short clip).
+- A fresh install must land on the PaddleOCR preset, not `Custom`. That holds
+  because `config.get_default_settings()` and `PRESETS["paddle"]` carry the same
+  values; `tests/test_presets.py` pins it.
+
+## Subtitle language coverage per engine
+
+- Each engine's combo offers exactly what its models can read; the lists are
+  guarded by `tests/test_language_lists.py` against the engines' own tables.
+- PaddleOCR: 110 languages (script-grouped local models).
+- Google Lens: 230 languages (matches `GOOGLE_LENS_LANGS`).
+- EasyOCR DirectML: 15 languages, internal fallback only.
+- ONNX Runtime DirectML: the **50** languages of RapidOCR's unified PP-OCRv6
+  recognition model (`rapidocr.utils.model_resolver.PP_OCRV6_LANGS`), not the
+  15-entry EasyOCR list it used to borrow. PP-OCRv6 has no Arabic, Korean,
+  Russian or Thai recognition, so those are gone from this engine — and
+  `args.build_args()` reports that as a validation error rather than silently
+  recognising English. The unified model means the language code does not change
+  the network: it is verified against the resolver and logged, but every
+  supported language loads the same `multi_PP-OCRv6_rec_*` weights.
+
 
 ## Theme / styling
 

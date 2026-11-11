@@ -374,10 +374,13 @@ class TestLanguageList:
         assert "Chinese (Simplified)" in texts
 
     def test_onnx_engine_language_list(self, window):
+        """ONNX offers PP-OCRv6's own coverage, not the EasyOCR list."""
         window._update_lang_list("ONNX Runtime DirectML (AMD GPU Experimental)")
         combo = window.lang_combo
         texts = [combo.itemText(i) for i in range(combo.count())]
-        assert "Japanese + English" in texts  # easyocr-style names
+        assert "Japanese" in texts
+        assert "Polish" in texts  # PP-OCRv6 covers it, EasyOCR never did
+        assert "Korean + English" not in texts  # no PP-OCRv6 Korean model
 
     def test_engine_list_offers_exactly_three(self, window):
         combo = window.engine_combo

@@ -34,7 +34,12 @@ from .progress import ProgressUpdate
 from .queue_tab import QueueTab
 from .settings_tab import SettingsTab
 from .video_preview import VideoPreview
-from .widgets import ClickableSlider, OutlinedProgressBar, WheelGuardComboBox
+from .widgets import (
+    ClickableSlider,
+    OutlinedProgressBar,
+    SearchableComboBox,
+    WheelGuardComboBox,
+)
 from .workers import VIDEOCR_PATH, CLIWorker
 
 try:  # pragma: no cover
@@ -90,7 +95,15 @@ OUTPUT
 - While "Save Subtitle File in Video Directory" is enabled, subtitles are written next to the video and the Output Directory setting is ignored.
 - File name: <video name>.<language code>.srt - existing files are never overwritten; " (1)", " (2)" ... is appended instead.
 - With Label Detection enabled (Advanced Settings) the output becomes .ass so detected labels keep their on-screen positions.
-- Tick "Save Subtitles and Labels as Separate .ass Files" to split them: the subtitle file is written as usual and the labels go to a companion "<video name>.<language code>.labels.ass" file.\
+- Tick "Save Subtitles and Labels as Separate .ass Files" to split them: the subtitle file is written as usual and the labels go to a companion "<video name>.<language code>.labels.ass" file.
+
+PRESETS
+- Advanced Settings > OCR Settings starts with a "Preset" selector: "PaddleOCR / Google Lens", "ONNX Runtime DirectML" or "Custom".
+- A preset fills the OCR Settings section (confidence and similarity thresholds, merge gap, SSIM, OCR image width, frames to skip, minimum subtitle duration, model tier) and the label-tuning knobs in Label Detection (label confidence, confirmation frames, text similarity, position drift, reappear merge gap, minimum zone height). Crop boxes, the GPU options and the ASS styles are never touched.
+- A preset never switches label detection on or off; it only tunes the knobs while the feature is already enabled.
+- Switching the OCR engine selects that engine's preset automatically, because each engine's numbers are tuned separately.
+- Editing any preset-managed setting by hand switches the selector to "Custom" so you can always see that the values are no longer the preset's.
+- The ONNX Runtime DirectML preset selects the "medium" PP-OCRv6 model tier: on the 4K test episode it recovered two subtitle windows and all eight labels that the default "small" tier missed, at about twice the runtime.\
 """
 
 
@@ -244,7 +257,7 @@ class MainWindow(QMainWindow):
         row3.addWidget(self.engine_combo, 1)
         self.lang_lbl = QLabel(i18n.tr("lbl_sub_lang", "Subtitle Language:"))
         row3.addWidget(self.lang_lbl)
-        self.lang_combo = WheelGuardComboBox()
+        self.lang_combo = SearchableComboBox()
         self.lang_combo.setMinimumWidth(150)
         row3.addWidget(self.lang_combo, 1)
         self.pos_lbl = QLabel(i18n.tr("lbl_sub_pos", "Subtitle Position:"))
@@ -517,7 +530,11 @@ class MainWindow(QMainWindow):
         """Refreshes the language combo for the given engine; preserves selection if possible."""
         if "Google Lens" in engine:
             names = C.lens_display_names
-        elif "EasyOCR DirectML" in engine or "ONNX Runtime DirectML" in engine:
+        elif "ONNX Runtime DirectML" in engine:
+            # PP-OCRv6 is a unified model with its own (larger, different)
+            # language coverage — not the EasyOCR list it used to borrow.
+            names = C.onnx_display_names
+        elif "EasyOCR DirectML" in engine:
             names = C.easyocr_display_names
         else:
             names = C.paddle_display_names
@@ -554,6 +571,9 @@ class MainWindow(QMainWindow):
         self.settings_tab.set_ocr_engine(engine)
         self._update_lang_list(engine, keep_selection=True)
         self._settings["subtitle_language"] = self.lang_combo.currentText()
+        # The OCR-settings preset follows the engine: each engine has its own
+        # tuned defaults, and the settings tab shows which one is in effect.
+        self.settings_tab.sync_preset_to_engine(engine)
         config.save_settings(self._settings)
         self._update_output_path()
 
@@ -1665,7 +1685,7 @@ class MainWindow(QMainWindow):
         lang_lookup = {
             "google_lens": C.lens_abbr_lookup,
             "easyocr_directml": C.easyocr_abbr_lookup,
-            "onnx_directml": C.easyocr_abbr_lookup,
+            "onnx_directml": C.onnx_abbr_lookup,
             "paddleocr": C.paddle_abbr_lookup,
         }
         # Use the mapped engine key (raw_engine) so a legacy display-name arg

@@ -336,5 +336,13 @@
   "ffmpeg_install_failed": "فشل تحديث FFmpeg: {error}",
   "ffmpeg_install_failed_title": "فشل تحديث FFmpeg",
   "ffmpeg_install_done": "تم تثبيت FFmpeg {version}. سيستخدمه التشغيل التالي تلقائيًا؛ لا حاجة لإعادة التشغيل.",
-  "ffmpeg_install_done_title": "تم تحديث FFmpeg"
+  "ffmpeg_install_done_title": "تم تحديث FFmpeg",
+  "lbl_preset": "الإعداد المسبق:",
+  "preset_paddle": "PaddleOCR / Google Lens",
+  "preset_onnx": "ONNX Runtime DirectML",
+  "preset_custom": "مخصص",
+  "tip_preset": "يملأ قسمي إعدادات OCR وكشف التسميات بقيم مضبوطة للمحرك المحدد. لا يتغير أي شيء خارج هذين القسمين، ولا يتم تشغيل كشف التسميات أو إيقافه أبدًا.",
+  "preset_note_applies": "يغيّر إعدادات OCR والتسميات فقط.",
+  "preset_note_custom": "قيم مخصصة. اختر إعدادًا مسبقًا لاستعادة إعدادات ذلك المحرك.",
+  "val_err_onnx_language": "'{language}' غير متاح لـ ONNX Runtime DirectML. يتعرف PP-OCRv6 على 50 لغة؛ اختر لغة أخرى."
 }

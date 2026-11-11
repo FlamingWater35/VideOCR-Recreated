@@ -336,5 +336,13 @@
   "ffmpeg_install_failed": "FFmpeg 更新失败：{error}",
   "ffmpeg_install_failed_title": "FFmpeg 更新失败",
   "ffmpeg_install_done": "FFmpeg {version} 已安装。下次运行会自动使用它，无需重启。",
-  "ffmpeg_install_done_title": "FFmpeg 已更新"
+  "ffmpeg_install_done_title": "FFmpeg 已更新",
+  "lbl_preset": "预设：",
+  "preset_paddle": "PaddleOCR / Google Lens",
+  "preset_onnx": "ONNX Runtime DirectML",
+  "preset_custom": "自定义",
+  "tip_preset": "使用为所选引擎调校的值填充 OCR 设置和标签检测部分。这两个部分以外的内容不会改变，标签检测也绝不会被开启或关闭。",
+  "preset_note_applies": "仅更改 OCR 和标签设置。",
+  "preset_note_custom": "自定义值。选择一个预设可恢复该引擎的默认值。",
+  "val_err_onnx_language": "“{language}”不适用于 ONNX Runtime DirectML。PP-OCRv6 可识别 50 种语言，请另选一种。"
 }

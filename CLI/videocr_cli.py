@@ -456,8 +456,12 @@ def main() -> None:
     parser.add_argument(
         "--label_pos_drift",
         type=restricted_int(min_val=1),
-        default=160,
-        help="Maximum on-screen position drift in pixels between detections of the same label (default: 160)",
+        default=400,
+        help=(
+            "Maximum on-screen position drift in pixels between detections of "
+            "the same label (default: 400). The old 160 split drifting title "
+            "art into extra false-positive events on the 4K test clip."
+        ),
     )
     parser.add_argument(
         "--label_close_pos_distance",

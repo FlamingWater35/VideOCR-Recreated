@@ -336,5 +336,13 @@
   "ffmpeg_install_failed": "Pembaruan FFmpeg gagal: {error}",
   "ffmpeg_install_failed_title": "Pembaruan FFmpeg Gagal",
   "ffmpeg_install_done": "FFmpeg {version} terpasang. Proses berikutnya akan memakainya otomatis; tidak perlu memulai ulang.",
-  "ffmpeg_install_done_title": "FFmpeg Diperbarui"
+  "ffmpeg_install_done_title": "FFmpeg Diperbarui",
+  "lbl_preset": "Prasetel:",
+  "preset_paddle": "PaddleOCR / Google Lens",
+  "preset_onnx": "ONNX Runtime DirectML",
+  "preset_custom": "Kustom",
+  "tip_preset": "Mengisi bagian Pengaturan OCR dan Deteksi Label dengan nilai yang disesuaikan untuk mesin yang dipilih. Tidak ada yang berubah di luar bagian tersebut, dan deteksi label tidak pernah dinyalakan atau dimatikan.",
+  "preset_note_applies": "Hanya mengubah pengaturan OCR dan label.",
+  "preset_note_custom": "Nilai kustom. Pilih prasetel untuk memulihkan default mesin tersebut.",
+  "val_err_onnx_language": "'{language}' tidak tersedia untuk ONNX Runtime DirectML. PP-OCRv6 mengenali 50 bahasa; pilih yang lain."
 }

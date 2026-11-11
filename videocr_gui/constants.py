@@ -383,9 +383,68 @@ EASYOCR_LANGUAGES_LIST = [('English', 'en'),
  ('Thai + English', 'th'),
  ('Vietnamese + English', 'vi')]
 
+# ONNX Runtime DirectML runs RapidOCR's *unified* PP-OCRv6 recognition model:
+# one network covers every language below, so this list is the model's real
+# coverage (rapidocr.utils.model_resolver.PP_OCRV6_LANGS), not a subset of it.
+# It is NOT the EasyOCR list: PP-OCRv6 has no Arabic/Korean/Russian/Thai
+# recognition, and it does cover ~40 Latin-script languages EasyOCR never
+# offered. tests/test_language_lists.py keeps this in sync with the installed
+# rapidocr.
+ONNX_LANGUAGES_LIST = [
+    ('Afrikaans', 'af'),
+    ('Albanian', 'sq'),
+    ('Azerbaijani', 'az'),
+    ('Basque', 'eu'),
+    ('Bosnian', 'bs'),
+    ('Catalan', 'ca'),
+    ('Chinese & English', 'ch'),
+    ('Chinese Traditional', 'chinese_cht'),
+    ('Croatian', 'hr'),
+    ('Czech', 'cs'),
+    ('Danish', 'da'),
+    ('Dutch', 'nl'),
+    ('English', 'en'),
+    ('Estonian', 'et'),
+    ('Finnish', 'fi'),
+    ('French', 'fr'),
+    ('Galician', 'gl'),
+    ('German', 'german'),
+    ('Hungarian', 'hu'),
+    ('Icelandic', 'is'),
+    ('Indonesian', 'id'),
+    ('Irish', 'ga'),
+    ('Italian', 'it'),
+    ('Japanese', 'japan'),
+    ('Kurdish', 'ku'),
+    ('Latin', 'la'),
+    ('Latvian', 'lv'),
+    ('Lithuanian', 'lt'),
+    ('Luxembourgish', 'lb'),
+    ('Malay', 'ms'),
+    ('Maltese', 'mt'),
+    ('Maori', 'mi'),
+    ('Norwegian', 'no'),
+    ('Occitan', 'oc'),
+    ('Polish', 'pl'),
+    ('Portuguese', 'pt'),
+    ('Quechua', 'qu'),
+    ('Romanian', 'ro'),
+    ('Romansh', 'rm'),
+    ('Serbian(latin)', 'rs_latin'),
+    ('Slovak', 'sk'),
+    ('Slovenian', 'sl'),
+    ('Spanish', 'es'),
+    ('Swahili', 'sw'),
+    ('Swedish', 'sv'),
+    ('Tagalog', 'tl'),
+    ('Turkish', 'tr'),
+    ('Uzbek', 'uz'),
+    ('Vietnamese', 'vi'),
+    ('Welsh', 'cy'),
+]
+
 # --- Language code maps ---
 EASY_TO_ISO_MAP = {'ch': 'zh', 'chinese_cht': 'zh', 'german': 'de', 'japan': 'ja', 'korean': 'ko'}
-
 PADDLE_TO_ISO_MAP = {'ang': 'anp',
  'ava': 'av',
  'ch': 'zh',
@@ -495,6 +554,8 @@ lens_display_names = [lang[0] for lang in GOOGLE_LENS_LANGUAGES_LIST]
 lens_abbr_lookup = {name: abbr for name, abbr in GOOGLE_LENS_LANGUAGES_LIST}
 easyocr_display_names = [lang[0] for lang in EASYOCR_LANGUAGES_LIST]
 easyocr_abbr_lookup = {name: abbr for name, abbr in EASYOCR_LANGUAGES_LIST}
+onnx_display_names = [lang[0] for lang in ONNX_LANGUAGES_LIST]
+onnx_abbr_lookup = {name: abbr for name, abbr in ONNX_LANGUAGES_LIST}
 
 DIRECTML_PERFORMANCE_DISPLAY = [name for name, _ in DIRECTML_PERFORMANCE_PRESETS]
 DIRECTML_PERFORMANCE_TO_CLI = {name: value for name, value in DIRECTML_PERFORMANCE_PRESETS}

@@ -35,6 +35,7 @@ import tempfile
 import urllib.request
 import zipfile
 from collections.abc import Callable
+from typing import Any
 
 #: Directory name (under the application root) holding the managed copy.
 MANAGED_DIR_NAME = "ffmpeg"
@@ -129,16 +130,50 @@ def resolve_ffmpeg(root: str | None = None) -> tuple[str | None, str]:
     return None, ""
 
 
+def _no_window_kwargs() -> dict[str, Any]:
+    """Extra ``subprocess`` keywords that keep a child from opening a console.
+
+    The GUI is a windowed executable, so any child it spawns would otherwise
+    get its own console window — a black box that flashes on screen. Every
+    probe here (``ffmpeg -version`` and the downloader) must opt out.
+    """
+    if os.name == "nt":
+        return {"creationflags": subprocess.CREATE_NO_WINDOW}
+    return {}
+
+
+_VERSION_CACHE: dict[tuple[str, int, int], str | None] = {}
+
+
 def ffmpeg_version(path: str | None, timeout: float = 10.0) -> str | None:
-    """Parses the version out of ``ffmpeg -version``; ``None`` if unreadable."""
+    """Parses the version out of ``ffmpeg -version``; ``None`` if unreadable.
+
+    Cached per (path, size, mtime): the binary is ~100 MB, so a cold
+    ``-version`` probe costs seconds while a warm one costs milliseconds. The
+    GUI reads this on every repaint, and the answer only changes when the file
+    on disk changes — which is exactly what the cache key captures, so an
+    in-place update still reports the new version.
+    """
     if not path:
         return None
+    # The key captures the identity of the file on disk, so an in-place update
+    # (new size or mtime) misses the cache and reports the new version.
+    try:
+        info = os.stat(path)
+        key: tuple[str, int, int] | None = (path, int(info.st_size), int(info.st_mtime))
+    except OSError:
+        # Unreadable here does not mean unrunnable (the caller may be mocking
+        # the subprocess, or the path may be resolved by the OS), so still try.
+        key = None
+    if key is not None and key in _VERSION_CACHE:
+        return _VERSION_CACHE[key]
     try:
         completed = subprocess.run(
             [path, "-version"],
             capture_output=True,
             timeout=timeout,
             check=False,
+            **_no_window_kwargs(),
         )
     except Exception:
         return None
@@ -147,7 +182,10 @@ def ffmpeg_version(path: str | None, timeout: float = 10.0) -> str | None:
         if raw:
             text += raw.decode("utf-8", errors="replace")
     match = _VERSION_RE.search(text)
-    return match.group(1) if match else None
+    version = match.group(1) if match else None
+    if key is not None:
+        _VERSION_CACHE[key] = version
+    return version
 
 
 def latest_release_version(timeout: float = _VERSION_TIMEOUT_S) -> str | None:

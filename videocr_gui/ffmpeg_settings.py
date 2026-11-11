@@ -95,12 +95,16 @@ class FFmpegRow(QWidget):
     _install_finished = Signal(str)
     #: Worker -> GUI thread: download progress in percent, or -1 for unknown.
     _progress = Signal(int)
+    #: Worker -> GUI thread: a completed background status read.
+    _status_ready = Signal(dict)
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self._busy = False
         self._latest: str | None = None
         self._version = ""
+        self._status_seq = 0
+        self._sentence_held = False
 
         root = QVBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
@@ -138,17 +142,57 @@ class FFmpegRow(QWidget):
         self._check_finished.connect(self._on_check_finished)
         self._install_finished.connect(self._on_install_finished)
         self._progress.connect(self._on_progress)
+        self._status_ready.connect(self._on_status_ready)
 
-        self.refresh()
+        # Never probe synchronously from the constructor: the first
+        # ``ffmpeg -version`` on a 100 MB binary can take seconds on a cold
+        # cache, and this row is built during MainWindow() — it would freeze
+        # the whole window before it is even on screen.
+        self.status_label.setText(i18n.tr("ffmpeg_checking", "Checking for FFmpeg updates..."))
+        self._request_status()
 
     # --- state -------------------------------------------------------------
 
     def refresh(self) -> None:
-        """Re-reads the current binary and repaints the row."""
-        status = self._load_status()
-        if status is None:
+        """Re-reads the current binary and repaints the row (off the GUI thread)."""
+        self._sentence_held = False
+        self._request_status()
+
+    def _request_status(self) -> None:
+        """Starts a background read of the current binary."""
+        self._status_seq += 1
+        seq = self._status_seq
+
+        def worker() -> None:
+            try:
+                status = _tools().managed_status(config.APP_DIR)
+                payload = {str(k): str(v) for k, v in status.items()}
+            except Exception as e:  # pragma: no cover - defensive
+                payload = {"__error__": str(e)}
+            payload["__seq__"] = str(seq)
+            with contextlib.suppress(RuntimeError):
+                self._status_ready.emit(payload)
+
+        threading.Thread(target=worker, name="ffmpeg-status", daemon=True).start()
+
+    def _on_status_ready(self, payload: dict[str, str]) -> None:
+        """GUI thread: apply a background status read."""
+        # A read started earlier may finish later; only the newest one may
+        # write anything, so a slow cold probe cannot clobber a fresh result.
+        if payload.get("__seq__") != str(self._status_seq):
             return
-        self._set_status(self._describe(status))
+        error = payload.get("__error__")
+        if error is not None:
+            self._set_status(
+                i18n.tr("ffmpeg_status_error", "FFmpeg status unavailable: {error}").replace(
+                    "{error}", error
+                )
+            )
+            self._set_buttons(check=False, update=False)
+            return
+        self._apply_status(payload)
+        if not self._sentence_held:
+            self._set_status(self._describe(payload))
 
     def _load_status(self) -> dict[str, str] | None:
         """Reads the current binary and updates buttons; ``None`` on failure.
@@ -156,6 +200,10 @@ class FFmpegRow(QWidget):
         Kept separate from :meth:`refresh` so a caller that wants to show its
         own sentence (``"up to date"``, an error) can reload the state without
         having that sentence immediately overwritten.
+
+        This is the *synchronous* read, used only where a caller already runs
+        off the GUI thread (the check worker) or where a test wants a
+        deterministic result. GUI code paths must use :meth:`refresh`.
         """
         try:
             status = _tools().managed_status(config.APP_DIR)
@@ -167,6 +215,13 @@ class FFmpegRow(QWidget):
             )
             self._set_buttons(check=False, update=False)
             return None
+        self._apply_status(status)
+        # ``managed_status`` returns a plain dict; typing it here keeps the
+        # Any that leaks through the lazily imported module out of the caller.
+        return {str(key): str(value) for key, value in status.items()}
+
+    def _apply_status(self, status: dict[str, str]) -> None:
+        """Applies a status dict to the buttons and cached version."""
         self._version = status.get("version", "")
         self._set_buttons(check=True, update=self._can_install(status))
         self.update_btn.setText(
@@ -174,9 +229,6 @@ class FFmpegRow(QWidget):
             if status.get("source") == "bundled"
             else i18n.tr("btn_ffmpeg_download", "Download FFmpeg")
         )
-        # ``managed_status`` returns a plain dict; typing it here keeps the
-        # Any that leaks through the lazily imported module out of the caller.
-        return {str(key): str(value) for key, value in status.items()}
 
     def _describe(self, status: dict[str, str]) -> str:
         """Human summary: which build, which version, from where."""
@@ -256,18 +308,17 @@ class FFmpegRow(QWidget):
         self._set_busy(False)
         self._latest = latest or None
         if not latest:
-            self._set_status(
+            self._hold_sentence(
                 i18n.tr(
                     "ffmpeg_check_failed",
                     "Could not reach the FFmpeg release server. The current build is unchanged.",
                 )
             )
-            self._load_status()
             return
         tools = _tools()
         short = self._short(latest)
         if tools.is_newer(latest, self._version):
-            self._set_status(
+            self._hold_sentence(
                 i18n.tr(
                     "ffmpeg_update_available",
                     "FFmpeg {version} is available (installed: {current}).",
@@ -275,14 +326,23 @@ class FFmpegRow(QWidget):
                 .replace("{version}", short)
                 .replace("{current}", self._short(self._version))
             )
-            self._load_status()
         else:
-            self._set_status(
+            self._hold_sentence(
                 i18n.tr("ffmpeg_up_to_date", "FFmpeg {version} is up to date.").replace(
                     "{version}", short
                 )
             )
-            self._load_status()
+
+    def _hold_sentence(self, text: str) -> None:
+        """Shows ``text`` and keeps it while the state is re-read in the background.
+
+        The sentence is the answer to what the user just asked, so a status
+        refresh must not overwrite it. The refresh still runs (the buttons need
+        the new version), it just does not get to set the text.
+        """
+        self._sentence_held = True
+        self._set_status(text)
+        self._request_status()
 
     def install_latest(self) -> None:
         """Downloads and swaps in the newest FFmpeg, without a restart."""
@@ -324,7 +384,7 @@ class FFmpegRow(QWidget):
         """GUI thread: report the outcome of an install."""
         self._set_busy(False)
         if error:
-            self._set_status(
+            self._hold_sentence(
                 i18n.tr("ffmpeg_install_failed", "FFmpeg update failed: {error}").replace(
                     "{error}", error
                 )
@@ -334,9 +394,23 @@ class FFmpegRow(QWidget):
                 i18n.tr("ffmpeg_install_failed_title", "FFmpeg Update Failed"),
                 error,
             )
-            self._load_status()
             return
-        self.refresh()
+        # The new binary is on disk now. Read its version synchronously — this
+        # slot runs on the GUI thread, but the read is a local probe that the
+        # version cache makes cheap, and the dialog must name the version.
+        self._sentence_held = False
+        self._load_status()
+        self._set_status(self._describe_installed())
+        self._announce_installed()
+
+    def _describe_installed(self) -> str:
+        """The "installed" sentence, without a second status probe."""
+        return i18n.tr("ffmpeg_up_to_date", "FFmpeg {version} is up to date.").replace(
+            "{version}", self._short(self._version)
+        )
+
+    def _announce_installed(self) -> None:
+        """GUI thread: tell the user the new build is live."""
         installed = self._short(self._version)
         self.installed.emit(installed)
         dialogs.info(
