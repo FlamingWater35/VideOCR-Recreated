@@ -129,6 +129,10 @@ class SettingsTab(QWidget):
         # combo key -> list of internal values parallel to the combo's items
         self._combo_internal: dict[str, list[str]] = {}
         self._block_signals = False
+        # True while a preset is writing its values into the widgets. Without
+        # it every individual write would look like a manual edit and flip the
+        # selector to Custom mid-application.
+        self._applying_preset = False
         self._settings: dict[str, Any] = {}
         self._style_box: QGroupBox | None = None
         # Display name of the engine selected in the Process Video tab. That
@@ -1294,7 +1298,11 @@ class SettingsTab(QWidget):
 
     # --- slots --------------------------------------------------------------
     def _on_changed(self, keys: list[str]) -> None:
-        if self._block_signals:
+        if self._block_signals or self._applying_preset:
+            # While a preset is being applied its writes are not user edits:
+            # they must not mark the selector Custom, and emitting one signal
+            # per field would make the main window snapshot the tab a dozen
+            # times. _select_preset emits a single consolidated signal instead.
             return
         key = keys[0]
         if key == "--preset":
@@ -1469,31 +1477,45 @@ class SettingsTab(QWidget):
     def _apply_preset_values(self, preset: str) -> None:
         """Writes ``preset``'s values into the widgets.
 
-        Most preset keys are line edits, but ``--model_tier`` is a combo whose
-        items carry internal values, so it is set through ``_combo_internal``
-        rather than by text.
+        The writes are wrapped in ``_applying_preset`` because every line edit
+        emits ``textChanged`` -> ``_on_changed`` -> ``_mark_custom()``. Without
+        the guard, applying a preset marked the selector "Custom" immediately,
+        so a single selection looked like it had failed and only a *second*
+        click (whose writes were no-ops, since the values already matched)
+        appeared to work.
         """
         values = presets.preset_values(preset)
         if not values:
             return
-        for key, value in values.items():
-            widget = self._widgets.get(key)
-            if isinstance(widget, QComboBox):
-                internal = self._combo_internal.get(key, [])
-                if str(value) in internal:
-                    widget.blockSignals(True)
-                    try:
-                        widget.setCurrentIndex(internal.index(str(value)))
-                    finally:
-                        widget.blockSignals(False)
-            elif isinstance(widget, QLineEdit):
-                widget.setText(str(value))
+        self._applying_preset = True
+        try:
+            for key, value in values.items():
+                widget = self._widgets.get(key)
+                if isinstance(widget, QComboBox):
+                    internal = self._combo_internal.get(key, [])
+                    if str(value) in internal:
+                        widget.blockSignals(True)
+                        try:
+                            widget.setCurrentIndex(internal.index(str(value)))
+                        finally:
+                            widget.blockSignals(False)
+                elif isinstance(widget, QLineEdit):
+                    widget.setText(str(value))
+        finally:
+            self._applying_preset = False
 
     def _select_preset(self, preset: str) -> None:
-        """Applies ``preset`` and selects it, then reports the change."""
-        self._apply_preset_values(preset)
+        """Applies ``preset`` and selects it, then reports the change.
+
+        The combo is updated *before* the values are written: each value write
+        emits ``settings_changed``, and the main window snapshots the whole tab
+        on that signal. With the old order the snapshot still carried the
+        previous preset id next to the new numbers, so the saved config could
+        pair ``--preset paddle`` with the ONNX tier.
+        """
         self._set_preset_combo(preset)
-        self.settings_changed.emit(list(presets.PRESET_KEYS))
+        self._apply_preset_values(preset)
+        self.settings_changed.emit(list(presets.PRESET_KEYS) + ["--preset"])
 
     def sync_preset_to_engine(self, engine: str) -> None:
         """Follows an engine change: switches (and applies) that engine's preset.
@@ -1508,18 +1530,23 @@ class SettingsTab(QWidget):
         if self._current_preset() == presets.CUSTOM_PRESET:
             return
         preset = presets.preset_for_engine(engine)
-        self._apply_preset_values(preset)
         self._set_preset_combo(preset)
+        self._apply_preset_values(preset)
+        # The value writes are suppressed by _applying_preset, so the main
+        # window has not seen them yet. Emit once here or its in-memory
+        # settings (and therefore the saved config) keep the previous engine's
+        # numbers.
+        self.settings_changed.emit(list(presets.PRESET_KEYS) + ["--preset"])
 
     def apply_engine_preset(self, engine: str) -> None:
         """Applies the engine's preset wholesale (used on first run / reset)."""
         preset = presets.preset_for_engine(engine)
-        self._apply_preset_values(preset)
         self._set_preset_combo(preset)
+        self._apply_preset_values(preset)
 
     def _mark_custom(self) -> None:
         """Switches the selector to Custom after a manual OCR edit."""
-        if self._block_signals:
+        if self._block_signals or self._applying_preset:
             return
         if self._current_preset() == presets.CUSTOM_PRESET:
             return

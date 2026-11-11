@@ -194,6 +194,82 @@ class TestSettingsTabPresetSelector:
             else:
                 assert widget.text() == value
 
+    def test_one_selection_shows_the_preset_not_custom(self, tab):
+        """Regression: applying a preset used to flip the combo to Custom.
+
+        Every value write emitted textChanged -> _on_changed -> _mark_custom(),
+        so the first click looked ignored and only a second click (a no-op,
+        because the values already matched) left the preset showing.
+        """
+        presets = _presets()
+        combo = tab._widgets["--preset"]
+        internal = tab._combo_internal["--preset"]
+
+        combo.setCurrentIndex(internal.index(presets.ONNX_PRESET))
+        assert tab._current_preset() == presets.ONNX_PRESET
+
+        combo.setCurrentIndex(internal.index(presets.PADDLE_PRESET))
+        assert tab._current_preset() == presets.PADDLE_PRESET
+
+        combo.setCurrentIndex(internal.index(presets.ONNX_PRESET))
+        assert tab._current_preset() == presets.ONNX_PRESET
+
+    def test_selecting_the_same_preset_twice_stays_on_it(self, tab):
+        presets = _presets()
+        combo = tab._widgets["--preset"]
+        internal = tab._combo_internal["--preset"]
+        index = internal.index(presets.ONNX_PRESET)
+        combo.setCurrentIndex(index)
+        combo.setCurrentIndex(index)
+        assert tab._current_preset() == presets.ONNX_PRESET
+
+    def test_manual_edit_after_a_preset_still_marks_custom(self, tab):
+        """The guard must not swallow real user edits."""
+        presets = _presets()
+        tab._select_preset(presets.ONNX_PRESET)
+        assert tab._current_preset() == presets.ONNX_PRESET
+        tab._widgets["--conf_threshold"].setText("42")
+        assert tab._current_preset() == presets.CUSTOM_PRESET
+
+    def test_editing_after_applying_a_preset_marks_custom(self, tab):
+        """_apply_preset_values must clear its guard even if a write throws."""
+        assert tab._applying_preset is False
+        tab._apply_preset_values(_presets().ONNX_PRESET)
+        assert tab._applying_preset is False
+
+    def test_applying_a_preset_emits_one_consolidated_signal(self, tab):
+        """The tab must not emit once per field while a preset is applied.
+
+        The main window snapshots the whole tab on every settings_changed, so
+        per-field signals made it persist intermediate states.
+        """
+        seen: list[list[str]] = []
+        tab.settings_changed.connect(lambda keys: seen.append(list(keys)))
+        tab._select_preset(_presets().ONNX_PRESET)
+        assert len(seen) == 1, seen
+        assert "--preset" in seen[0]
+
+    def test_saved_preset_matches_saved_values_after_an_engine_switch(self, qtbot):
+        """Regression: the config paired --preset paddle with the ONNX tier.
+
+        The selector was updated after the values, so the snapshot taken on the
+        first value-change signal carried the old preset id. The conftest's
+        autouse fixture points CONFIG_FILE at a throwaway path.
+        """
+        from videocr_gui import config
+        from videocr_gui.app import MainWindow
+
+        window = MainWindow(config.get_default_settings())
+        qtbot.addWidget(window)
+        try:
+            window.engine_combo.setCurrentIndex(2)  # ONNX
+            saved = config.load_settings()
+            assert saved["--preset"] == "onnx", saved.get("--preset")
+            assert saved["--model_tier"] == "medium", saved.get("--model_tier")
+            assert _presets().matches_preset(saved, "onnx")
+        finally:
+            window.close()
+
     def test_choosing_a_preset_leaves_unmanaged_keys_alone(self, tab):
         """Crop/GPU/style settings and the label toggle must not move."""
         unmanaged = (
